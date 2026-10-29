@@ -1,0 +1,44 @@
+{
+  "model": "ByteCore-Diffusion",
+  "params": 187328,
+  "params_mb": 0.749312,
+  "reconstruction_accuracy": 0.9981689453125,
+  "per_modality": {
+    "audio": 0.9981697872281075,
+    "text": 1.0,
+    "image": 0.997585155069828
+  },
+  "noise": {
+    "substitute": {
+      "0.02": 0.9982452392578125,
+      "0.05": 0.9972135126590729,
+      "0.1": 0.9956653267145157
+    },
+    "insert": {
+      "0.02": 0.9985844567418098,
+      "0.05": 0.9981043860316277,
+      "0.1": 0.9971078708767891
+    },
+    "delete": {
+      "0.02": 0.9985316321253777,
+      "0.05": 0.9987123906612396,
+      "0.1": 0.9985844567418098
+    }
+  },
+  "robustness_score": 0.9989483471646845,
+  "timing_ms_per_sample": 0.2096369404998768,
+  "concept_demo": {
+    "text": {
+      "concept_written": "new:text",
+      "gen_vs_example_byte_match": 0.578125
+    },
+    "image": {
+      "concept_written": "new:image",
+      "gen_vs_example_byte_match": 0.5234375
+    },
+    "audio": {
+      "concept_written": "new:audio",
+      "gen_vs_example_byte_match": 0.5
+    }
+  }
+}

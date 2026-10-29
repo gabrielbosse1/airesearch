@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.log
+data/processed/
+runs/*_eval_*.jsonl
+runs/train*.log
+runs/eval_out.txt

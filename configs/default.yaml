@@ -1,0 +1,40 @@
+# ByteCore-Diffusion: diffusion-based multimodal model on raw bytes.
+# Philosophy: "Tokens are a crutch." Everything is raw bytes (0-255).
+# A concept bank lets the model learn new concepts without retraining
+# (memory write instead of gradient update).
+
+data:
+  train_samples: 4000
+  val_samples: 500
+  test_samples: 500
+  data_dir: data
+  processed_dir: data/processed
+  # Synthetic modality settings (all byte counts must fit in max_seq_len)
+  text_max_len: 40        # utf-8 bytes per text sample
+  img_size: 8             # grayscale image side (pixels = bytes) -> 64 bytes
+  audio_len: 64           # raw PCM bytes per audio clip
+  max_seq_len: 128        # unified byte sequence length (padded)
+
+model:
+  vocab_size: 256         # raw bytes
+  d_model: 64
+  n_layers: 3
+  n_heads: 4
+  d_ff: 256
+  max_len: 130            # max_seq_len + 1 cond token
+  diffusion_timesteps: 50
+  concept_capacity: 256   # concept bank slots
+  concept_dim: 64
+  dropout: 0.1
+
+training:
+  epochs: 6
+  batch_size: 32
+  lr: 0.001
+  device: cpu
+  seed: 42
+
+evaluation:
+  noise_levels: [0.0, 0.02, 0.05, 0.10]
+  noise_modes: [substitute, insert, delete]
+  inference_timing_batches: 10
