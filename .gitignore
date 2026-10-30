@@ -14,3 +14,6 @@ runs/user_memory/
 # Phase 15 sandbox working directories are disposable execution scratch space.
 runs/phase15/sandbox/
 runs/phase15/eval_sandbox/
+
+# Phase 16 sandbox working directories are disposable execution scratch space.
+runs/phase16/sandbox/

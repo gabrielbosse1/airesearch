@@ -1,24 +1,30 @@
-"""Interactive Phase 15 tool-use agent: the model routes, the sandbox verifies.
+"""Interactive ByteCore tool agent: two generations behind one sandbox.
 
-Loop per user turn (see AGENTS.md, Phase 15):
+**Default (Phase 16, ByteCore v2).** The foundation model is a standard causal
+byte LM and tool use is ReAct text. Each turn the model continues a plain byte
+stream and the host intercepts one ``Action:`` line with a regex::
 
-1. The user request is packed and the frozen backbone produces features.
-2. The tool head routes (no-tool / exec_python / read_file / write_file) and,
-   when a tool is chosen, decodes the argument bytes into a frame
-   ``[TOOL_CALL] name [TOOL_ARG_START] argument [TOOL_ARG_END]``.
-3. The host parses that frame (incomplete frames are never executed), runs it
-   in :class:`models.sandbox.ByteSandbox`, and injects the real result bytes
-   back as ``[TOOL_RESULT] ...`` on the next turn.
-4. The loop stops when the sandbox result is error free, when the head declines
-   to call another tool, or when ``--max-rounds`` is reached.
+    Request: Calculate 6 * 7.
+    Thought: ...
+    Action: exec_python("print(6 * 7)")
+    Observation: 42
+    Answer: 42
 
-Nothing here evaluates whether the code is *right*: the sandbox decides that and
-returns bytes. The final reply is rendered by the host from those bytes -- the
-head emits tool calls, not prose.
+The sandbox runs the call, the host appends the real ``Observation:`` (anything
+the model emitted after its action is discarded, so observations are never
+fabricated), and the model finishes with ``Answer:``. No control frames, no copy
+head, no separate result channel.
 
-Run it with:
-    python -m demo.tool_agent --policy runs/phase15/tool_policy.pt
-    python -m demo.tool_agent --policy runs/phase15/tool_policy.pt --with-memory
+**``--legacy-frames`` (Phase 15, superseded).** The frozen pointer-generator
+policy that emits ``[TOOL_CALL] name [TOOL_ARG_START] argument [TOOL_ARG_END]``
+frames. It is kept runnable for comparison and for reproducing published
+measurements; no Phase 16 module imports it.
+
+Run it with::
+
+    python -m demo.tool_agent --once "Calculate 6 * 7."
+    python -m demo.tool_agent --with-memory --user alice
+    python -m demo.tool_agent --legacy-frames --once "Calculate 6 * 7."
 """
 from __future__ import annotations
 
@@ -27,6 +33,7 @@ from dataclasses import dataclass, field
 
 import torch
 
+from models.react import ReactLoop, sandbox_observation
 from models.sandbox import STDERR_MARK, ByteSandbox, looks_failed
 from models.tool_use import (MAX_ARGUMENT_BYTES, ROUTE_NAMES, ToolCall, ToolCallPolicy,
                              find_tool_call, load_tool_policy, sanitize_result)
@@ -175,7 +182,7 @@ def build_session(args, generator):
                                      record_episodes=not args.no_episode_storage)
 
 
-def main() -> None:
+def _legacy_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--generator", default="runs/phase12/generator.pt")
     parser.add_argument("--policy", default="runs/phase15/tool_policy.pt")
@@ -192,7 +199,10 @@ def main() -> None:
     parser.add_argument("--user", default="local")
     parser.add_argument("--episode-limit", type=int, default=5)
     parser.add_argument("--no-episode-storage", action="store_true")
-    args = parser.parse_args()
+    return parser
+
+
+def main_legacy(args) -> None:
     torch.set_num_threads(1)
 
     generator = load_generator(args.generator, "cpu", args.heads)
@@ -224,6 +234,127 @@ def main() -> None:
         if agent.injected_context():
             detail.append("injected=" + repr(agent.injected_context()[:48]))
         print("  [" + ", ".join(detail) + "]")
+
+
+
+
+# ==========================================================================
+# Phase 16: ReAct agent over the foundation model.
+# ==========================================================================
+class ReactAgent:
+    """Foundation model + sandbox + optional memory prefix."""
+
+    def __init__(self, model, sandbox: ByteSandbox, *, memory=None, max_rounds: int = 3,
+                 max_new_bytes: int = 200, temperature: float = 0.0) -> None:
+        self.model = model
+        self.sandbox = sandbox
+        self.memory = memory
+        self.tools = {
+            b"exec_python": self._exec_python,
+            b"read_file": self.sandbox.read_file,
+            b"write_file": self.sandbox.write_file,
+            b"recall": self._recall,
+        }
+        self.loop = ReactLoop(model, self.tools, max_rounds=max_rounds,
+                              max_new_bytes=max_new_bytes, temperature=temperature,
+                              memory=memory.prefix if memory is not None else None)
+
+    def _exec_python(self, code: bytes) -> bytes:
+        return sandbox_observation(self.sandbox.execute_python(code))
+
+    def _recall(self, topic: bytes) -> bytes:
+        """Answer a recall action from the prefix store, never from weights."""
+        if self.memory is None:
+            return b"ERROR: memory is disabled"
+        key = topic[3:] if topic.startswith(b"my:") else topic
+        queries = (b"What is my " + key.replace(b"_", b" ") + b"?",
+                   key.replace(b":", b" ").replace(b"_", b" ") + b"?")
+        for query in queries:
+            for entry in self.memory.retrieve(query):
+                return entry.value
+        return b"ERROR: no stored fact for " + topic
+
+    def respond(self, request: bytes):
+        from models.foundation_memory import MemoryPrefixReport
+
+        run = self.loop.run(request)
+        report = MemoryPrefixReport(query=request, entries=list(self.memory.retrieve(request))
+                                    if self.memory is not None else [], prefix=b"")
+        return run, report
+
+
+def _build_prefix_memory(args) -> "object | None":
+    """Wire Phase 12 vector facts into the prefix interface (optional)."""
+    try:
+        from models.foundation_memory import PrefixMemory, VectorFactRetriever
+        from models.memory_model import MemoryModel
+        from models.vector_memory import VectorConversationMemory, load_vector_reader
+        from training.train_confidence import load_generator
+
+        generator = load_generator(args.generator, "cpu", args.heads).eval()
+        codec, reader = load_vector_reader(args.vector_reader, generator_path=args.generator)
+        bank = MemoryModel(d_model=generator.d_model, capacity=192, n_heads=generator.n_heads).eval()
+        store = VectorConversationMemory(bank, codec, args.memory)
+        retriever = VectorFactRetriever(generator, store, reader, user_id=args.user.encode(),
+                                        top_k=args.top_k)
+        return PrefixMemory(retriever, top_k=args.top_k)
+    except Exception as error:  # memory is optional; never break the agent
+        print(f"[memory unavailable: {type(error).__name__}: {error}]")
+        return None
+
+
+def main() -> None:
+    parser = _legacy_parser()
+    parser.add_argument("--model", default="runs/phase16/foundation.pt")
+    parser.add_argument("--max-new-bytes", type=int, default=200)
+    parser.add_argument("--temperature", type=float, default=0.0)
+    parser.add_argument("--top-k", type=int, default=3)
+    parser.add_argument("--once", default=None, help="run a single request and exit")
+    parser.add_argument("--legacy-frames", action="store_true",
+                        help="use the superseded Phase 15 control-frame loop")
+    args = parser.parse_args()
+    if args.legacy_frames:
+        main_legacy(args)
+        return
+
+    from models.foundation import load_foundation
+
+    torch.set_num_threads(1)
+    model = load_foundation(args.model, device="cpu")
+    sandbox = ByteSandbox(args.sandbox_dir or "runs/phase16/sandbox", timeout=args.timeout)
+    memory = _build_prefix_memory(args) if args.with_memory else None
+    agent = ReactAgent(model, sandbox, memory=memory, max_rounds=args.max_rounds,
+                       max_new_bytes=args.max_new_bytes, temperature=args.temperature)
+    print("ByteCore v2 tool agent (ReAct). The model proposes; the sandbox verifies. /quit exits.")
+
+    def once(text: str) -> None:
+        run, report = agent.respond(text.encode("utf-8"))
+        print(run.transcript.decode("utf-8", "replace"))
+        detail = [f"rounds={run.rounds}"]
+        if run.actions:
+            detail.append("calls=" + ",".join(run.actions))
+        if report.entries:
+            detail.append("memory=" + ",".join(entry.topic.decode() for entry in report.entries))
+        print("  [" + ", ".join(detail) + "]")
+
+    if args.once:
+        once(args.once)
+        sandbox.close()
+        return
+
+    while True:
+        try:
+            line = input("You: ")
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if line == "/quit":
+            break
+        if line == "/files":
+            print("Sandbox files:", sorted(path.name for path in sandbox.root.iterdir()))
+            continue
+        once(line)
+    sandbox.close()
 
 
 if __name__ == "__main__":

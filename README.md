@@ -714,3 +714,47 @@ python -m demo.tool_agent --generator runs/phase12/generator.pt --policy runs/ph
 Full validation: route **85.3%**, frame **72.1%**, call-frame **72.6%** (481 rows), decline **100.0%** (371 rows). Decline behaviour: **18/40** conversational prompts and **48/60** across all Phase 10 intents produce no tool call.
 
 **Limits.** The sandbox is hardening, not a security boundary: child processes inherit the host filesystem and network. Routing and debugging prompts are synthetic single-line Python from a fixed template pool, so these numbers are not a generalisation claim. Argument bytes come from a copy head, not from parsing the program; the policy fails when an argument is long enough to exceed its copy fidelity, and `os.listdir` requests can fall into a degenerate free-running loop. See `runs/phase15_report.md` for the full analysis, ablations and reproduction commands.
+
+## Phase 16: the scalable foundation (ByteCore v2)
+
+The pivot from prototype hacks to a foundation that can be scaled. **The model is a standard causal byte-level Transformer; verification is outsourced to the sandbox; tool use is ReAct text intercepted by a regex; memory enters as a prefix.**
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_foundation --epochs 8 --batch-size 64 --lr 0.0012
+python -m evaluation.foundation_eval
+python -m demo.tool_agent --once "Calculate 6 * 7."
+```
+
+*What was removed from the active path*
+
+| Removed | Replaced by |
+| --- | --- |
+| Pointer-generator copy head (`copy_gate`, attention-as-pointer) | plain causal attention; copying emerges as next-byte prediction |
+| Rigid `[TOOL_CALL][ARG_START]...[TOOL_ARG_END]` frames | `Action: tool("arg")` text caught by one regex |
+| Learned internal verifier | the sandbox, whose output re-enters the stream as bytes |
+| Bespoke result channels | `[MEM] ...` prefix bytes for memory, `Observation: ...` for tools |
+
+*How a turn works*
+
+1. Optional retrieval renders `[MEM] topic = value` lines in front of the request.
+2. The model continues the stream: `Thought: ...`, then `Action: exec_python("...")`.
+3. The host parses that line, runs the sandbox, **truncates** anything the model emitted after the action, and appends the real `Observation: ...`.
+4. The model produces `Answer: ...`. It never fabricates an observation.
+
+*Measurements (final-epoch checkpoint, fixed seeds)*
+
+| Check | Result | Target |
+| --- | --- | --- |
+| Next-byte accuracy, short held-out sequences | **95.03%** | >85% |
+| Next-byte accuracy, all held-out sequences | **94.63%** | -- |
+| Argument byte-exact (free-running) | **42/60** | -- |
+| Generated code that runs cleanly | **58/60** | -- |
+| Tool interception checks | **8/8** | all pass |
+| Phase 12 vector-only recall | **10/10** | 10/10 |
+| Unit test suite | **258 tests in 164.051s** | all passing |
+
+Per-segment next-byte accuracy: action 97.1, answer 92.5, observation 94.2, preamble 90.2, thought 99.2. Data: **12,160** ReAct trajectories (chat 1120, exec 5040, file 1680, memory 1120, repair 2240), instance-disjoint splits, every observation produced by the real sandbox. Model: **266,243 parameters** at `d_model=64`, 4 layers, 4 heads.
+
+*Scale.* `configs/default.yaml` exposes `d_model`, `n_layers`, `n_heads`, `d_ff` and `max_seq_len`. The `production` preset is ~87M parameters and `d_model=1024` is ~150M -- the same class, different numbers.
+
+**Limits, stated plainly.** Trajectories are synthetic and templated, and the accuracy score is dominated by format bytes: inside `Action:` lines the model gets 98.8% of punctuation and 96.7% of letters right but only **89.7% of digits**, because digits are the bytes it must copy out of the request. It learned the ReAct protocol, not literal copying -- 42/60 held-out arguments are byte-exact even though 58/60 execute cleanly. Positional embeddings are learned and absolute, so context is capped at `max_seq_len`. The sandbox is hardening, not a security boundary. Phase 15's pointer/frame stack is frozen for reproducibility and is no longer imported by any Phase 16 module. See `runs/phase16_report.md`.
