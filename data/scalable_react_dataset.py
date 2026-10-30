@@ -493,7 +493,9 @@ def dataset_stats(rows: Iterable[Trajectory]) -> dict[str, object]:
         "median_length": lengths[len(lengths) // 2],
         "max_length": lengths[-1],
         "with_memory_prefix": sum(1 for row in rows if row.memory),
-        "with_tool_call": sum(1 for row in rows if row.kind in ("exec", "repair", "file", "memory")),
+        # Detected from the bytes rather than from the kind, so a corpus added
+        # later (Phase 17's real GitHub trajectories) is counted the same way.
+        "with_tool_call": sum(1 for row in rows if b"Action: " in row.text),
     }
 
 

@@ -758,3 +758,30 @@ Per-segment next-byte accuracy: action 97.1, answer 92.5, observation 94.2, prea
 *Scale.* `configs/default.yaml` exposes `d_model`, `n_layers`, `n_heads`, `d_ff` and `max_seq_len`. The `production` preset is ~87M parameters and `d_model=1024` is ~150M -- the same class, different numbers.
 
 **Limits, stated plainly.** Trajectories are synthetic and templated, and the accuracy score is dominated by format bytes: inside `Action:` lines the model gets 98.8% of punctuation and 96.7% of letters right but only **89.7% of digits**, because digits are the bytes it must copy out of the request. It learned the ReAct protocol, not literal copying -- 42/60 held-out arguments are byte-exact even though 58/60 execute cleanly. Positional embeddings are learned and absolute, so context is capped at `max_seq_len`. The sandbox is hardening, not a security boundary. Phase 15's pointer/frame stack is frozen for reproducibility and is no longer imported by any Phase 16 module. See `runs/phase16_report.md`.
+
+## Phase 17: training on real GitHub data
+
+Phase 16's observations were real (produced by executing code) but its *requests* were invented. Phase 17 replaces the invented half: 4,476 records from ten public repositories, rendered into 4,475 ReAct trajectories whose observations are the return values of four real corpus tools.
+
+```bash
+export GITHUB_TOKEN="$(gh auth token)"
+python -m data.github_collector --max-items-per-kind 200 --output-dir data/github_raw
+python -m data.github_to_react --verify 60
+python -m data.mixed_react_dataset --output-dir runs/phase17
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.003
+python -m evaluation.github_eval --model runs/phase17/foundation.pt \
+    --baseline runs/phase16/foundation.pt
+python -m demo.github_agent --once "Summarize the project python/cpython."
+```
+
+| | Phase 16 checkpoint | Phase 17 checkpoint |
+| --- | --- | --- |
+| held-out requests | never trained on this data | trained on 3,580 real trajectories |
+| routed to the right tool | 0/448 | **n/a** |
+| argument byte-exact | 0/448 | **n/a** |
+| answer grounded in the observation | 0/448 | **n/a** |
+
+**Grounding is the hallucination test.** For each tool the evaluator extracts the fields the tool looked *up* -- a commit's author and date, a pull request's state and comment count, the repository a search hit came from, a README's character count -- keeps only those absent from the request, and checks whether the answer contains one. An answer that does cannot have been copied out of the request.
+
+**Limits.** Ten repositories, 7,666,483 characters: enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap. Observations are capped at 200 bytes, so long bodies truncate. Grounding is a substring test -- a floor on honesty, not a ceiling on correctness. Scrubbing is heuristic. Scale is unchanged: d_model 64, 4 layers, 0 parameters. See `runs/phase17_report.md`.

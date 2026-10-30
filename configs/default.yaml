@@ -96,6 +96,11 @@ foundation:
       n_heads: 2
       d_ff: 128
       max_seq_len: 256
+    # Phase 17: the test stack with room for the real GitHub trajectories,
+    # whose longest rendered sequence is 690 bytes (median 441). Everything
+    # else is unchanged, so this is the same model, not a new one.
+    github:
+      max_seq_len: 768
     # Documented scale target. Not trainable on one CPU; the code path is the
     # same class, so switching is a config change, not a rewrite.
     # ~87M parameters. Widening to d_model 1024 / d_ff 4096 (same class, same

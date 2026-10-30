@@ -207,3 +207,29 @@ python -m evaluation.foundation_eval
 python -m demo.tool_agent --once "Calculate 6 * 7."
 python -m unittest discover -s tests
 ```
+
+## Phase 17: real GitHub data (experimental, reported as measured)
+
+**Why.** Phase 16's trajectories were synthetic: templated requests, sandbox-generated observations. Every observation was real (produced by executing code) but every *request* was invented. Phase 17 replaces the invented half with 4,476 records pulled from ten public repositories.
+
+- **Collection.** `data/github_collector.py` -- stdlib `urllib` only, token from `GITHUB_TOKEN`, backoff and sleep-until-reset on 403/429, content-hash deduplication, heuristic PII scrubbing, per-repository SPDX licence recorded. 80 API requests, 7,666,483 characters, {'readme': 10, 'issue': 496, 'pr': 1970, 'commit': 2000}. Commit shas are abbreviated to 12 characters.
+- **Conversion.** `data/github_to_react.py` renders 4,475 trajectories over four corpus tools: `search_issues`, `review_pr`, `explain_commit`, `summarize_readme`. **No observation is synthesised** -- each is the return value of a real function over the corpus, and `--verify N` re-executes a sample and raises on any mismatch. Every action argument is recoverable from its request (1.0), because an argument that cannot be read out of the request would have to be invented.
+- **Mixture.** `data/mixed_react_dataset.py` mixes the synthetic corpus with the real one and splits the real rows **by record** (stable hash of the tool argument), so the held-out set contains requests the model has never seen. Train 14,780 rows / 4,437,093 bytes, of which 3,580 are real. `max_seq_len` 512 -> 768 (the `github` preset); the model is otherwise unchanged at 0 parameters.
+- **Training.** `training/train_foundation.py` gains `--data-dir` so the mixture can be trained with the same code path. 8 epochs at lr 0.003; loss 0.0000 -> 0.0000.
+- **Evaluation.** `evaluation/github_eval.py` drives `ReactLoop` with the real tools over 0 held-out rows and scores three things: **tool routing** n/a, **argument byte-exact** n/a, and **grounding** -- does the answer contain a fact that only the observation carries -- n/a. The same rows scored with the Phase 16 checkpoint, which never saw this data: routing 0/448, arguments 0/448, grounding 0/448.
+- **Demo.** `demo/github_agent.py` runs the loop with the real tools over a live request and marks which facts in the answer came from a tool.
+- **Targets.** held_out_tool_routing >= 0.90=NOT met; held_out_argument_byte_exact >= 0.80=NOT met; held_out_grounded_in_observation >= 0.60=NOT met; every_scored_observation_reproduced_by_the_tool=see report; phase12_vector_only_recall == 10/10=see report; regression_suite_green=see report.
+- **Limits.** Ten repositories, one afternoon, 7,666,483 characters -- enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap, not semantic search. Observations are capped at 200 bytes, so long bodies are truncated. Grounding is a substring test, a floor on honesty rather than a ceiling on correctness. Scrubbing is heuristic and does not guarantee the absence of personal data.
+- **Reproduce:**
+
+```bash
+export GITHUB_TOKEN="$(gh auth token)"
+python -m data.github_collector --max-items-per-kind 200 --output-dir data/github_raw
+python -m data.github_to_react --verify 60
+python -m data.mixed_react_dataset --output-dir runs/phase17
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.003
+python -m evaluation.github_eval --model runs/phase17/foundation.pt \
+    --baseline runs/phase16/foundation.pt
+python -m demo.github_agent --once "Summarize the project python/cpython."
+```

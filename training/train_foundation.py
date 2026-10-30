@@ -179,6 +179,10 @@ def main() -> None:
     parser.add_argument("--dropout", type=float, default=None)
     parser.add_argument("--limit", type=int, default=None, help="cap training trajectories")
     parser.add_argument("--rebuild", action="store_true", help="regenerate the dataset")
+    parser.add_argument("--data-dir", default=None,
+                        help="read react_{train,validation,test}.jsonl from here "
+                             "instead of generating the synthetic corpus "
+                             "(Phase 17: the synthetic + real GitHub mixture)")
     parser.add_argument("--init-from", default=None,
                         help="continue from a checkpoint instead of starting fresh")
     parser.add_argument("--device", default="cpu")
@@ -205,14 +209,21 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=True)
 
     # ---------------------------------------------------------------- data
-    paths = {split: output / f"react_{split}.jsonl" for split in ("train", "validation", "test")}
-    if args.rebuild or not all(path.exists() for path in paths.values()):
-        print("building trajectories with the real sandbox (one run per snippet)...", flush=True)
-        started = time.time()
-        built = build_all()
-        for split, rows in built.items():
-            write_jsonl(rows, paths[split])
-        print(f"dataset built in {time.time() - started:.1f}s", flush=True)
+    source = Path(args.data_dir) if args.data_dir else output
+    paths = {split: source / f"react_{split}.jsonl" for split in ("train", "validation", "test")}
+    if args.data_dir:
+        missing = [str(path) for path in paths.values() if not path.exists()]
+        if missing:
+            raise FileNotFoundError("missing dataset files: " + ", ".join(missing))
+        print(json.dumps({"dataset_source": str(source)}), flush=True)
+    else:
+        if args.rebuild or not all(path.exists() for path in paths.values()):
+            print("building trajectories with the real sandbox (one run per snippet)...", flush=True)
+            started = time.time()
+            built = build_all()
+            for split, rows in built.items():
+                write_jsonl(rows, paths[split])
+            print(f"dataset built in {time.time() - started:.1f}s", flush=True)
     raw = {split: read_jsonl(path) for split, path in paths.items()}
     if args.limit:
         raw["train"] = raw["train"][: args.limit]

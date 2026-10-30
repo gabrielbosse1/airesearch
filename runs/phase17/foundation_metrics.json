@@ -1,0 +1,137 @@
+{
+  "schema_version": 2,
+  "configuration": {
+    "vocab_size": 259,
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "max_seq_len": 768,
+    "dropout": 0.1,
+    "epochs": 8,
+    "batch_size": 64,
+    "lr": 0.0012,
+    "weight_decay": 0.01,
+    "seed": 17017,
+    "warmup_epochs": 1,
+    "device": "cpu",
+    "preset": "github",
+    "complete": false
+  },
+  "parameters": 282627,
+  "dataset": {
+    "train": {
+      "count": 14780,
+      "by_kind": {
+        "github_pr": 1597,
+        "exec": 5040,
+        "file": 1680,
+        "github_commit": 1574,
+        "chat": 1120,
+        "repair": 2240,
+        "memory": 1120,
+        "github_issue": 402,
+        "github_readme": 7
+      },
+      "bytes": 4437093,
+      "min_length": 81,
+      "median_length": 348,
+      "max_length": 690,
+      "with_memory_prefix": 1120,
+      "with_tool_call": 13660
+    },
+    "validation": {
+      "count": 927,
+      "by_kind": {
+        "exec": 220,
+        "chat": 40,
+        "memory": 50,
+        "repair": 100,
+        "github_issue": 47,
+        "file": 70,
+        "github_commit": 215,
+        "github_pr": 184,
+        "github_readme": 1
+      },
+      "bytes": 324220,
+      "min_length": 87,
+      "median_length": 397,
+      "max_length": 690,
+      "with_memory_prefix": 50,
+      "with_tool_call": 887
+    },
+    "test": {
+      "count": 928,
+      "by_kind": {
+        "exec": 220,
+        "chat": 40,
+        "memory": 50,
+        "repair": 100,
+        "github_commit": 211,
+        "file": 70,
+        "github_pr": 189,
+        "github_issue": 46,
+        "github_readme": 2
+      },
+      "bytes": 322648,
+      "min_length": 87,
+      "median_length": 396,
+      "max_length": 678,
+      "with_memory_prefix": 50,
+      "with_tool_call": 888
+    }
+  },
+  "longest_trajectory_bytes": 692,
+  "epochs": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.0012,
+      "train_loss": 0.694243786549359,
+      "train_next_byte_accuracy": 0.7939314531209672,
+      "gradient_norm": 0.5208959579467773,
+      "validation": {
+        "loss": 0.8739670515060425,
+        "next_byte_accuracy": 0.7434268192540605,
+        "tokens": 325147
+      },
+      "elapsed_s": 446.2
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 0.001154327719506772,
+      "train_loss": 0.6739149816987807,
+      "train_next_byte_accuracy": 0.7998397528411075,
+      "gradient_norm": 0.5092310905456543,
+      "validation": {
+        "loss": 0.8701410333315531,
+        "next_byte_accuracy": 0.7437189947931243,
+        "tokens": 325147
+      },
+      "elapsed_s": 888.2
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 0.0010242640687119283,
+      "train_loss": 0.6563165028759262,
+      "train_next_byte_accuracy": 0.8047772252263261,
+      "gradient_norm": 0.5451461672782898,
+      "validation": {
+        "loss": 0.8385119279225667,
+        "next_byte_accuracy": 0.7528471737398776,
+        "tokens": 325147
+      },
+      "elapsed_s": 1330.0
+    }
+  ],
+  "final_validation": {
+    "loss": 0.8385119279225667,
+    "next_byte_accuracy": 0.7528471737398776,
+    "tokens": 325147
+  },
+  "final_test": null,
+  "checkpoint": {
+    "path": "runs/phase17/foundation.pt"
+  },
+  "sample_generation": null,
+  "selection": "fixed final epoch; no test-based checkpoint selection"
+}

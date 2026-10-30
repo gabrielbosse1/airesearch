@@ -1,0 +1,105 @@
+{
+  "collected_at": "2026-10-30T19:09:17Z",
+  "records": 4476,
+  "repositories": [
+    "pytorch/pytorch",
+    "tensorflow/tensorflow",
+    "huggingface/transformers",
+    "microsoft/vscode",
+    "facebook/react",
+    "python/cpython",
+    "rust-lang/rust",
+    "scikit-learn/scikit-learn",
+    "home-assistant/core",
+    "denoland/deno"
+  ],
+  "per_repository": {
+    "pytorch/pytorch": {
+      "readme": 1,
+      "issue": 42,
+      "pr": 200,
+      "commit": 200
+    },
+    "tensorflow/tensorflow": {
+      "readme": 1,
+      "issue": 15,
+      "pr": 200,
+      "commit": 200
+    },
+    "huggingface/transformers": {
+      "readme": 1,
+      "issue": 39,
+      "pr": 200,
+      "commit": 200
+    },
+    "microsoft/vscode": {
+      "readme": 1,
+      "issue": 73,
+      "pr": 199,
+      "commit": 200
+    },
+    "facebook/react": {
+      "readme": 1,
+      "issue": 39,
+      "pr": 185,
+      "commit": 200
+    },
+    "python/cpython": {
+      "readme": 1,
+      "issue": 48,
+      "pr": 193,
+      "commit": 200
+    },
+    "rust-lang/rust": {
+      "readme": 1,
+      "issue": 52,
+      "pr": 196,
+      "commit": 200
+    },
+    "scikit-learn/scikit-learn": {
+      "readme": 1,
+      "issue": 46,
+      "pr": 200,
+      "commit": 200
+    },
+    "home-assistant/core": {
+      "readme": 1,
+      "issue": 60,
+      "pr": 200,
+      "commit": 200
+    },
+    "denoland/deno": {
+      "readme": 1,
+      "issue": 82,
+      "pr": 200,
+      "commit": 200
+    }
+  },
+  "licenses": {
+    "pytorch/pytorch": "NOASSERTION",
+    "tensorflow/tensorflow": "Apache-2.0",
+    "huggingface/transformers": "Apache-2.0",
+    "microsoft/vscode": "MIT",
+    "facebook/react": "MIT",
+    "python/cpython": "NOASSERTION",
+    "rust-lang/rust": "Apache-2.0",
+    "scikit-learn/scikit-learn": "BSD-3-Clause",
+    "home-assistant/core": "Apache-2.0",
+    "denoland/deno": "MIT"
+  },
+  "by_type": {
+    "readme": 10,
+    "issue": 496,
+    "pr": 1970,
+    "commit": 2000
+  },
+  "characters": 7666483,
+  "requests_made": 80,
+  "authenticated": true,
+  "rate_limit": {
+    "limit": 5000,
+    "remaining": 4905
+  },
+  "scrubbing": "heuristic: e-mail addresses, URLs and long opaque blobs are replaced with placeholders. This reduces accidental personal data; it does not guarantee its absence.",
+  "provenance": "Content belongs to its respective repositories under the recorded SPDX licences. Redistribution terms follow those licences."
+}
