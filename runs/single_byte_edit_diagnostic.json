@@ -1,0 +1,221 @@
+{
+  "source_bytes": [
+    72,
+    101,
+    108,
+    108,
+    111,
+    32,
+    87,
+    111,
+    114,
+    108
+  ],
+  "source_text": "Hello Worl",
+  "requested_position_zero_based": 9,
+  "requested_old_byte": 108,
+  "requested_new_byte": 100,
+  "target_bytes": [
+    72,
+    101,
+    108,
+    108,
+    111,
+    32,
+    87,
+    111,
+    114,
+    100
+  ],
+  "target_text": "Hello Word",
+  "instruction": "Replace the byte at zero-based position 9 from 108 ('l') to 100 ('d').",
+  "diffusion": {
+    "native_generate_accepts_edit_mask": false,
+    "official_instruction_directed_replace": {
+      "status": "unsupported",
+      "error": "diffusion supports denoising, not instruction-directed substitution",
+      "output_bytes": null
+    },
+    "phase7_mask_conditioned_feature_available": false,
+    "host_mask_fallback": {
+      "seed": 42,
+      "output_bytes": [
+        72,
+        101,
+        108,
+        108,
+        111,
+        32,
+        87,
+        111,
+        114,
+        0
+      ],
+      "output_text": "Hello Wor\u0000",
+      "predicted_byte_at_position_9": 0,
+      "exact": false,
+      "limitation": "Host clamps all other positions; the mask is not a model input. The instruction is averaged into an untrained concept vector."
+    }
+  },
+  "cognitive_selected": {
+    "checkpoint": "runs/phase8/generator.pt",
+    "output_bytes": [
+      72,
+      101,
+      108,
+      108,
+      63,
+      32,
+      87,
+      111,
+      114,
+      108
+    ],
+    "output_text": "Hell? Worl",
+    "done": true,
+    "halt_reason": "done",
+    "steps": 5,
+    "exact": false,
+    "actions": [
+      {
+        "token": 259,
+        "start": 0,
+        "end": 10,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      },
+      {
+        "token": 261,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      },
+      {
+        "token": 262,
+        "start": 4,
+        "end": 5,
+        "kind": "replace",
+        "data_hex": "3f",
+        "destination": 1,
+        "think_steps": 1
+      },
+      {
+        "token": 260,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      },
+      {
+        "token": 263,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      }
+    ]
+  },
+  "cognitive_final_epoch": {
+    "checkpoint": "runs/phase8/last_epoch.pt",
+    "output_bytes": [
+      72,
+      101,
+      108,
+      108,
+      63,
+      32,
+      87,
+      111,
+      114,
+      108
+    ],
+    "output_text": "Hell? Worl",
+    "done": true,
+    "halt_reason": "done",
+    "steps": 5,
+    "exact": false,
+    "actions": [
+      {
+        "token": 259,
+        "start": 0,
+        "end": 10,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      },
+      {
+        "token": 261,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      },
+      {
+        "token": 262,
+        "start": 4,
+        "end": 5,
+        "kind": "replace",
+        "data_hex": "3f",
+        "destination": 1,
+        "think_steps": 1
+      },
+      {
+        "token": 260,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      },
+      {
+        "token": 263,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1
+      }
+    ]
+  },
+  "memory": {
+    "checkpoint": "runs/real_traces/memory.pt",
+    "existing_memory": {
+      "found": false,
+      "exact": false,
+      "output_bytes": null
+    },
+    "after_explicit_write_and_reload": {
+      "found": true,
+      "output_bytes": [
+        72,
+        101,
+        108,
+        108,
+        111,
+        32,
+        87,
+        111,
+        114,
+        100
+      ],
+      "output_text": "Hello Word",
+      "exact": true,
+      "guard_failed_slots": 0,
+      "limitation": "Stored the exact answer first; this is lookup, not model-generated editing."
+    }
+  }
+}

@@ -1,0 +1,340 @@
+{
+  "source_bytes": [
+    72,
+    101,
+    108,
+    108,
+    111,
+    32,
+    87,
+    111,
+    114,
+    108
+  ],
+  "source_text": "Hello Worl",
+  "target_bytes_for_scoring": [
+    72,
+    101,
+    108,
+    108,
+    111,
+    32,
+    87,
+    111,
+    114,
+    100
+  ],
+  "target_text": "Hello Word",
+  "instruction": "Replace the byte at zero-based position 9 from 108 ('l') to 100 ('d').",
+  "requested_position_zero_based": 9,
+  "requested_old_byte": 108,
+  "requested_new_byte": 100,
+  "diffusion_native": {
+    "checkpoint": "runs/phase9/diffusion/model.pt",
+    "seed": 42,
+    "mask": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "requested_bytes_at_mask": [
+      100
+    ],
+    "predicted_masked_byte": 100,
+    "output_bytes": [
+      72,
+      101,
+      108,
+      108,
+      111,
+      32,
+      87,
+      111,
+      114,
+      100
+    ],
+    "output_text": "Hello Word",
+    "exact": true,
+    "sampling_steps": 50,
+    "unmasked_embedding_preserved": true,
+    "unmasked_bytes_preserved": true,
+    "model_prediction_not_request_overwrite": true,
+    "counterfactual_request_101": {
+      "requested_byte": 101,
+      "predicted_byte": 101,
+      "output_bytes": [
+        72,
+        101,
+        108,
+        108,
+        111,
+        32,
+        87,
+        111,
+        114,
+        101
+      ]
+    },
+    "mask_only_no_requested_byte": {
+      "predicted_byte": 127,
+      "output_bytes": [
+        72,
+        101,
+        108,
+        108,
+        111,
+        32,
+        87,
+        111,
+        114,
+        127
+      ],
+      "note": "A mask alone does not specify which replacement is desired."
+    },
+    "repeated_samples": {
+      "seed": 59,
+      "samples": 32,
+      "exact_requested_byte": 32,
+      "unmasked_preserved": true
+    }
+  },
+  "cognitive_natural_only": {
+    "checkpoint": "runs/phase9/generator.pt",
+    "in_training_data": true,
+    "memory": false,
+    "controller": false,
+    "output_bytes": [
+      72,
+      101,
+      108,
+      108,
+      111,
+      32,
+      87,
+      111,
+      114,
+      100
+    ],
+    "output_text": "Hello Word",
+    "done": true,
+    "halt_reason": "done",
+    "steps": 5,
+    "exact": true,
+    "actions": [
+      {
+        "token": 259,
+        "start": 0,
+        "end": 10,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          259
+        ]
+      },
+      {
+        "token": 261,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          261
+        ]
+      },
+      {
+        "token": 262,
+        "start": 9,
+        "end": 10,
+        "kind": "replace",
+        "data_hex": "64",
+        "destination": 2,
+        "think_steps": 1,
+        "argument_bytes": [
+          9,
+          2,
+          100
+        ],
+        "control_and_arguments": [
+          262,
+          9,
+          2,
+          100
+        ]
+      },
+      {
+        "token": 260,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          260
+        ]
+      },
+      {
+        "token": 263,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          263
+        ]
+      }
+    ]
+  },
+  "cognitive_explicit_request": {
+    "checkpoint": "runs/phase12/generator.pt",
+    "inherited_training_example": true,
+    "request_argument_bytes": [
+      9,
+      2,
+      100
+    ],
+    "memory": false,
+    "controller": false,
+    "output_bytes": [
+      72,
+      101,
+      108,
+      108,
+      111,
+      32,
+      87,
+      111,
+      114,
+      100
+    ],
+    "output_text": "Hello Word",
+    "done": true,
+    "halt_reason": "done",
+    "steps": 5,
+    "exact": true,
+    "actions": [
+      {
+        "token": 259,
+        "start": 0,
+        "end": 10,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          259
+        ]
+      },
+      {
+        "token": 261,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          261
+        ]
+      },
+      {
+        "token": 262,
+        "start": 9,
+        "end": 10,
+        "kind": "replace",
+        "data_hex": "64",
+        "destination": 2,
+        "think_steps": 1,
+        "argument_bytes": [
+          9,
+          2,
+          100
+        ],
+        "control_and_arguments": [
+          262,
+          9,
+          2,
+          100
+        ]
+      },
+      {
+        "token": 260,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          260
+        ]
+      },
+      {
+        "token": 263,
+        "start": null,
+        "end": null,
+        "kind": null,
+        "data_hex": "",
+        "destination": null,
+        "think_steps": 1,
+        "argument_bytes": null,
+        "control_and_arguments": [
+          263
+        ]
+      }
+    ]
+  },
+  "memory": {
+    "checkpoint": "runs/real_traces/memory.pt",
+    "existing_memory": {
+      "found": false,
+      "exact": false,
+      "output_bytes": null
+    },
+    "after_explicit_write_and_reload": {
+      "found": true,
+      "output_bytes": [
+        72,
+        101,
+        108,
+        108,
+        111,
+        32,
+        87,
+        111,
+        114,
+        100
+      ],
+      "output_text": "Hello Word",
+      "exact": true,
+      "guard_failed_slots": 0,
+      "limitation": "Stored the exact answer first; this is lookup, not model-generated editing."
+    }
+  },
+  "pre_phase9_reference": {
+    "source": "runs/single_byte_edit_diagnostic.json",
+    "native_mask_supported_then": false,
+    "host_inpainting_byte_then": 0,
+    "cognitive_output_then": "Hell? Worl"
+  }
+}

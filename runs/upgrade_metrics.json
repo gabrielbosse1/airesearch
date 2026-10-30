@@ -1,0 +1,77 @@
+{
+  "cognitive_toy_held_out": {
+    "count": 256,
+    "done_fraction": 1.0,
+    "exact_task_fraction": 1.0,
+    "by_command": {
+      "I": {
+        "correct": 64,
+        "count": 64
+      },
+      "D": {
+        "correct": 64,
+        "count": 64
+      },
+      "R": {
+        "correct": 64,
+        "count": 64
+      },
+      "M": {
+        "correct": 64,
+        "count": 64
+      }
+    },
+    "ms_per_task": 19.968630332030557
+  },
+  "procedure": {
+    "round_trip": true,
+    "latent_steps": 2,
+    "slot": 24
+  },
+  "graph": {
+    "active": "conflict",
+    "expired": "unknown",
+    "path_slots": [
+      16,
+      17,
+      18
+    ]
+  },
+  "confidence_denoising_test": {
+    "count": 13902,
+    "correct_fraction": 0.6088332533836365,
+    "mean_confidence": 0.6200449466705322,
+    "nll": 0.300376832485199,
+    "brier": 0.09228378534317017,
+    "ece_10_bins": 0.021464732330059633
+  },
+  "confidence_next_byte_test": {
+    "count": 13602,
+    "correct_fraction": 0.01007204782217741,
+    "mean_confidence": 0.008254106156527996,
+    "nll": 0.046649422496557236,
+    "brier": 0.009641613811254501,
+    "ece_10_bins": 0.0023145174782257527
+  },
+  "adaptive_sampling_unvalidated_example": {
+    "steps": [
+      5,
+      9,
+      5,
+      6,
+      7,
+      5,
+      5,
+      10
+    ],
+    "mean_steps": 6.5,
+    "full_schedule_steps": 50,
+    "warnings": [
+      "Confidence was calibrated for a different task, not diffusion_sampling; validate and recalibrate for this halting use."
+    ]
+  },
+  "parameters": {
+    "generator_checkpoint_architecture": 344408,
+    "diffusion": 195905
+  }
+}

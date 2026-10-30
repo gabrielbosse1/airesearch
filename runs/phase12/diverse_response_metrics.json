@@ -1,0 +1,809 @@
+{
+  "configuration": {
+    "generator": "runs/phase12/generator.pt",
+    "generator_heads": 4,
+    "pairs": "data/real_edit_pairs.jsonl",
+    "processed_dir": "data/processed",
+    "output_dir": "runs/phase12",
+    "epochs": 70,
+    "steps_per_epoch": 25,
+    "prompts_per_batch": 8,
+    "styles_per_prompt": 8,
+    "hidden_dim": 96,
+    "diversity_weight": 0.05,
+    "lr": 0.0015,
+    "seed": 121230,
+    "threads": 1
+  },
+  "generator_sha256": "96b53fb369c20a552781d098906ddcf3e3a63050d66487a6762b77a8bca807e1",
+  "decoder_sha256": "54cb4f6bfc6969d4a29b0c4647bfd70fcf10af63b247cca30f8d97c3c6df508b",
+  "guard_fingerprint": "18802a621b9b3aac6d8eee243bf047c247b90d4a18bb88f3da811d593225a08b",
+  "preflight": {
+    "training_prompts": 32,
+    "styles": 32,
+    "blocked_prompts": 0,
+    "protected_hashes": 4078
+  },
+  "selected_epoch": 54,
+  "selection_rule": "validation teacher-forced sequence accuracy, then validation NLL",
+  "validation": {
+    "nll": 0.005243626888841391,
+    "teacher_sequence_exact": 64,
+    "sequences": 64,
+    "teacher_sequence_accuracy": 1.0
+  },
+  "decoder_parameters": 135873,
+  "epochs": [
+    {
+      "epoch": 1,
+      "train_nll": 3.8507720184326173,
+      "diversity_loss": 0.9830758118629456,
+      "validation": {
+        "nll": 2.968339443206787,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 2,
+      "train_nll": 2.767000789642334,
+      "diversity_loss": 0.9142543387413025,
+      "validation": {
+        "nll": 2.5269618034362793,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 3,
+      "train_nll": 2.3047659587860108,
+      "diversity_loss": 0.6767600989341735,
+      "validation": {
+        "nll": 2.0777933597564697,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 4,
+      "train_nll": 1.8945993709564208,
+      "diversity_loss": 0.4696091091632843,
+      "validation": {
+        "nll": 1.7143865823745728,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 5,
+      "train_nll": 1.565382981300354,
+      "diversity_loss": 0.36186284899711607,
+      "validation": {
+        "nll": 1.4005329608917236,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 6,
+      "train_nll": 1.2630870151519775,
+      "diversity_loss": 0.28632805585861204,
+      "validation": {
+        "nll": 1.1139262914657593,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 7,
+      "train_nll": 0.9901039838790894,
+      "diversity_loss": 0.23295147597789764,
+      "validation": {
+        "nll": 0.8610863089561462,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 8,
+      "train_nll": 0.7571217918395996,
+      "diversity_loss": 0.1927603477239609,
+      "validation": {
+        "nll": 0.6535589694976807,
+        "teacher_sequence_exact": 2,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.03125
+      }
+    },
+    {
+      "epoch": 9,
+      "train_nll": 0.5653895175457001,
+      "diversity_loss": 0.16154981553554534,
+      "validation": {
+        "nll": 0.4873955249786377,
+        "teacher_sequence_exact": 4,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0625
+      }
+    },
+    {
+      "epoch": 10,
+      "train_nll": 0.42816608667373657,
+      "diversity_loss": 0.13975880444049835,
+      "validation": {
+        "nll": 0.3657432794570923,
+        "teacher_sequence_exact": 11,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.171875
+      }
+    },
+    {
+      "epoch": 11,
+      "train_nll": 0.3172742164134979,
+      "diversity_loss": 0.1232270509004593,
+      "validation": {
+        "nll": 0.27617472410202026,
+        "teacher_sequence_exact": 23,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.359375
+      }
+    },
+    {
+      "epoch": 12,
+      "train_nll": 0.2418834412097931,
+      "diversity_loss": 0.1129333570599556,
+      "validation": {
+        "nll": 0.21283599734306335,
+        "teacher_sequence_exact": 38,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.59375
+      }
+    },
+    {
+      "epoch": 13,
+      "train_nll": 0.19133497655391693,
+      "diversity_loss": 0.10307574272155762,
+      "validation": {
+        "nll": 0.1659184843301773,
+        "teacher_sequence_exact": 44,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.6875
+      }
+    },
+    {
+      "epoch": 14,
+      "train_nll": 0.1486807358264923,
+      "diversity_loss": 0.0977572125196457,
+      "validation": {
+        "nll": 0.13175185024738312,
+        "teacher_sequence_exact": 60,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.9375
+      }
+    },
+    {
+      "epoch": 15,
+      "train_nll": 0.12363006860017776,
+      "diversity_loss": 0.09590318620204925,
+      "validation": {
+        "nll": 0.11155859380960464,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 16,
+      "train_nll": 0.09979014873504638,
+      "diversity_loss": 0.09283947646617889,
+      "validation": {
+        "nll": 0.08913750946521759,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 17,
+      "train_nll": 0.08105433762073516,
+      "diversity_loss": 0.09076084434986115,
+      "validation": {
+        "nll": 0.07482622563838959,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 18,
+      "train_nll": 0.06929378479719162,
+      "diversity_loss": 0.08723467946052552,
+      "validation": {
+        "nll": 0.06378006935119629,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 19,
+      "train_nll": 0.05899957701563835,
+      "diversity_loss": 0.08688357770442963,
+      "validation": {
+        "nll": 0.05502093583345413,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 20,
+      "train_nll": 0.05140222504734993,
+      "diversity_loss": 0.085295150578022,
+      "validation": {
+        "nll": 0.048300664871931076,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 21,
+      "train_nll": 0.045005334615707396,
+      "diversity_loss": 0.0844364157319069,
+      "validation": {
+        "nll": 0.042514558881521225,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 22,
+      "train_nll": 0.039619972556829454,
+      "diversity_loss": 0.08513650417327881,
+      "validation": {
+        "nll": 0.03789709135890007,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 23,
+      "train_nll": 0.03588580265641213,
+      "diversity_loss": 0.08426390290260315,
+      "validation": {
+        "nll": 0.03422904014587402,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 24,
+      "train_nll": 0.03233964830636978,
+      "diversity_loss": 0.08454307675361633,
+      "validation": {
+        "nll": 0.0309032890945673,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 25,
+      "train_nll": 0.029360714182257653,
+      "diversity_loss": 0.08310004502534866,
+      "validation": {
+        "nll": 0.028143685311079025,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 26,
+      "train_nll": 0.02668922521173954,
+      "diversity_loss": 0.08116478383541108,
+      "validation": {
+        "nll": 0.025645416229963303,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 27,
+      "train_nll": 0.02431344471871853,
+      "diversity_loss": 0.08171984642744064,
+      "validation": {
+        "nll": 0.023532353341579437,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 28,
+      "train_nll": 0.02254452832043171,
+      "diversity_loss": 0.08176691383123398,
+      "validation": {
+        "nll": 0.021622970700263977,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 29,
+      "train_nll": 0.020651617646217348,
+      "diversity_loss": 0.08186103105545044,
+      "validation": {
+        "nll": 0.020203031599521637,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 30,
+      "train_nll": 0.019469261318445206,
+      "diversity_loss": 0.07989180445671082,
+      "validation": {
+        "nll": 0.018482647836208344,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 31,
+      "train_nll": 0.017664859965443612,
+      "diversity_loss": 0.08050468653440475,
+      "validation": {
+        "nll": 0.017132679000496864,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 32,
+      "train_nll": 0.016330882497131823,
+      "diversity_loss": 0.08156394302845,
+      "validation": {
+        "nll": 0.015949875116348267,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 33,
+      "train_nll": 0.015193318799138069,
+      "diversity_loss": 0.08273665428161621,
+      "validation": {
+        "nll": 0.014864493161439896,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 34,
+      "train_nll": 0.014396236389875411,
+      "diversity_loss": 0.08059894651174546,
+      "validation": {
+        "nll": 0.013884407468140125,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 35,
+      "train_nll": 0.013206439949572086,
+      "diversity_loss": 0.08271622866392135,
+      "validation": {
+        "nll": 0.01303141564130783,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 36,
+      "train_nll": 0.012535612732172012,
+      "diversity_loss": 0.0819317027926445,
+      "validation": {
+        "nll": 0.012302852235734463,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 37,
+      "train_nll": 0.011809568665921689,
+      "diversity_loss": 0.08252505749464036,
+      "validation": {
+        "nll": 0.011582974344491959,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 38,
+      "train_nll": 0.011051140800118446,
+      "diversity_loss": 0.08070397526025772,
+      "validation": {
+        "nll": 0.010980786755681038,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 39,
+      "train_nll": 0.01057277549058199,
+      "diversity_loss": 0.07951901376247406,
+      "validation": {
+        "nll": 0.010397247038781643,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 40,
+      "train_nll": 0.010000340417027473,
+      "diversity_loss": 0.08097533524036407,
+      "validation": {
+        "nll": 0.009834411554038525,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 41,
+      "train_nll": 0.009630132094025612,
+      "diversity_loss": 0.07924315333366394,
+      "validation": {
+        "nll": 0.009349360130727291,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 42,
+      "train_nll": 0.00904137771576643,
+      "diversity_loss": 0.07924766272306442,
+      "validation": {
+        "nll": 0.008938116952776909,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 43,
+      "train_nll": 0.008701751604676247,
+      "diversity_loss": 0.08173261851072311,
+      "validation": {
+        "nll": 0.008573012426495552,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 44,
+      "train_nll": 0.008217720203101636,
+      "diversity_loss": 0.08008324325084687,
+      "validation": {
+        "nll": 0.00801861472427845,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 45,
+      "train_nll": 0.0077617519721388814,
+      "diversity_loss": 0.08007790267467499,
+      "validation": {
+        "nll": 0.00764476926997304,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 46,
+      "train_nll": 0.007466380372643471,
+      "diversity_loss": 0.0799979954957962,
+      "validation": {
+        "nll": 0.0073203458450734615,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 47,
+      "train_nll": 0.007015208452939987,
+      "diversity_loss": 0.08145542353391648,
+      "validation": {
+        "nll": 0.006978635676205158,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 48,
+      "train_nll": 0.006814001183956861,
+      "diversity_loss": 0.08089770942926407,
+      "validation": {
+        "nll": 0.00665665278211236,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 49,
+      "train_nll": 0.0065052731335163115,
+      "diversity_loss": 0.07890509605407715,
+      "validation": {
+        "nll": 0.006395369302481413,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 50,
+      "train_nll": 0.006241137199103832,
+      "diversity_loss": 0.07953420132398606,
+      "validation": {
+        "nll": 0.006115955766290426,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 51,
+      "train_nll": 0.005915531795471907,
+      "diversity_loss": 0.08207375049591065,
+      "validation": {
+        "nll": 0.00587069196626544,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 52,
+      "train_nll": 0.005699687879532575,
+      "diversity_loss": 0.08035466372966767,
+      "validation": {
+        "nll": 0.005655327811837196,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 53,
+      "train_nll": 0.005444541200995445,
+      "diversity_loss": 0.08166088968515396,
+      "validation": {
+        "nll": 0.005430468823760748,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 54,
+      "train_nll": 0.005218625515699387,
+      "diversity_loss": 0.08056770592927932,
+      "validation": {
+        "nll": 0.005243626888841391,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 55,
+      "train_nll": 0.05676989510655403,
+      "diversity_loss": 0.08260049998760223,
+      "validation": {
+        "nll": 0.8721240758895874,
+        "teacher_sequence_exact": 0,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.0
+      }
+    },
+    {
+      "epoch": 56,
+      "train_nll": 0.5084543615579605,
+      "diversity_loss": 0.1153898897767067,
+      "validation": {
+        "nll": 0.2129431962966919,
+        "teacher_sequence_exact": 14,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 0.21875
+      }
+    },
+    {
+      "epoch": 57,
+      "train_nll": 0.11490836754441261,
+      "diversity_loss": 0.093271144926548,
+      "validation": {
+        "nll": 0.05948757007718086,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 58,
+      "train_nll": 0.04076152101159096,
+      "diversity_loss": 0.08441953480243683,
+      "validation": {
+        "nll": 0.03136376291513443,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 59,
+      "train_nll": 0.026557948887348175,
+      "diversity_loss": 0.08152701884508133,
+      "validation": {
+        "nll": 0.023403383791446686,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 60,
+      "train_nll": 0.020720122680068016,
+      "diversity_loss": 0.08321597635746002,
+      "validation": {
+        "nll": 0.019384032115340233,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 61,
+      "train_nll": 0.017407973669469355,
+      "diversity_loss": 0.0815467408299446,
+      "validation": {
+        "nll": 0.016591520980000496,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 62,
+      "train_nll": 0.015281142182648182,
+      "diversity_loss": 0.08089705884456634,
+      "validation": {
+        "nll": 0.014557966031134129,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 63,
+      "train_nll": 0.013387056142091751,
+      "diversity_loss": 0.0817052286863327,
+      "validation": {
+        "nll": 0.012831836007535458,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 64,
+      "train_nll": 0.011849715262651444,
+      "diversity_loss": 0.08034324437379838,
+      "validation": {
+        "nll": 0.011622746475040913,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 65,
+      "train_nll": 0.010641856044530868,
+      "diversity_loss": 0.0820556715130806,
+      "validation": {
+        "nll": 0.01053223293274641,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 66,
+      "train_nll": 0.009875100553035737,
+      "diversity_loss": 0.08153711199760437,
+      "validation": {
+        "nll": 0.009688020683825016,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 67,
+      "train_nll": 0.008957687355577946,
+      "diversity_loss": 0.08209087461233139,
+      "validation": {
+        "nll": 0.008928222581744194,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 68,
+      "train_nll": 0.008405275419354439,
+      "diversity_loss": 0.07922058939933777,
+      "validation": {
+        "nll": 0.008285073563456535,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 69,
+      "train_nll": 0.007873900346457957,
+      "diversity_loss": 0.08038419246673584,
+      "validation": {
+        "nll": 0.007748005446046591,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    },
+    {
+      "epoch": 70,
+      "train_nll": 0.007325480990111828,
+      "diversity_loss": 0.08035958051681519,
+      "validation": {
+        "nll": 0.007271080743521452,
+        "teacher_sequence_exact": 64,
+        "sequences": 64,
+        "teacher_sequence_accuracy": 1.0
+      }
+    }
+  ],
+  "limitations": "Synthetic fixed style corpus: surface variety is not evidence of semantic quality. Loss uses soft predicted distributions, not discrete sampled token IDs."
+}

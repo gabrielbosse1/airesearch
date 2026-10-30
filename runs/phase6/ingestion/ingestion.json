@@ -1,0 +1,14 @@
+{
+  "count": 10,
+  "total_optimal_byte_edits": 15,
+  "co_training": [],
+  "known_real_heldout_records": 12,
+  "known_synthetic_heldout_records": 1000,
+  "holdout_audit": {
+    "checked_slots": 10,
+    "failed_slots": 0,
+    "failures": [],
+    "policy_fingerprint": "0fd9bc6c620a47785c331a8508a2977379d8339fe821c847c5e0e0ff04f8ac6b"
+  },
+  "warning": "Host-directed trace replay is not learned edit generation; exact hashes do not detect near-duplicates."
+}

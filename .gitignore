@@ -1,7 +1,12 @@
 __pycache__/
+.venv/
 *.pyc
 *.log
 data/processed/
 runs/*_eval_*.jsonl
 runs/train*.log
 runs/eval_out.txt
+# Temporary corrupted evaluation datasets can be regenerated.
+runs/**/_eval_noise_*.jsonl
+# Local conversation memories may contain private user data.
+runs/user_memory/

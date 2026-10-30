@@ -33,8 +33,42 @@ training:
   lr: 0.001
   device: cpu
   seed: 42
+  # Optional training-only alignment is disabled by default; legacy Gaussian objective.
+  alignment_loss_weight: 0.0
+  alignment_gamma: 0.02
+  edit_noise_probability: 0.0
+  edit_noise_fraction: 0.10
 
 evaluation:
   noise_levels: [0.0, 0.02, 0.05, 0.10]
   noise_modes: [substitute, insert, delete]
   inference_timing_batches: 10
+
+# Phase 5 confidence thresholds (diagnostic-only; adaptive halting stays off).
+phase5_calibration:
+  adaptive_halting_enabled: false
+  source: validation_selection; thresholds require independent deployment validation
+  diffusion_denoising_thresholds:
+    '0.90': null
+    '0.95': null
+    '0.99': null
+  generator_next_byte_thresholds:
+    '0.90': null
+    '0.95': null
+    '0.99': null
+# End Phase 5 confidence thresholds.
+
+# Config-driven halting is wired to both APIs but fails closed unless a
+# checkpoint has matching task-scoped calibration and an explicit threshold.
+# Independent quality validation is still the caller's responsibility.
+adaptive_halting:
+  diffusion_sampling:
+    enabled: false
+    confidence_threshold: null
+    min_steps: 1
+    confidence_reduction: min
+  thought:
+    enabled: false
+    confidence_threshold: null
+    min_thought_steps: 1
+    max_thought_steps: 1

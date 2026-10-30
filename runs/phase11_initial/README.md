@@ -1,0 +1,1 @@
+Initial Phase 11 decoder retained as a developmental baseline. Its first retention fixtures were inspected and must not be described as a pristine final test. The original metric used substring matching and overcounted Amara inside Amarara; use whole-value boundaries for final evaluation.

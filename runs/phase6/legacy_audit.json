@@ -1,0 +1,77 @@
+{
+  "historical_real_trace_memory": {
+    "sha256_before": "4baadc0504f56292a3c3af9fe1d4dd3a723184ba781d378437d34eaf422d3bce",
+    "exact_heldout_pairs_found": 12,
+    "heldout_slots": [
+      {
+        "slot": 10,
+        "id": "validation-code-01",
+        "split": "validation"
+      },
+      {
+        "slot": 11,
+        "id": "validation-code-02",
+        "split": "validation"
+      },
+      {
+        "slot": 12,
+        "id": "validation-code-03",
+        "split": "validation"
+      },
+      {
+        "slot": 13,
+        "id": "validation-code-04",
+        "split": "validation"
+      },
+      {
+        "slot": 14,
+        "id": "test-code-01",
+        "split": "test"
+      },
+      {
+        "slot": 15,
+        "id": "test-code-02",
+        "split": "test"
+      },
+      {
+        "slot": 16,
+        "id": "test-code-03",
+        "split": "test"
+      },
+      {
+        "slot": 17,
+        "id": "test-code-04",
+        "split": "test"
+      },
+      {
+        "slot": 18,
+        "id": "test-code-05",
+        "split": "test"
+      },
+      {
+        "slot": 19,
+        "id": "test-code-06",
+        "split": "test"
+      },
+      {
+        "slot": 20,
+        "id": "test-text-01",
+        "split": "test"
+      },
+      {
+        "slot": 21,
+        "id": "test-text-02",
+        "split": "test"
+      }
+    ],
+    "unverifiable_slots_under_strict_audit": 22
+  },
+  "legacy_dual_memory": {
+    "used_slots": 67,
+    "unverifiable_or_unsafe_slots": 67,
+    "note": "Opaque legacy provenance prevents a clean certification; this does not prove every slot is contaminated."
+  },
+  "remediation": "Replaced the old real-trace checkpoint with the guarded, train-only Phase 6 snapshot; historical Phase 5 replay numbers remain historical.",
+  "replacement_sha256": "108bb8b877d7e5c2c87c27fc47953b01de956ca0367453b3211175879eee0402",
+  "replacement_registry": "real edit validation/test plus available synthetic validation/test"
+}

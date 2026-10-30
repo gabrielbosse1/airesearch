@@ -1,0 +1,232 @@
+{
+  "protocol": "Inference-time zeroing of one RETRO cross-attention output head before its output projection; prefix and self-attention stay on. Negative delta means ablation improved NLL. Attention mass is descriptive, not causal.",
+  "examples": 128,
+  "tasks": [
+    "audio",
+    "image",
+    "text"
+  ],
+  "baseline": {
+    "count": 6088,
+    "accuracy": 0.008048620236530881,
+    "nll": 5.7582679327464765,
+    "ece": 0.0005991249967858426,
+    "brier": 0.007733366917818785,
+    "mean_confidence": 0.00784153863787651,
+    "by_modality": {
+      "audio": {
+        "count": 3024,
+        "accuracy": 0.004298941798941799,
+        "nll": 5.919799138629247
+      },
+      "text": {
+        "count": 229,
+        "accuracy": 0.14410480349344978,
+        "nll": 4.3836657928067
+      },
+      "image": {
+        "count": 2835,
+        "accuracy": 0.0010582010582010583,
+        "nll": 5.697002861655368
+      }
+    },
+    "mean_memory_attention_mass": {
+      "audio": [
+        [
+          0.5920630693435669,
+          0.5911133885383606,
+          0.5923638343811035,
+          0.5887176394462585
+        ],
+        [
+          0.5901051759719849,
+          0.5942686200141907,
+          0.5924065113067627,
+          0.5862822532653809
+        ]
+      ],
+      "text": [
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "image": [
+        [
+          0.5925241112709045,
+          0.5937499403953552,
+          0.5915812253952026,
+          0.5913277268409729
+        ],
+        [
+          0.5916123390197754,
+          0.5939382314682007,
+          0.5939118266105652,
+          0.5881059765815735
+        ]
+      ]
+    }
+  },
+  "heads": [
+    {
+      "layer": 0,
+      "head": 0,
+      "delta_nll": {
+        "audio": -3.8338716698227415e-05,
+        "image": 0.00027493808214895665,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5920630693435669,
+        "image": 0.5925241112709045,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 0,
+      "head": 1,
+      "delta_nll": {
+        "audio": -0.0011115805812611512,
+        "image": -0.0011047470927021408,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5911133885383606,
+        "image": 0.5937499403953552,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 0,
+      "head": 2,
+      "delta_nll": {
+        "audio": -0.00011332072908931679,
+        "image": -0.0004216377487047396,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5923638343811035,
+        "image": 0.5915812253952026,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 0,
+      "head": 3,
+      "delta_nll": {
+        "audio": -0.0005870697990291163,
+        "image": -0.00099200966917401,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5887176394462585,
+        "image": 0.5913277268409729,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 1,
+      "head": 0,
+      "delta_nll": {
+        "audio": -0.00031390518107698995,
+        "image": -0.0005952596243936625,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5901051759719849,
+        "image": 0.5916123390197754,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 1,
+      "head": 1,
+      "delta_nll": {
+        "audio": -0.0004577132129162109,
+        "image": -0.000757987747326716,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5942686200141907,
+        "image": 0.5939382314682007,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 1,
+      "head": 2,
+      "delta_nll": {
+        "audio": 0.00013143549520489017,
+        "image": -0.0010754028535604476,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5924065113067627,
+        "image": 0.5939118266105652,
+        "text": 0.0
+      }
+    },
+    {
+      "layer": 1,
+      "head": 3,
+      "delta_nll": {
+        "audio": -0.0004628499348955373,
+        "image": -0.0006402125013771354,
+        "text": 0.0
+      },
+      "delta_accuracy": {
+        "audio": 0.0,
+        "image": 0.0,
+        "text": 0.0
+      },
+      "mean_real_memory_attention_mass": {
+        "audio": 0.5862822532653809,
+        "image": 0.5881059765815735,
+        "text": 0.0
+      }
+    }
+  ]
+}

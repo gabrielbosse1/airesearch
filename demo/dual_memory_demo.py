@@ -3,7 +3,7 @@
 Demonstrates the full vision:
   * Long-term memory outside the context window (people, facts, interactions).
   * Cross-modal session continuity (text -> voice awareness).
-  * Lie / contradiction detection against stored facts.
+  * Time-aware contradiction evidence for explicit stored facts (not lie detection).
   * Code generation + function calling.
   * Multitasking: write code while "talking".
   * Learn a skill from several examples via co-training (memory + generator
@@ -19,6 +19,7 @@ import torch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.memory_model import MemoryModel
+from models.contradiction_graph import Fact
 from models.generator_conditioned import GeneratorConditioned
 from training.co_train import ingest_examples, encode_text, save_system, load_system
 
@@ -91,7 +92,11 @@ def demo_person_memory(memory):
         },
     )
 
-    # Now switch modality to VOICE — memory should still know Alice.
+    # Record an actual raw-byte voice event after the text events.
+    memory.write(
+        torch.tensor([128.0, 130.0, 127.0] + [0.0] * 61),
+        {"person": "Alice", "modality": "voice", "session": "s1", "type": "voice_event"},
+    )
     print("\n[User switches from TEXT to VOICE]")
     summary = memory.person_summary("Alice")
     print(f"Memories about Alice: {summary['n_memories']}")
@@ -99,7 +104,8 @@ def demo_person_memory(memory):
     print("Actions:", [a.get("action") for a in summary["actions"]])
     print("Facts:", [f.get("fact") for f in summary["facts"]])
     assert summary["n_memories"] >= 2, "Memory should retain Alice across modalities"
-    print("PASS: Alice remembered across text->voice modality switch.")
+    assert {"text", "voice"}.issubset(summary["modalities_seen"])
+    print("PASS: Alice remembered across recorded text and voice events.")
 
 
 # ===========================================================================
@@ -107,30 +113,23 @@ def demo_person_memory(memory):
 # ===========================================================================
 def demo_lie_detection(memory, generator):
     print("\n" + "=" * 70)
-    print("DEMO 2: Lie / contradiction detection")
+    print("DEMO 2: Temporally aware multi-hop contradiction evidence")
     print("=" * 70)
 
-    # Store a true fact: "Alice uses Python."
-    true_emb = torch.tensor(list("alice uses python".encode("utf-8")) + [0] * 46)[:64]
-    memory.write(
-        true_emb,
-        {"person": "Alice", "modality": "text", "session": "s1", "type": "fact",
-         "fact": "Alice uses Python"},
-    )
-
-    # Consistent statement.
-    consistent_emb = torch.tensor(list("alice codes in python".encode("utf-8")) + [0] * 48)[:64]
-    score, conflicts = memory.check_contradiction(consistent_emb, person="Alice")
-    print(f"Consistent statement 'alice codes in python': consistency={score:.3f}")
-    assert score > 0.5, "Consistent statement should score high."
-
-    # Contradictory statement: "Alice hates programming and never codes."
-    lie_emb = torch.tensor(list("alice hates coding never programs".encode("utf-8")) + [0] * 36)[:64]
-    score2, conflicts2 = memory.check_contradiction(lie_emb, person="Alice")
-    print(f"Contradictory statement 'alice hates coding': consistency={score2:.3f}")
-    if score2 < 0.5:
-        print("  -> FLAGGED AS POSSIBLE LIE / CONTRADICTION")
-    print("PASS: Lie detection distinguishes consistent vs contradictory statements.")
+    # The graph never infers facts from arbitrary prose. These explicit aliases
+    # and the exclusive relation define exactly what may be checked.
+    first = memory.write_fact(Fact(b"demo-alice", b"same_as", b"demo-alias-1"))
+    second = memory.write_fact(Fact(b"demo-alias-1", b"same_as", b"demo-alias-2"))
+    third = memory.write_fact(Fact(b"demo-alias-2", b"uses-language", b"python",
+                                   exclusive=True, valid_from=10, valid_to=20))
+    claim = Fact(b"demo-alice", b"uses-language", b"rust", exclusive=True)
+    active = memory.explain_contradiction(claim, as_of=15, max_hops=3)
+    expired = memory.explain_contradiction(claim, as_of=25, max_hops=3)
+    assert active.status == "conflict" and active.evidence[0].path_slots == (first, second, third)
+    assert expired.status == "unknown"
+    print(f"  At time 15: {active.status}; evidence path {active.evidence[0].path_slots}")
+    print(f"  At time 25: {expired.status} (old fact has expired)")
+    print("PASS: explicit facts yield a time-valid multi-hop evidence path; this does not determine intent or truth.")
 
 
 # ===========================================================================
@@ -225,8 +224,11 @@ def demo_skill_learning(memory, generator):
     print("Skill ingested. Co-training logs (last epoch):")
     if logs:
         print("  ", logs[-1])
+    replay = memory.execute_procedure(b"greet Bob")
+    assert replay.output == b"Hello, Bob! Nice to meet you."
+    print(f"Exact stored-skill replay: {replay.output!r}; latent steps={len(replay.latent_trace)}")
 
-    # Now test: can the generator greet a NEW person using the learned skill?
+    # Sample a new input; this is illustrative, not a test of generalization.
     alice_query = torch.tensor(list("greet Helen".encode("utf-8")) + [0] * 56)[:64].float()
     entries, ctx = memory.retrieve(alice_query, top_k=4)
     print(f"Retrieved {len(entries)} relevant greeting memories for 'greet Helen'.")
@@ -239,22 +241,22 @@ def demo_skill_learning(memory, generator):
     gen_text = bytes([b for b in generated.tolist() if b < 256]).decode(
         "utf-8", errors="replace"
     )
-    print(f"Generated greeting for Helen: {gen_text[:100]}")
-    print("PASS: Skill learned from examples via co-training (no full retraining).")
+    print(f"Unverified sample for Helen: {gen_text[:100]}")
+    print("PASS: structured example replay and co-training completed; novel-input quality is not asserted.")
 
 
 # ===========================================================================
 # MAIN
 # ===========================================================================
-def main():
+def main(runs_dir: str = RUNS_DIR):
     torch.manual_seed(42)
     memory = make_memory()
     generator = make_generator()
 
     # Try to load a previously saved system if present.
-    if os.path.exists(os.path.join(RUNS_DIR, "memory.pt")):
+    if os.path.exists(os.path.join(runs_dir, "memory.pt")):
         print("Loading previously saved dual-memory system...")
-        load_system(memory, generator, RUNS_DIR)
+        load_system(memory, generator, runs_dir)
 
     demo_person_memory(memory)
     demo_lie_detection(memory, generator)
@@ -262,21 +264,24 @@ def main():
     demo_skill_learning(memory, generator)
 
     # Save the grown memory + generator (knowledge persists outside context window).
-    os.makedirs(RUNS_DIR, exist_ok=True)
-    save_system(memory, generator, RUNS_DIR)
-    print(f"\nSaved grown memory + generator to {RUNS_DIR}")
+    os.makedirs(runs_dir, exist_ok=True)
+    save_system(memory, generator, runs_dir)
+    print(f"\nSaved grown memory + generator to {runs_dir}")
 
     print("\n" + "=" * 70)
     print("ALL DEMOS COMPLETE")
     print("=" * 70)
     print("Summary of capabilities demonstrated:")
     print("  * Long-term person memory (Alice) across text->voice modality switch")
-    print("  * Lie / contradiction detection vs stored facts")
+    print("  * Time-valid multi-hop contradiction evidence for explicit facts")
     print("  * Code generation + function calling (minecraft.move/mine, code.write)")
     print("  * Multitasking: generation + function execution in one pass")
-    print("  * Skill learned from 6 examples via Memory<->Generator co-training")
+    print("  * Exact skill replay from examples plus Memory<->Generator co-training")
     print("  * Memory + generator saved and reloadable (persistent outside context)")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runs-dir", default=RUNS_DIR, help="checkpoint directory to read and update")
+    main(parser.parse_args().runs_dir)

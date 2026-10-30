@@ -1,0 +1,7462 @@
+{
+  "protocol": {
+    "seed": 881,
+    "device": "cpu",
+    "generator_checkpoint": "runs/real_traces/generator.pt",
+    "generator_checkpoint_sha256": "1200637c885a99f4d3d5ac868203c0fd63cd3fca3108ea7bfc4add0b8ff2c561",
+    "pairs": "data/real_edit_pairs.jsonl",
+    "epochs": 20,
+    "examples_per_stage": 8,
+    "real_anchors_per_epoch": 2,
+    "rollout_budget": 16,
+    "evaluation_budget": 128,
+    "temperature": 0.8,
+    "learning_rate": 0.0003,
+    "training": "train-only synthetic curriculum plus real train anchors; no memory or stored traces in policy rollout",
+    "supervision": "teacher-forced training-only traces; fixed target-minus-current byte sketch after THINK",
+    "loss": "supervised_weight*trace_CE + rl_weight*[-(reward-greedy_baseline)*sampled_log_probability] + 0.5*reasoning_MSE",
+    "reward": "1 - byte_levenshtein(committed_canvas,target)/max(len(committed_canvas),len(target),1) - 0.01*(THINK steps + EDIT actions)",
+    "validation_selection": "only final-stage epochs; maximize real validation exact fraction, break ties by normalized byte similarity; earliest on ties",
+    "test_inference": "greedy autonomous cognitive_generate; no memory, controller, stored trace, instruction, target or target-derived budget; baseline, validation-selected and last-epoch policies evaluated after selection",
+    "real_fixture_limitation": "the real held-out pairs do not include actionable edit requests; source alone underdetermines the desired target",
+    "guard_limit": "hash guard checks registered raw bytes and trace states, not model-weight history or semantic duplicates",
+    "registered_processed_synthetic_holdouts": 1000,
+    "synthetic_curriculum_validation_examples": 10,
+    "best_epoch": 17,
+    "best_validation_rank": [
+      0.0,
+      0.844757326007326
+    ],
+    "generator_parameters": 352728,
+    "reasoning_predictor_parameters": 8320,
+    "trainable_parameters": 105871
+  },
+  "counts": {
+    "real_train": 10,
+    "real_validation": 4,
+    "real_test": 8,
+    "synthetic_train": 40
+  },
+  "reward_curve": [
+    {
+      "epoch": 1,
+      "curriculum_stage": "single_byte_substitution",
+      "examples": 10,
+      "supervised_weight": 0.8,
+      "rl_weight": 0.19999999999999996,
+      "reward": 0.451117216117216,
+      "baseline_reward": 0.5128571428571428,
+      "similarity": 0.47611721611721614,
+      "think_steps": 1.0,
+      "edit_steps": 1.5,
+      "exact": 0.1,
+      "supervised_loss": 1.7801232993602754,
+      "rl_loss": -0.36770863831043243,
+      "reasoning_loss": 0.00012852349427703303,
+      "total_loss": 1.3506211772561074,
+      "log_probability": -5.31190550327301,
+      "gradient_norm": 6.041574573516845,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8476991758241759
+    },
+    {
+      "epoch": 2,
+      "curriculum_stage": "single_byte_substitution",
+      "examples": 10,
+      "supervised_weight": 0.768421052631579,
+      "rl_weight": 0.231578947368421,
+      "reward": 0.618,
+      "baseline_reward": 0.6494761904761905,
+      "similarity": 0.64,
+      "think_steps": 1.0,
+      "edit_steps": 1.2,
+      "exact": 0.2,
+      "supervised_loss": 1.3220654383301735,
+      "rl_loss": -0.29091507494449614,
+      "reasoning_loss": 9.000587378977798e-05,
+      "total_loss": 0.9485781282186508,
+      "log_probability": -4.1129638195037845,
+      "gradient_norm": 5.263319706916809,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8476991758241759
+    },
+    {
+      "epoch": 3,
+      "curriculum_stage": "single_byte_substitution",
+      "examples": 10,
+      "supervised_weight": 0.736842105263158,
+      "rl_weight": 0.26315789473684204,
+      "reward": 0.6312857142857142,
+      "baseline_reward": 0.6313333333333333,
+      "similarity": 0.6542857142857144,
+      "think_steps": 1.0,
+      "edit_steps": 1.3,
+      "exact": 0.1,
+      "supervised_loss": 1.0782154947519302,
+      "rl_loss": -0.06810775399208069,
+      "reasoning_loss": 9.549691349093336e-05,
+      "total_loss": 0.7765992157161236,
+      "log_probability": -4.447613108158111,
+      "gradient_norm": 3.8650617718696596,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8476991758241759
+    },
+    {
+      "epoch": 4,
+      "curriculum_stage": "single_byte_substitution",
+      "examples": 10,
+      "supervised_weight": 0.7052631578947369,
+      "rl_weight": 0.2947368421052631,
+      "reward": 0.6449166666666667,
+      "baseline_reward": 0.6834743589743589,
+      "similarity": 0.6679166666666667,
+      "think_steps": 1.0,
+      "edit_steps": 1.3,
+      "exact": 0.1,
+      "supervised_loss": 0.900257921218872,
+      "rl_loss": -0.27187922075390814,
+      "reasoning_loss": 9.829957452893723e-05,
+      "total_loss": 0.5548350527882576,
+      "log_probability": -4.316281235218048,
+      "gradient_norm": 3.0466351389884947,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8476991758241759
+    },
+    {
+      "epoch": 5,
+      "curriculum_stage": "single_word_replacement",
+      "examples": 10,
+      "supervised_weight": 0.6736842105263159,
+      "rl_weight": 0.3263157894736841,
+      "reward": 0.5966520847573478,
+      "baseline_reward": 0.48534586466165414,
+      "similarity": 0.6226520847573479,
+      "think_steps": 1.0,
+      "edit_steps": 1.6,
+      "exact": 0.0,
+      "supervised_loss": 7.498610877990723,
+      "rl_loss": 1.4175533026456832,
+      "reasoning_loss": 0.00021920541257713921,
+      "total_loss": 5.514375641942024,
+      "log_probability": -7.670201778411865,
+      "gradient_norm": 4.991805496811867,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8504464285714286
+    },
+    {
+      "epoch": 6,
+      "curriculum_stage": "single_word_replacement",
+      "examples": 10,
+      "supervised_weight": 0.6421052631578947,
+      "rl_weight": 0.35789473684210527,
+      "reward": 0.5740796221322537,
+      "baseline_reward": 0.6971203007518796,
+      "similarity": 0.6010796221322539,
+      "think_steps": 1.0,
+      "edit_steps": 1.7,
+      "exact": 0.0,
+      "supervised_loss": 6.855919954180718,
+      "rl_loss": -1.8971164904534816,
+      "reasoning_loss": 5.0682936853263526e-05,
+      "total_loss": 3.723279681801796,
+      "log_probability": -10.382695817947388,
+      "gradient_norm": 4.97202764749527,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8504464285714286
+    },
+    {
+      "epoch": 7,
+      "curriculum_stage": "single_word_replacement",
+      "examples": 10,
+      "supervised_weight": 0.6105263157894738,
+      "rl_weight": 0.3894736842105262,
+      "reward": 0.637421052631579,
+      "baseline_reward": 0.7264860681114549,
+      "similarity": 0.6684210526315789,
+      "think_steps": 1.0,
+      "edit_steps": 2.1,
+      "exact": 0.2,
+      "supervised_loss": 6.2303676217794415,
+      "rl_loss": -1.8839989453554153,
+      "reasoning_loss": 4.8799210890138053e-05,
+      "total_loss": 3.070059871673584,
+      "log_probability": -12.142023468017578,
+      "gradient_norm": 5.263048124313355,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8504464285714286
+    },
+    {
+      "epoch": 8,
+      "curriculum_stage": "single_word_replacement",
+      "examples": 10,
+      "supervised_weight": 0.5789473684210527,
+      "rl_weight": 0.42105263157894735,
+      "reward": 0.6570781499202552,
+      "baseline_reward": 0.5936140350877193,
+      "similarity": 0.6930781499202553,
+      "think_steps": 1.0,
+      "edit_steps": 2.6,
+      "exact": 0.0,
+      "supervised_loss": 5.644535773992539,
+      "rl_loss": 1.572063720226288,
+      "reasoning_loss": 5.6444066194671906e-05,
+      "total_loss": 3.9298388436436653,
+      "log_probability": -12.909609472751617,
+      "gradient_norm": 4.935515820980072,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8361607142857144
+    },
+    {
+      "epoch": 9,
+      "curriculum_stage": "single_line_edit",
+      "examples": 10,
+      "supervised_weight": 0.5473684210526316,
+      "rl_weight": 0.4526315789473684,
+      "reward": 0.7490576923076924,
+      "baseline_reward": 0.7931410256410256,
+      "similarity": 0.7760576923076924,
+      "think_steps": 1.0,
+      "edit_steps": 1.7,
+      "exact": 0.0,
+      "supervised_loss": 6.276236605644226,
+      "rl_loss": -1.150008650124073,
+      "reasoning_loss": 7.537783194493386e-05,
+      "total_loss": 2.914921061694622,
+      "log_probability": -9.872753536701202,
+      "gradient_norm": 5.938296270370484,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8361607142857144
+    },
+    {
+      "epoch": 10,
+      "curriculum_stage": "single_line_edit",
+      "examples": 10,
+      "supervised_weight": 0.5157894736842106,
+      "rl_weight": 0.4842105263157894,
+      "reward": 0.6752071524966261,
+      "baseline_reward": 0.759,
+      "similarity": 0.7012071524966261,
+      "think_steps": 1.0,
+      "edit_steps": 1.6,
+      "exact": 0.0,
+      "supervised_loss": 5.775697049498558,
+      "rl_loss": -2.348770186305046,
+      "reasoning_loss": 0.000130263918390483,
+      "total_loss": 1.8418095469474793,
+      "log_probability": -8.948511600494385,
+      "gradient_norm": 5.1083369016647335,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8540178571428572
+    },
+    {
+      "epoch": 11,
+      "curriculum_stage": "single_line_edit",
+      "examples": 10,
+      "supervised_weight": 0.48421052631578954,
+      "rl_weight": 0.5157894736842105,
+      "reward": 0.6305238095238097,
+      "baseline_reward": 0.7566904761904764,
+      "similarity": 0.6605238095238095,
+      "think_steps": 1.0,
+      "edit_steps": 2.0,
+      "exact": 0.1,
+      "supervised_loss": 5.151582255959511,
+      "rl_loss": -2.543618804216385,
+      "reasoning_loss": 6.601967902497563e-06,
+      "total_loss": 1.1824818521738052,
+      "log_probability": -9.965935361385345,
+      "gradient_norm": 3.9631230413913725,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8683035714285714
+    },
+    {
+      "epoch": 12,
+      "curriculum_stage": "single_line_edit",
+      "examples": 10,
+      "supervised_weight": 0.4526315789473685,
+      "rl_weight": 0.5473684210526315,
+      "reward": 0.5969509803921569,
+      "baseline_reward": 0.7638333333333334,
+      "similarity": 0.6279509803921568,
+      "think_steps": 1.8,
+      "edit_steps": 1.3,
+      "exact": 0.1,
+      "supervised_loss": 4.8038006782531735,
+      "rl_loss": -1.9707314684987067,
+      "reasoning_loss": 0.00012792678389814683,
+      "total_loss": 1.0956997817382217,
+      "log_probability": -6.1423125743865965,
+      "gradient_norm": 4.171682775020599,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8683035714285714
+    },
+    {
+      "epoch": 13,
+      "curriculum_stage": "multiline_insert_delete",
+      "examples": 10,
+      "supervised_weight": 0.42105263157894746,
+      "rl_weight": 0.5789473684210525,
+      "reward": 0.6422619047619047,
+      "baseline_reward": 0.6037619047619047,
+      "similarity": 0.6722619047619047,
+      "think_steps": 1.1,
+      "edit_steps": 1.9,
+      "exact": 0.0,
+      "supervised_loss": 7.202015538513661,
+      "rl_loss": 1.1241457270458342,
+      "reasoning_loss": 0.0012650445212784688,
+      "total_loss": 3.6838813409209252,
+      "log_probability": -10.947811341285705,
+      "gradient_norm": 6.997923946380615,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8540178571428572
+    },
+    {
+      "epoch": 14,
+      "curriculum_stage": "multiline_insert_delete",
+      "examples": 10,
+      "supervised_weight": 0.38947368421052636,
+      "rl_weight": 0.6105263157894736,
+      "reward": 0.6213076923076923,
+      "baseline_reward": 0.6769505494505494,
+      "similarity": 0.6523076923076924,
+      "think_steps": 1.0,
+      "edit_steps": 2.1,
+      "exact": 0.0,
+      "supervised_loss": 6.464842516183853,
+      "rl_loss": -1.6433634743094445,
+      "reasoning_loss": 0.0012590050069775315,
+      "total_loss": 1.515198853611946,
+      "log_probability": -14.78211938738823,
+      "gradient_norm": 6.154895257949829,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8004464285714286
+    },
+    {
+      "epoch": 15,
+      "curriculum_stage": "multiline_insert_delete",
+      "examples": 10,
+      "supervised_weight": 0.35789473684210527,
+      "rl_weight": 0.6421052631578947,
+      "reward": 0.5664210526315789,
+      "baseline_reward": 0.63,
+      "similarity": 0.6084210526315789,
+      "think_steps": 1.0,
+      "edit_steps": 3.2,
+      "exact": 0.0,
+      "supervised_loss": 5.88982363641262,
+      "rl_loss": -1.2683414325118065,
+      "reasoning_loss": 0.001209473937342409,
+      "total_loss": 1.2941329285502434,
+      "log_probability": -16.117457699775695,
+      "gradient_norm": 4.733067265152931,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8004464285714286
+    },
+    {
+      "epoch": 16,
+      "curriculum_stage": "multiline_insert_delete",
+      "examples": 10,
+      "supervised_weight": 0.3263157894736843,
+      "rl_weight": 0.6736842105263157,
+      "reward": 0.6255238095238095,
+      "baseline_reward": 0.6585714285714286,
+      "similarity": 0.6645238095238095,
+      "think_steps": 1.0,
+      "edit_steps": 2.9,
+      "exact": 0.1,
+      "supervised_loss": 5.192276626825333,
+      "rl_loss": -2.741448551416397,
+      "reasoning_loss": 0.0009636048293032218,
+      "total_loss": -0.15206701550632715,
+      "log_probability": -16.45394070148468,
+      "gradient_norm": 7.493237936496735,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.8139880952380952
+    },
+    {
+      "epoch": 17,
+      "curriculum_stage": "code_block_move",
+      "examples": 10,
+      "supervised_weight": 0.2947368421052632,
+      "rl_weight": 0.7052631578947368,
+      "reward": 0.7202539682539684,
+      "baseline_reward": 0.7204177323103154,
+      "similarity": 0.7602539682539682,
+      "think_steps": 1.1,
+      "edit_steps": 2.9,
+      "exact": 0.0,
+      "supervised_loss": 5.147227458655834,
+      "rl_loss": 0.4510765699669719,
+      "reasoning_loss": 0.00015334247837017756,
+      "total_loss": 1.8352818293496966,
+      "log_probability": -16.44726288318634,
+      "gradient_norm": 8.516932284832,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.844757326007326
+    },
+    {
+      "epoch": 18,
+      "curriculum_stage": "code_block_move",
+      "examples": 10,
+      "supervised_weight": 0.26315789473684215,
+      "rl_weight": 0.7368421052631579,
+      "reward": 0.7822222222222223,
+      "baseline_reward": 0.7945555555555557,
+      "similarity": 0.8022222222222222,
+      "think_steps": 1.0,
+      "edit_steps": 1.0,
+      "exact": 0.0,
+      "supervised_loss": 3.992405021190643,
+      "rl_loss": -0.051180578768253326,
+      "reasoning_loss": 0.00011812700922746444,
+      "total_loss": 1.0129800043185242,
+      "log_probability": -4.883533406257629,
+      "gradient_norm": 1.462655532360077,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.844757326007326
+    },
+    {
+      "epoch": 19,
+      "curriculum_stage": "code_block_move",
+      "examples": 10,
+      "supervised_weight": 0.2315789473684211,
+      "rl_weight": 0.7684210526315789,
+      "reward": 0.7607080191050779,
+      "baseline_reward": 0.7627799145299146,
+      "similarity": 0.7827080191050778,
+      "think_steps": 1.0,
+      "edit_steps": 1.2,
+      "exact": 0.0,
+      "supervised_loss": 3.7327164113521576,
+      "rl_loss": -0.12938207983970643,
+      "reasoning_loss": 6.923131054463738e-05,
+      "total_loss": 0.7650332294404507,
+      "log_probability": -6.836935901641846,
+      "gradient_norm": 1.692698097229004,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.844757326007326
+    },
+    {
+      "epoch": 20,
+      "curriculum_stage": "code_block_move",
+      "examples": 10,
+      "supervised_weight": 0.20000000000000007,
+      "rl_weight": 0.7999999999999999,
+      "reward": 0.7468888888888889,
+      "baseline_reward": 0.7382371615312792,
+      "similarity": 0.7688888888888888,
+      "think_steps": 1.0,
+      "edit_steps": 1.2,
+      "exact": 0.1,
+      "supervised_loss": 3.567198023200035,
+      "rl_loss": 0.09682742394506931,
+      "reasoning_loss": 0.00012638243076708023,
+      "total_loss": 0.7909647423774004,
+      "log_probability": -7.621364903450012,
+      "gradient_norm": 1.5732298601418733,
+      "validation_exact": 0,
+      "validation_count": 4,
+      "validation_mean_similarity": 0.844757326007326
+    }
+  ],
+  "baseline_test": {
+    "count": 8,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 1.0,
+    "mean_similarity": 0.7025674019607842,
+    "mean_reward": 0.6825674019607842,
+    "examples": [
+      {
+        "id": "test-code-01",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.9,
+        "similarity": 0.92,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2020202020202020666f72203f5f20696e2072616e6765286e",
+        "target_hex": "2020202020202020666f72206920696e2072616e6765286e",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-02",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.7925,
+        "similarity": 0.8125,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "655d5b6c6576656c5d203d203f75",
+        "target_hex": "655d5b6c6576656c5d203d20696e7075",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 5,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-03",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.7447058823529411,
+        "similarity": 0.7647058823529411,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "6e74726164696374696f6e206265",
+        "target_hex": "6e74726164696374696f6e206576696465",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-04",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.73,
+        "similarity": 0.75,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "5f4449526220226d656d6f72792e7074",
+        "target_hex": "5f6469722c20226d656d6f72792e7074",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 16,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 4,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-05",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.8466666666666667,
+        "similarity": 0.8666666666666667,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "20627072696e74282220202a204c69",
+        "target_hex": "207072696e74282220202a205469",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-06",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.8133333333333334,
+        "similarity": 0.8333333333333334,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2066726f6d2036206578616d62706c657320",
+        "target_hex": "2066726f6d206578616d706c657320",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-01",
+        "kind": "text",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.48,
+        "similarity": 0.5,
+        "distance": 7,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "7465623e766f696365",
+        "target_hex": "7465787420616e6420766f696365",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 11,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-02",
+        "kind": "text",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.15333333333333335,
+        "similarity": 0.17333333333333334,
+        "distance": 62,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "677261797363616c6520696d6167657329",
+        "target_hex": "382d62697420677261797363616c652062797465732c20616e6420617564696f20697320382d6269742050434d2062797465732e205468657265206973202a2a6e6f2065787465726e616c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 77,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 16,
+            "end": 77,
+            "kind": "replace",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "selected_test": {
+    "count": 8,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 1.0,
+    "mean_similarity": 0.7321827865761689,
+    "mean_reward": 0.7096827865761689,
+    "examples": [
+      {
+        "id": "test-code-01",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.9,
+        "similarity": 0.92,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2020202020202020666f7220295f20696e2072616e6765286e",
+        "target_hex": "2020202020202020666f72206920696e2072616e6765286e",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-02",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 128,
+        "reward": 0.7825,
+        "similarity": 0.8125,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 2,
+        "output_hex": "655d5b6c6576656c5d203d2075",
+        "target_hex": "655d5b6c6576656c5d203d20696e7075",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-03",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 128,
+        "reward": 0.7347058823529411,
+        "similarity": 0.7647058823529411,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 2,
+        "output_hex": "6e74726164696374696f6e2065",
+        "target_hex": "6e74726164696374696f6e206576696465",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-04",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.73,
+        "similarity": 0.75,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "5f4449523f20226d656d6f72792e7074",
+        "target_hex": "5f6469722c20226d656d6f72792e7074",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 16,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 4,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-05",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.8466666666666667,
+        "similarity": 0.8666666666666667,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "203f7072696e74282220202a204c69",
+        "target_hex": "207072696e74282220202a205469",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-06",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.8133333333333334,
+        "similarity": 0.8333333333333334,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2066726f6d2036206578616d62706c657320",
+        "target_hex": "2066726f6d206578616d706c657320",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-01",
+        "kind": "text",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.48,
+        "similarity": 0.5,
+        "distance": 7,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "74653f3e766f696365",
+        "target_hex": "7465787420616e6420766f696365",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 11,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-02",
+        "kind": "text",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.3902564102564102,
+        "similarity": 0.41025641025641024,
+        "distance": 46,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "677261797363616c6520696d29616765732c20616e6420382d6269742050434d20617564696f2061726520616c6c206665642061732062797465206172726179732e204e6f2065787465726e616c",
+        "target_hex": "382d62697420677261797363616c652062797465732c20616e6420617564696f20697320382d6269742050434d2062797465732e205468657265206973202a2a6e6f2065787465726e616c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 77,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 67,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "final_test": {
+    "count": 8,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 1.0,
+    "mean_similarity": 0.6432244532428356,
+    "mean_reward": 0.6207244532428356,
+    "examples": [
+      {
+        "id": "test-code-01",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.18833333333333338,
+        "similarity": 0.20833333333333337,
+        "distance": 19,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "20205f20696e2072616e6765286e202020202020666f7220",
+        "target_hex": "2020202020202020666f72206920696e2072616e6765286e",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-02",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 128,
+        "reward": 0.7825,
+        "similarity": 0.8125,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 2,
+        "output_hex": "655d5b6c6576656c5d203d2075",
+        "target_hex": "655d5b6c6576656c5d203d20696e7075",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-03",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 128,
+        "reward": 0.7347058823529411,
+        "similarity": 0.7647058823529411,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 2,
+        "output_hex": "6e74726164696374696f6e2065",
+        "target_hex": "6e74726164696374696f6e206576696465",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-04",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.73,
+        "similarity": 0.75,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "5f4449523f20226d656d6f72792e7074",
+        "target_hex": "5f6469722c20226d656d6f72792e7074",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 16,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 4,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-05",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.8466666666666667,
+        "similarity": 0.8666666666666667,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "203f7072696e74282220202a204c69",
+        "target_hex": "207072696e74282220202a205469",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-06",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.8133333333333334,
+        "similarity": 0.8333333333333334,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2066726f6d2036206578616d62706c657320",
+        "target_hex": "2066726f6d206578616d706c657320",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-01",
+        "kind": "text",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.48,
+        "similarity": 0.5,
+        "distance": 7,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "7465623e766f696365",
+        "target_hex": "7465787420616e6420766f696365",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 11,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-02",
+        "kind": "text",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.3902564102564102,
+        "similarity": 0.41025641025641024,
+        "distance": 46,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "677261797363616c6520696d29616765732c20616e6420382d6269742050434d20617564696f2061726520616c6c206665642061732062797465206172726179732e204e6f2065787465726e616c",
+        "target_hex": "382d62697420677261797363616c652062797465732c20616e6420617564696f20697320382d6269742050434d2062797465732e205468657265206973202a2a6e6f2065787465726e616c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 77,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 77,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "selected_validation": {
+    "count": 4,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 0.5,
+    "mean_similarity": 0.844757326007326,
+    "mean_reward": 0.19725732600732604,
+    "examples": [
+      {
+        "id": "validation-code-01",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.855,
+        "similarity": 0.875,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "20746f7263682e6f6e6573286c3f2c20",
+        "target_hex": "20746f7263682e6f6e657328312c20",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 15,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 13,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 13,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "validation-code-02",
+        "kind": "code",
+        "exact": false,
+        "done": false,
+        "halt_reason": "max_steps",
+        "steps": 128,
+        "budget": 128,
+        "reward": -0.3469230769230769,
+        "similarity": 0.9230769230769231,
+        "distance": 1,
+        "think_steps": 1,
+        "edit_steps": 126,
+        "output_hex": "20202020202020206966207265",
+        "target_hex": "202020202020202069662065",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 13,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 1,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "validation-code-03",
+        "kind": "code",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 128,
+        "reward": 0.6842857142857143,
+        "similarity": 0.7142857142857143,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 2,
+        "output_hex": "2020202020202020206266",
+        "target_hex": "2020202020202020202020206966",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 13,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 5,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "validation-code-04",
+        "kind": "code",
+        "exact": false,
+        "done": false,
+        "halt_reason": "max_steps",
+        "steps": 128,
+        "budget": 128,
+        "reward": -0.4033333333333333,
+        "similarity": 0.8666666666666667,
+        "distance": 2,
+        "think_steps": 1,
+        "edit_steps": 126,
+        "output_hex": "7263682e636174285b782c20746f72",
+        "target_hex": "7263682e636174285b782c2072",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 15,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 13,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 13,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 14,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 12,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "synthetic_validation": {
+    "count": 10,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 0.8,
+    "mean_similarity": 0.7598672438672438,
+    "mean_reward": 0.4828672438672439,
+    "examples": [
+      {
+        "id": "curriculum-validation-0-0",
+        "kind": "synthetic",
+        "exact": false,
+        "done": false,
+        "halt_reason": "max_steps",
+        "steps": 128,
+        "budget": 128,
+        "reward": -0.47,
+        "similarity": 0.8,
+        "distance": 1,
+        "think_steps": 1,
+        "edit_steps": 126,
+        "output_hex": "523a655149",
+        "target_hex": "523a3f5149",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 5,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-0-1",
+        "kind": "synthetic",
+        "exact": false,
+        "done": false,
+        "halt_reason": "max_steps",
+        "steps": 128,
+        "budget": 128,
+        "reward": -0.47,
+        "similarity": 0.8,
+        "distance": 1,
+        "think_steps": 1,
+        "edit_steps": 126,
+        "output_hex": "523a66514a",
+        "target_hex": "523a3f514a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 5,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 2,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-1-0",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 7,
+        "budget": 128,
+        "reward": 0.6872727272727273,
+        "similarity": 0.7272727272727273,
+        "distance": 6,
+        "think_steps": 1,
+        "edit_steps": 3,
+        "output_hex": "23203f512929490a636f6c6f72206f6c6420656e640a",
+        "target_hex": "232051490a636f6c6f72206e657720656e640a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 19,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 19,
+            "kind": "insert",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 20,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 20,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 21,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-1-1",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 7,
+        "budget": 128,
+        "reward": 0.6872727272727273,
+        "similarity": 0.7272727272727273,
+        "distance": 6,
+        "think_steps": 1,
+        "edit_steps": 3,
+        "output_hex": "2320514a290a636f6c6f72206f293f6c6420656e640a",
+        "target_hex": "2320514a0a636f6c6f72206e657720656e640a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 19,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 19,
+            "kind": "insert",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 20,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 21,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 21,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-2-0",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.86,
+        "similarity": 0.88,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "232051490a746f7028290a78293d300a626f74746f6d28290a",
+        "target_hex": "232051490a746f7028290a793d310a626f74746f6d28290a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 7,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-2-1",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.86,
+        "similarity": 0.88,
+        "distance": 3,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2320514a0a746f7028290a78293d300a626f74746f6d28290a",
+        "target_hex": "2320514a0a746f7028290a793d310a626f74746f6d28290a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 7,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-3-0",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 128,
+        "reward": 0.6485714285714286,
+        "similarity": 0.6785714285714286,
+        "distance": 9,
+        "think_steps": 1,
+        "edit_steps": 2,
+        "output_hex": "23205149290a746f297028290a626f74746f6d28290a",
+        "target_hex": "232051490a746f7028290a6128290a6228290a626f74746f6d28290a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 20,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 7,
+            "end": 20,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 20,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 21,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 21,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-3-1",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 7,
+        "budget": 128,
+        "reward": 0.51,
+        "similarity": 0.55,
+        "distance": 9,
+        "think_steps": 1,
+        "edit_steps": 3,
+        "output_hex": "232062514a0a746f6f6d28290a",
+        "target_hex": "2320514a0a746f7028290a626f74746f6d28290a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 28,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 13,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 13,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 7,
+            "end": 24,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 27,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 12,
+            "kind": "insert",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-4-0",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.7577777777777778,
+        "similarity": 0.7777777777777778,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "232051490a6128290a622829290a6328290a",
+        "target_hex": "232051490a6328290a6128290a6228290a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 17,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "curriculum-validation-4-1",
+        "kind": "synthetic",
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 128,
+        "reward": 0.7577777777777778,
+        "similarity": 0.7777777777777778,
+        "distance": 4,
+        "think_steps": 1,
+        "edit_steps": 1,
+        "output_hex": "2320514a0a6128290a622829290a6328290a",
+        "target_hex": "2320514a0a6328290a6128290a6228290a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 17,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  }
+}
