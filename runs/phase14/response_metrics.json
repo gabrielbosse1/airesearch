@@ -1,0 +1,1053 @@
+{
+  "config": {
+    "generator": "runs/phase12/generator.pt",
+    "output_dir": "runs/phase14",
+    "pairs": "data/real_edit_pairs.jsonl",
+    "processed_dir": "data/processed",
+    "steps": 45,
+    "diversity_weight": 0.1,
+    "seed": 14002
+  },
+  "train_prompt_count": 8,
+  "validation_prompt_count": 2,
+  "guard_fingerprint": "9f3c1e61c86f80cf4d33ae6f767387a5ae6aee6c0c30c21b7a2ab8406fde194e",
+  "responses_per_intent": 12,
+  "trained_intents": [
+    "chat",
+    "question",
+    "edit",
+    "remember",
+    "recall",
+    "forget",
+    "clarify"
+  ],
+  "initial": {
+    "nll": 5.571377754211426,
+    "teacher_exact": 0,
+    "count": 84
+  },
+  "epochs": [
+    {
+      "epoch": 1,
+      "train_nll": 3.349686050415039,
+      "diversity_loss": 0.9435237354702419,
+      "validation": {
+        "nll": 2.509948492050171,
+        "teacher_exact": 0,
+        "count": 84
+      },
+      "gradient_mean": 0.6995263019070064,
+      "gradient_min": 0.3512748906317612,
+      "gradient_max": 1.3634960559208753
+    },
+    {
+      "epoch": 2,
+      "train_nll": 2.1837421019872028,
+      "diversity_loss": 0.6106319460603926,
+      "validation": {
+        "nll": 1.8930376768112183,
+        "teacher_exact": 0,
+        "count": 84
+      },
+      "gradient_mean": 0.3475247331081957,
+      "gradient_min": 0.28726398722065605,
+      "gradient_max": 0.4016596309916751
+    },
+    {
+      "epoch": 3,
+      "train_nll": 1.6731828716066148,
+      "diversity_loss": 0.4184251699182722,
+      "validation": {
+        "nll": 1.4401212930679321,
+        "teacher_exact": 0,
+        "count": 84
+      },
+      "gradient_mean": 0.3299076899205418,
+      "gradient_min": 0.25693636885640175,
+      "gradient_max": 0.44410134156533904
+    },
+    {
+      "epoch": 4,
+      "train_nll": 1.2575888580746122,
+      "diversity_loss": 0.32607279817263285,
+      "validation": {
+        "nll": 1.092282772064209,
+        "teacher_exact": 0,
+        "count": 84
+      },
+      "gradient_mean": 0.3335292555450749,
+      "gradient_min": 0.2651154296098272,
+      "gradient_max": 0.4323415395019922
+    },
+    {
+      "epoch": 5,
+      "train_nll": 0.9702870355712043,
+      "diversity_loss": 0.2714614401261012,
+      "validation": {
+        "nll": 0.8269239068031311,
+        "teacher_exact": 1,
+        "count": 84
+      },
+      "gradient_mean": 0.3667212806275048,
+      "gradient_min": 0.27811694725916497,
+      "gradient_max": 0.47672473672363697
+    },
+    {
+      "epoch": 6,
+      "train_nll": 0.7393451227082146,
+      "diversity_loss": 0.2378769083155526,
+      "validation": {
+        "nll": 0.6314551830291748,
+        "teacher_exact": 2,
+        "count": 84
+      },
+      "gradient_mean": 0.4294647255925409,
+      "gradient_min": 0.2625312306859087,
+      "gradient_max": 0.6199457029780697
+    },
+    {
+      "epoch": 7,
+      "train_nll": 0.5510516438219283,
+      "diversity_loss": 0.20694957971572875,
+      "validation": {
+        "nll": 0.48183679580688477,
+        "teacher_exact": 5,
+        "count": 84
+      },
+      "gradient_mean": 0.3810855888269612,
+      "gradient_min": 0.24351224730505175,
+      "gradient_max": 0.5560541978025482
+    },
+    {
+      "epoch": 8,
+      "train_nll": 0.42722242607010735,
+      "diversity_loss": 0.1875915159781774,
+      "validation": {
+        "nll": 0.37054094672203064,
+        "teacher_exact": 22,
+        "count": 84
+      },
+      "gradient_mean": 0.4797950418647562,
+      "gradient_min": 0.3010357266658086,
+      "gradient_max": 0.7733917841023161
+    },
+    {
+      "epoch": 9,
+      "train_nll": 0.34873803324169583,
+      "diversity_loss": 0.17631023625532785,
+      "validation": {
+        "nll": 0.2967451214790344,
+        "teacher_exact": 33,
+        "count": 84
+      },
+      "gradient_mean": 0.7519087074236774,
+      "gradient_min": 0.34832824360616466,
+      "gradient_max": 1.4365375454414697
+    },
+    {
+      "epoch": 10,
+      "train_nll": 0.2462671332889133,
+      "diversity_loss": 0.16245066788461474,
+      "validation": {
+        "nll": 0.2223166674375534,
+        "teacher_exact": 46,
+        "count": 84
+      },
+      "gradient_mean": 0.3042089107336636,
+      "gradient_min": 0.2205584253701296,
+      "gradient_max": 0.4675487017686768
+    }
+  ],
+  "evaluation": {
+    "chat": {
+      "unique": 15,
+      "complete_valid": 20,
+      "known_variation_matches": 6,
+      "outputs": [
+        {
+          "text": "Hello there!",
+          "hex": "48656c6c6f20746865726521",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Hi there.",
+          "hex": "48692074686572652e",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Hi, how can I help?",
+          "hex": "48692c20686f772063616e20492068656c703f",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "I am listent.",
+          "hex": "4920616d206c697374656e742e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Hellame there.",
+          "hex": "48656c6c616d652074686572652e",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "Hello there!",
+          "hex": "48656c6c6f20746865726521",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "I an I remend.",
+          "hex": "4920616e20492072656d656e642e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Welcome plame back!",
+          "hex": "57656c636f6d6520706c616d65206261636b21",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "Hello there!",
+          "hex": "48656c6c6f20746865726521",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Good do you.",
+          "hex": "476f6f6420646f20796f752e",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "Welcome chang.",
+          "hex": "57656c636f6d65206368616e672e",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "Hi th te neen?",
+          "hex": "4869207468207465206e65656e3f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Hello, I am here.",
+          "hex": "48656c6c6f2c204920616d20686572652e",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "I am hememen.",
+          "hex": "4920616d2068656d656d656e2e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Hello there!",
+          "hex": "48656c6c6f20746865726521",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Hi there, fremere.",
+          "hex": "48692074686572652c206672656d6572652e",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "He, wac co chat.",
+          "hex": "48652c2077616320636f20636861742e",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Hi there, frien?",
+          "hex": "48692074686572652c20667269656e3f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Good do you.",
+          "hex": "476f6f6420646f20796f752e",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "Good do you.",
+          "hex": "476f6f6420646f20796f752e",
+          "complete": true,
+          "style": 10
+        }
+      ]
+    },
+    "question": {
+      "unique": 19,
+      "complete_valid": 20,
+      "known_variation_matches": 4,
+      "outputs": [
+        {
+          "text": "Please details exp?",
+          "hex": "506c656173652064657461696c73206578703f",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Which details should I adedrem?",
+          "hex": "57686963682064657461696c732073686f756c642049206164656472656d3f",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "Can you specify the to re memerestion?",
+          "hex": "43616e20796f7520737065636966792074686520746f207265206d656d6572657374696f6e3f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Could you splio you need?",
+          "hex": "436f756c6420796f752073706c696f20796f75206e6565643f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "Please details the tae mean?",
+          "hex": "506c656173652064657461696c732074686520746165206d65616e3f",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Could you clarify the the top?",
+          "hex": "436f756c6420796f7520636c6172696679207468652074686520746f703f",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "Which subject interestiinterestio you?",
+          "hex": "5768696368207375626a65637420696e74657265737469696e746572657374696f20796f753f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Can you liks you specify the topic?",
+          "hex": "43616e20796f75206c696b7320796f7520737065636966792074686520746f7069633f",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Which subject interestiens?",
+          "hex": "5768696368207375626a65637420696e74657265737469656e733f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Can you specify the toped to you.",
+          "hex": "43616e20796f7520737065636966792074686520746f70656420746f20796f752e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Tell me the question factail?",
+          "hex": "54656c6c206d6520746865207175657374696f6e206661637461696c3f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "What should I explike theres?",
+          "hex": "576861742073686f756c642049206578706c696b65207468657265733f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Could you expand the tail.",
+          "hex": "436f756c6420796f7520657870616e6420746865207461696c2e",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "What inte moured I ory?",
+          "hex": "5768617420696e7465206d6f757265642049206f72793f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "What is you specify the the theren?",
+          "hex": "5768617420697320796f75207370656369667920746865207468652074686572656e3f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Please give me more details.",
+          "hex": "506c656173652067697665206d65206d6f72652064657461696c732e",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Can you specify the topic?",
+          "hex": "43616e20796f7520737065636966792074686520746f7069633f",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "What should I explain?",
+          "hex": "576861742073686f756c642049206578706c61696e3f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "What should I explain?",
+          "hex": "576861742073686f756c642049206578706c61696e3f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Which subject intion you lue?",
+          "hex": "5768696368207375626a65637420696e74696f6e20796f75206c75653f",
+          "complete": true,
+          "style": 6
+        }
+      ]
+    },
+    "edit": {
+      "unique": 17,
+      "complete_valid": 20,
+      "known_variation_matches": 7,
+      "outputs": [
+        {
+          "text": "Can you specify the replaine?",
+          "hex": "43616e20796f75207370656369667920746865207265706c61696e653f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Which is the saved I change?",
+          "hex": "5768696368206973207468652073617665642049206368616e67653f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Which is the should I change?",
+          "hex": "5768696368206973207468652073686f756c642049206368616e67653f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "What should I sanded?",
+          "hex": "576861742073686f756c6420492073616e6465643f",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Tell me the desired fyoued destesstes the destelikeed the destele.",
+          "hex": "54656c6c206d652074686520646573697265642066796f7565642064657374657373746573207468652064657374656c696b656564207468652064657374656c652e",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "Please specify the edit.",
+          "hex": "506c6561736520737065636966792074686520656469742e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What should I change?",
+          "hex": "576861742073686f756c642049206368616e67653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "What ide quld therify?",
+          "hex": "57686174206964652071756c6420746865726966793f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "Please specify the edit.",
+          "hex": "506c6561736520737065636966792074686520656469742e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What should be mored?",
+          "hex": "576861742073686f756c64206265206d6f7265643f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "What should I sanged?",
+          "hex": "576861742073686f756c6420492073616e6765643f",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Which is the should I change?",
+          "hex": "5768696368206973207468652073686f756c642049206368616e67653f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Please identify the edit.",
+          "hex": "506c65617365206964656e746966792074686520656469742e",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "What should be modifed?",
+          "hex": "576861742073686f756c64206265206d6f64696665643f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Which should be modend?",
+          "hex": "57686963682073686f756c64206265206d6f64656e643f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "What should I change?",
+          "hex": "576861742073686f756c642049206368616e67653f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Please provide the text and edit.",
+          "hex": "506c656173652070726f7669646520746865207465787420616e6420656469742e",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "What should you want?",
+          "hex": "576861742073686f756c6420796f752077616e743f",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Could you describe the change?",
+          "hex": "436f756c6420796f7520646573637269626520746865206368616e67653f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "What what whant ed the det.",
+          "hex": "576861742077686174207768616e7420656420746865206465742e",
+          "complete": true,
+          "style": 9
+        }
+      ]
+    },
+    "remember": {
+      "unique": 14,
+      "complete_valid": 20,
+      "known_variation_matches": 5,
+      "outputs": [
+        {
+          "text": "What should I rememe?",
+          "hex": "576861742073686f756c6420492072656d656d653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "What should I rememe?",
+          "hex": "576861742073686f756c6420492072656d656d653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Please specify the detail.",
+          "hex": "506c656173652073706563696679207468652064657461696c2e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What should I rememe?",
+          "hex": "576861742073686f756c6420492072656d656d653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "What would you detaie detail.",
+          "hex": "5768617420776f756c6420796f75206465746169652064657461696c2e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What would you like you detail.",
+          "hex": "5768617420776f756c6420796f75206c696b6520796f752064657461696c2e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "Please provide the mememe?",
+          "hex": "506c656173652070726f7669646520746865206d656d656d653f",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "What would you specify the saved?",
+          "hex": "5768617420776f756c6420796f752073706563696679207468652073617665643f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "What would you specify the saved?",
+          "hex": "5768617420776f756c6420796f752073706563696679207468652073617665643f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Please specify the detail.",
+          "hex": "506c656173652073706563696679207468652064657461696c2e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What would you specify the detail.",
+          "hex": "5768617420776f756c6420796f752073706563696679207468652064657461696c2e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "Which fact should I save?",
+          "hex": "576869636820666163742073686f756c64204920736176653f",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Please name the fact fact fact fact fact fact fact fact fact fact.",
+          "hex": "506c65617365206e616d652074686520666163742066616374206661637420666163742066616374206661637420666163742066616374206661637420666163742e",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Which fact should I save?",
+          "hex": "576869636820666163742073686f756c64204920736176653f",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Which value detail detail detail detail.",
+          "hex": "57686963682076616c75652064657461696c2064657461696c2064657461696c2064657461696c2e",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "What fact do you deremor?",
+          "hex": "57686174206661637420646f20796f7520646572656d6f723f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "What should I rememe?",
+          "hex": "576861742073686f756c6420492072656d656d653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Tell me the detail fordet.",
+          "hex": "54656c6c206d65207468652064657461696c20666f726465742e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "What fact should I forge?",
+          "hex": "5768617420666163742073686f756c64204920666f7267653f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "What should I remember?",
+          "hex": "576861742073686f756c6420492072656d656d6265723f",
+          "complete": true,
+          "style": 0
+        }
+      ]
+    },
+    "recall": {
+      "unique": 17,
+      "complete_valid": 20,
+      "known_variation_matches": 8,
+      "outputs": [
+        {
+          "text": "What should I forget.",
+          "hex": "576861742073686f756c64204920666f726765742e",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "Please identify the saved fact.",
+          "hex": "506c65617365206964656e746966792074686520736176656420666163742e",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "What should I look for?",
+          "hex": "576861742073686f756c642049206c6f6f6b20666f723f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "Tell me which fact nemecifytersten?",
+          "hex": "54656c6c206d652077686963682066616374206e656d65636966797465727374656e3f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Which memory alisyory foryou.",
+          "hex": "5768696368206d656d6f727920616c6973796f727920666f72796f752e",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "Can you specify the memory?",
+          "hex": "43616e20796f75207370656369667920746865206d656d6f72793f",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "Tell me which fact the me the me thered?",
+          "hex": "54656c6c206d65207768696368206661637420746865206d6520746865206d65207468657265643f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Can you specify the memory.",
+          "hex": "43616e20796f75207370656369667920746865206d656d6f72792e",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "Please clarify the requested fact.",
+          "hex": "506c6561736520636c6172696679207468652072657175657374656420666163742e",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "What detail should I fact.",
+          "hex": "576861742064657461696c2073686f756c64204920666163742e",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "What should I look for?",
+          "hex": "576861742073686f756c642049206c6f6f6b20666f723f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "Which fact should I look no fok fou.",
+          "hex": "576869636820666163742073686f756c642049206c6f6f6b206e6f20666f6b20666f752e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Which fact should I forg tored.",
+          "hex": "576869636820666163742073686f756c64204920666f726720746f7265642e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Please identify the saved fact.",
+          "hex": "506c65617365206964656e746966792074686520736176656420666163742e",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "What should I forget.",
+          "hex": "576861742073686f756c64204920666f726765742e",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "What would you like recalled?",
+          "hex": "5768617420776f756c6420796f75206c696b6520726563616c6c65643f",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What detail should I frem forge?",
+          "hex": "576861742064657461696c2073686f756c642049206672656d20666f7267653f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "Tell me which fact the ninendify the me thered?",
+          "hex": "54656c6c206d65207768696368206661637420746865206e696e656e6469667920746865206d65207468657265643f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Which memory are you mean?",
+          "hex": "5768696368206d656d6f72792061726520796f75206d65616e3f",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "Which detail do you mean?",
+          "hex": "57686963682064657461696c20646f20796f75206d65616e3f",
+          "complete": true,
+          "style": 0
+        }
+      ]
+    },
+    "forget": {
+      "unique": 14,
+      "complete_valid": 20,
+      "known_variation_matches": 14,
+      "outputs": [
+        {
+          "text": "What should I forget?",
+          "hex": "576861742073686f756c64204920666f726765743f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "What would you like forget.",
+          "hex": "5768617420776f756c6420796f75206c696b6520666f726765742e",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What should I forget?",
+          "hex": "576861742073686f756c64204920666f726765743f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "What would you like forgotten?",
+          "hex": "5768617420776f756c6420796f75206c696b6520666f72676f7474656e3f",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What would you like forgotten?",
+          "hex": "5768617420776f756c6420796f75206c696b6520666f72676f7474656e3f",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "Which detail do you want erased?",
+          "hex": "57686963682064657461696c20646f20796f752077616e74206572617365643f",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "Please name the detail to forget.",
+          "hex": "506c65617365206e616d65207468652064657461696c20746f20666f726765742e",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "Tell me which item to remove.",
+          "hex": "54656c6c206d65207768696368206974656d20746f2072656d6f76652e",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "What should I remove?",
+          "hex": "576861742073686f756c6420492072656d6f76653f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "Which should you specify the saved value?",
+          "hex": "57686963682073686f756c6420796f752073706563696679207468652073617665642076616c75653f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Which detail do you want erased?",
+          "hex": "57686963682064657461696c20646f20796f752077616e74206572617365643f",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "Which detail do you want erased?",
+          "hex": "57686963682064657461696c20646f20796f752077616e74206572617365643f",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "Which stored item is it?",
+          "hex": "57686963682073746f726564206974656d2069732069743f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Please identify the stored fact.",
+          "hex": "506c65617365206964656e74696679207468652073746f72656420666163742e",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Which detail should I remove?",
+          "hex": "57686963682064657461696c2073686f756c6420492072656d6f76653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "What fact should I forget?",
+          "hex": "5768617420666163742073686f756c64204920666f726765743f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "Which detail should I remove?",
+          "hex": "57686963682064657461696c2073686f756c6420492072656d6f76653f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Please name the memored?",
+          "hex": "506c65617365206e616d6520746865206d656d6f7265643f",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "What fact should I forget?",
+          "hex": "5768617420666163742073686f756c64204920666f726765743f",
+          "complete": true,
+          "style": 8
+        },
+        {
+          "text": "Which should I removed?",
+          "hex": "57686963682073686f756c6420492072656d6f7665643f",
+          "complete": true,
+          "style": 6
+        }
+      ]
+    },
+    "clarify": {
+      "unique": 18,
+      "complete_valid": 20,
+      "known_variation_matches": 8,
+      "outputs": [
+        {
+          "text": "I am not sure I ured.",
+          "hex": "4920616d206e6f742073757265204920757265642e",
+          "complete": true,
+          "style": 3
+        },
+        {
+          "text": "Could you clarify?",
+          "hex": "436f756c6420796f7520636c61726966793f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "What would you like changed?",
+          "hex": "5768617420776f756c6420796f75206c696b65206368616e6765643f",
+          "complete": true,
+          "style": 6
+        },
+        {
+          "text": "Please explain you need.",
+          "hex": "506c65617365206578706c61696e20796f75206e6565642e",
+          "complete": true,
+          "style": 11
+        },
+        {
+          "text": "What should I focus fact fact fyou.",
+          "hex": "576861742073686f756c64204920666f637573206661637420666163742066796f752e",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Which part do you mean?",
+          "hex": "5768696368207061727420646f20796f75206d65616e3f",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "What do you mean?",
+          "hex": "5768617420646f20796f75206d65616e3f",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "Could you lorice detain?",
+          "hex": "436f756c6420796f75206c6f726963652064657461696e3f",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "Which part do you mean?",
+          "hex": "5768696368207061727420646f20796f75206d65616e3f",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "Could you explain faclainge?",
+          "hex": "436f756c6420796f75206578706c61696e206661636c61696e67653f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "Can you mexplain fore detail?",
+          "hex": "43616e20796f75206d6578706c61696e20666f72652064657461696c3f",
+          "complete": true,
+          "style": 7
+        },
+        {
+          "text": "Could you explain further?",
+          "hex": "436f756c6420796f75206578706c61696e20667572746865723f",
+          "complete": true,
+          "style": 4
+        },
+        {
+          "text": "Could you clarify?",
+          "hex": "436f756c6420796f7520636c61726966793f",
+          "complete": true,
+          "style": 0
+        },
+        {
+          "text": "Can you me me me me me ret.",
+          "hex": "43616e20796f75206d65206d65206d65206d65206d65207265742e",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Can you be more specific?",
+          "hex": "43616e20796f75206265206d6f72652073706563696669633f",
+          "complete": true,
+          "style": 2
+        },
+        {
+          "text": "Can you mean?",
+          "hex": "43616e20796f75206d65616e3f",
+          "complete": true,
+          "style": 5
+        },
+        {
+          "text": "What do you do you mean?",
+          "hex": "5768617420646f20796f7520646f20796f75206d65616e3f",
+          "complete": true,
+          "style": 1
+        },
+        {
+          "text": "What should I focus in?",
+          "hex": "576861742073686f756c64204920666f63757320696e3f",
+          "complete": true,
+          "style": 9
+        },
+        {
+          "text": "Could you lain?",
+          "hex": "436f756c6420796f75206c61696e3f",
+          "complete": true,
+          "style": 10
+        },
+        {
+          "text": "What should I fact fact fyou.",
+          "hex": "576861742073686f756c642049206661637420666163742066796f752e",
+          "complete": true,
+          "style": 9
+        }
+      ]
+    }
+  },
+  "limitations": "Synthetic intent-conditioned generic responses; shared templates across train/validation; no factual grounding or side-effect authorization. Direct decoder test, not session."
+}

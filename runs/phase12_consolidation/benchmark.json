@@ -1,0 +1,3904 @@
+{
+  "greetings": {
+    "count": 20,
+    "correct": 17,
+    "rows": [
+      {
+        "prompt": "Hi there!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hello, how are you?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hey, what's up?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "Good morning!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Thanks!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Okay, got it.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hello, good to see you!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hey friend!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Thank you for helping!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Good evening!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hello again!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hi, nice to see you.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Much appreciated!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "Morning, how are things?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hey, how is your day?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Thank you very much!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Good afternoon!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hi, pleased to meet you.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Okay, I understand.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "Thanks for your help!",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      }
+    ]
+  },
+  "session_intents": {
+    "count": 50,
+    "correct": 41,
+    "rows": [
+      {
+        "prompt": "Hello, I am glad to see you.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hey, thanks for joining me.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Good afternoon, pal.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Thanks for staying with me.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "It is lovely to chat today.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "Hello, hope you are well.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "My favorite fruit is plum.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      },
+      {
+        "prompt": "What is a comet?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "How does a solar panel work?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Explain how magnets attract.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Why do leaves fall in autumn?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Who invented the printing press?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "What does a database do?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Tell me about alpine flowers.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "question",
+        "predicted": "question",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Replace byte 22 with 84.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "edit",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Change byte 17 to 112.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "edit",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Delete the final word from the note.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "edit",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Fix the typo on line 31.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "question",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "Remove the comma from the title.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "question",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "Insert a period at the end of the sentence.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "edit",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Move the third paragraph above the second.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "edit",
+        "predicted": "edit",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Remember my nickname is Finch.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Please remember my hometown is Bilbao.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Remember that my favorite fruit is plum.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Remember my favorite drink is chai.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Remember my team is West.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Remember my instrument is accordion.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Remember that my pet is Sunny.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "remember",
+        "predicted": "remember",
+        "action": "remember",
+        "correct": true
+      },
+      {
+        "prompt": "Please tell me my nickname.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "recall",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Do you know my hometown?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "question",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "What is my favorite fruit?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "recall",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Can you recall my favorite drink?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "recall",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "What was my team?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "recall",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "What was my instrument?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "recall",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Do you remember my editor?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "recall",
+        "predicted": "recall",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Please forget my alias.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "forget",
+        "action": "forget",
+        "correct": true
+      },
+      {
+        "prompt": "Can you forget my hometown?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "recall",
+        "action": "forget",
+        "correct": false
+      },
+      {
+        "prompt": "Forget my favorite fruit.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "forget",
+        "action": "forget",
+        "correct": true
+      },
+      {
+        "prompt": "Please remove my saved preferred drink.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "forget",
+        "action": "forget",
+        "correct": true
+      },
+      {
+        "prompt": "Could you forget my team?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "recall",
+        "action": "forget",
+        "correct": false
+      },
+      {
+        "prompt": "Delete my saved instrument.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "forget",
+        "action": "forget",
+        "correct": true
+      },
+      {
+        "prompt": "Can you forget my editor?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "forget",
+        "predicted": "recall",
+        "action": "forget",
+        "correct": false
+      },
+      {
+        "prompt": "Could you sort this problem?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "I would like you to do it.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": false
+      },
+      {
+        "prompt": "Please tell me about that thing.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "question",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "What did the person say?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "question",
+        "action": "ask",
+        "correct": false
+      },
+      {
+        "prompt": "Can you improve it for me?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Go ahead and change that.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "Would you handle this?",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "clarify",
+        "predicted": "clarify",
+        "action": "ask",
+        "correct": true
+      },
+      {
+        "prompt": "My hobby is sailing.",
+        "history": [
+          {
+            "user": "Could you help me earlier?",
+            "assistant": "Yes, I can help."
+          }
+        ],
+        "expected": "chat",
+        "predicted": "chat",
+        "action": "answer",
+        "correct": true
+      }
+    ]
+  },
+  "diversity": {
+    "routed_unique": 13,
+    "routed_diverse_decoder": 16,
+    "direct_unique": 16,
+    "direct_complete_valid": 16,
+    "seed": 12555,
+    "routed": [
+      {
+        "text": "Can you tell me a little more?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I appreciate you sharing that.",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm ghat?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "Let's talk. Where would you like to start?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "How can I support you right now?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm here. What would you like to talk about?",
+        "intent": "chat",
+        "source": "policy",
+        "action": "answer"
+      },
+      {
+        "text": "I appreciate you sharing that.",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "Thanks for opening up. What's on your mind?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "What's been on your mind?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm here. What would you like to talk about?",
+        "intent": "chat",
+        "source": "policy",
+        "action": "answer"
+      },
+      {
+        "text": "Thanks for opening up. What's on your mind?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm here with you. What feels important?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "Let's talk. Where would you like to start?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "That makes sense. What would help now?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm geeld me. What's next?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm geeld me. What's next?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "Sure, let's chat. What's on your mind?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      },
+      {
+        "text": "I'm here. What would you like to talk about?",
+        "intent": "chat",
+        "source": "policy",
+        "action": "answer"
+      },
+      {
+        "text": "I'm here. What would you like to talk about?",
+        "intent": "chat",
+        "source": "policy",
+        "action": "answer"
+      },
+      {
+        "text": "How has the day been for you?",
+        "intent": "chat",
+        "source": "diverse_byte_decoder",
+        "action": "answer"
+      }
+    ],
+    "direct": [
+      {
+        "text": "Can you tell me a little more?",
+        "complete": true,
+        "style": 24
+      },
+      {
+        "text": "I appreciate you sharing that.",
+        "complete": true,
+        "style": 20
+      },
+      {
+        "text": "I'm ghat?",
+        "complete": true,
+        "style": 25
+      },
+      {
+        "text": "Let's talk. Where would you like to start?",
+        "complete": true,
+        "style": 29
+      },
+      {
+        "text": "How can I support you right now?",
+        "complete": true,
+        "style": 19
+      },
+      {
+        "text": "Would to talk this there to talk thare. Whare to talk there to talk there to tal",
+        "complete": false,
+        "style": 21
+      },
+      {
+        "text": "I appreciate you sharing that.",
+        "complete": true,
+        "style": 20
+      },
+      {
+        "text": "Thanks for opening up. What's on your mind?",
+        "complete": true,
+        "style": 27
+      },
+      {
+        "text": "What's been on your mind?",
+        "complete": true,
+        "style": 4
+      },
+      {
+        "text": "That sounds important to you. What to you. What to you. What to you. What to you",
+        "complete": false,
+        "style": 23
+      },
+      {
+        "text": "Thanks for opening up. What's on your mind?",
+        "complete": true,
+        "style": 27
+      },
+      {
+        "text": "I'm here with you. What feels important?",
+        "complete": true,
+        "style": 31
+      },
+      {
+        "text": "Let's talk. Where would you like to start?",
+        "complete": true,
+        "style": 29
+      },
+      {
+        "text": "That makes sense. What would help now?",
+        "complete": true,
+        "style": 2
+      },
+      {
+        "text": "I'm geeld me. What's next?",
+        "complete": true,
+        "style": 25
+      },
+      {
+        "text": "I'm geeld me. What's next?",
+        "complete": true,
+        "style": 25
+      },
+      {
+        "text": "Sure, let's chat. What's on your mind?",
+        "complete": true,
+        "style": 7
+      },
+      {
+        "text": "I'm listening. What would be be to tanke fould yould be telistening. What would ",
+        "complete": false,
+        "style": 14
+      },
+      {
+        "text": "Thanks for sharing. Want to sant to sant to sant to sant to sant to sant to sant",
+        "complete": false,
+        "style": 0
+      },
+      {
+        "text": "How has the day been for you?",
+        "complete": true,
+        "style": 5
+      }
+    ]
+  },
+  "phase10_development": {
+    "count": 384,
+    "correct": 248,
+    "accuracy": 0.6458333333333334,
+    "macro_accuracy_present_classes": 0.7028645833333333,
+    "per_class": {
+      "chat": {
+        "count": 10,
+        "correct": 7,
+        "accuracy": 0.7
+      },
+      "question": {
+        "count": 30,
+        "correct": 20,
+        "accuracy": 0.6666666666666666
+      },
+      "edit": {
+        "count": 12,
+        "correct": 8,
+        "accuracy": 0.6666666666666666
+      },
+      "remember": {
+        "count": 256,
+        "correct": 155,
+        "accuracy": 0.60546875
+      },
+      "recall": {
+        "count": 32,
+        "correct": 29,
+        "accuracy": 0.90625
+      },
+      "forget": {
+        "count": 32,
+        "correct": 20,
+        "accuracy": 0.625
+      },
+      "clarify": {
+        "count": 12,
+        "correct": 9,
+        "accuracy": 0.75
+      }
+    },
+    "vague": {
+      "count": 12,
+      "correct": 9,
+      "accuracy": 0.75
+    },
+    "specific": {
+      "count": 372,
+      "correct": 239,
+      "accuracy": 0.6424731182795699
+    },
+    "covered_at_threshold": {
+      "threshold": 0.55,
+      "count": 372,
+      "accuracy": 0.6586021505376344
+    },
+    "examples": [
+      {
+        "input": "hello friend",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.996107280254364,
+        "correct": true
+      },
+      {
+        "input": "Hello friend?",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.910258948802948,
+        "correct": true
+      },
+      {
+        "input": "good to meet you",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.9994140863418579,
+        "correct": true
+      },
+      {
+        "input": "Good to meet you?",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.9989266991615295,
+        "correct": true
+      },
+      {
+        "input": "thank you for your help",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.9992270469665527,
+        "correct": true
+      },
+      {
+        "input": "Thank you for your help?",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.9638228416442871,
+        "correct": true
+      },
+      {
+        "input": "I appreciate it",
+        "expected": "chat",
+        "predicted": "clarify",
+        "confidence": 0.9957724213600159,
+        "correct": false
+      },
+      {
+        "input": "I appreciate it?",
+        "expected": "chat",
+        "predicted": "clarify",
+        "confidence": 0.9945665597915649,
+        "correct": false
+      },
+      {
+        "input": "how is your day",
+        "expected": "chat",
+        "predicted": "chat",
+        "confidence": 0.6724197268486023,
+        "correct": true
+      },
+      {
+        "input": "How is your day?",
+        "expected": "chat",
+        "predicted": "question",
+        "confidence": 0.5897895693778992,
+        "correct": false
+      },
+      {
+        "input": "could you explain a planet to me",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9930354952812195,
+        "correct": true
+      },
+      {
+        "input": "Could you explain a planet to me?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9537762403488159,
+        "correct": true
+      },
+      {
+        "input": "could you explain entropy to me",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.7413166761398315,
+        "correct": true
+      },
+      {
+        "input": "Could you explain entropy to me?",
+        "expected": "question",
+        "predicted": "chat",
+        "confidence": 0.49199140071868896,
+        "correct": false
+      },
+      {
+        "input": "could you explain a bicycle to me",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9989966750144958,
+        "correct": true
+      },
+      {
+        "input": "Could you explain a bicycle to me?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9956170320510864,
+        "correct": true
+      },
+      {
+        "input": "could you explain the internet to me",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9823251962661743,
+        "correct": true
+      },
+      {
+        "input": "Could you explain the internet to me?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.746640682220459,
+        "correct": true
+      },
+      {
+        "input": "could you explain a river to me",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9999527931213379,
+        "correct": true
+      },
+      {
+        "input": "Could you explain a river to me?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9998453855514526,
+        "correct": true
+      },
+      {
+        "input": "what do you know about a planet",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9297893643379211,
+        "correct": true
+      },
+      {
+        "input": "What do you know about a planet?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9284231662750244,
+        "correct": true
+      },
+      {
+        "input": "what do you know about entropy",
+        "expected": "question",
+        "predicted": "clarify",
+        "confidence": 0.9296038150787354,
+        "correct": false
+      },
+      {
+        "input": "What do you know about entropy?",
+        "expected": "question",
+        "predicted": "clarify",
+        "confidence": 0.5460593700408936,
+        "correct": false
+      },
+      {
+        "input": "what do you know about a bicycle",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9977831244468689,
+        "correct": true
+      },
+      {
+        "input": "What do you know about a bicycle?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9886166453361511,
+        "correct": true
+      },
+      {
+        "input": "what do you know about the internet",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.6612747311592102,
+        "correct": true
+      },
+      {
+        "input": "What do you know about the internet?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.531360387802124,
+        "correct": true
+      },
+      {
+        "input": "what do you know about a river",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9997594952583313,
+        "correct": true
+      },
+      {
+        "input": "What do you know about a river?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9936460256576538,
+        "correct": true
+      },
+      {
+        "input": "give me an explanation of a planet",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.778327226638794,
+        "correct": false
+      },
+      {
+        "input": "Give me an explanation of a planet?",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.4457349479198456,
+        "correct": false
+      },
+      {
+        "input": "give me an explanation of entropy",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.5947269201278687,
+        "correct": false
+      },
+      {
+        "input": "Give me an explanation of entropy?",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.4870559871196747,
+        "correct": false
+      },
+      {
+        "input": "give me an explanation of a bicycle",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.6991369724273682,
+        "correct": false
+      },
+      {
+        "input": "Give me an explanation of a bicycle?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.920482873916626,
+        "correct": true
+      },
+      {
+        "input": "give me an explanation of the internet",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.6445855498313904,
+        "correct": false
+      },
+      {
+        "input": "Give me an explanation of the internet?",
+        "expected": "question",
+        "predicted": "edit",
+        "confidence": 0.6211712956428528,
+        "correct": false
+      },
+      {
+        "input": "give me an explanation of a river",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.8027679324150085,
+        "correct": true
+      },
+      {
+        "input": "Give me an explanation of a river?",
+        "expected": "question",
+        "predicted": "question",
+        "confidence": 0.9672737121582031,
+        "correct": true
+      },
+      {
+        "input": "please replace byte at position 6 with 44",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.993956446647644,
+        "correct": true
+      },
+      {
+        "input": "Please replace byte at position 6 with 44?",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.9981310963630676,
+        "correct": true
+      },
+      {
+        "input": "please replace byte at position 11 with 71",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.9931592345237732,
+        "correct": true
+      },
+      {
+        "input": "Please replace byte at position 11 with 71?",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.997499406337738,
+        "correct": true
+      },
+      {
+        "input": "please replace byte at position 15 with 128",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.9950575828552246,
+        "correct": true
+      },
+      {
+        "input": "Please replace byte at position 15 with 128?",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.9935160875320435,
+        "correct": true
+      },
+      {
+        "input": "could you fix this text",
+        "expected": "edit",
+        "predicted": "clarify",
+        "confidence": 0.9527198672294617,
+        "correct": false
+      },
+      {
+        "input": "Could you fix this text?",
+        "expected": "edit",
+        "predicted": "clarify",
+        "confidence": 0.9964535236358643,
+        "correct": false
+      },
+      {
+        "input": "revise this document",
+        "expected": "edit",
+        "predicted": "clarify",
+        "confidence": 0.8593966960906982,
+        "correct": false
+      },
+      {
+        "input": "Revise this document?",
+        "expected": "edit",
+        "predicted": "clarify",
+        "confidence": 0.947941243648529,
+        "correct": false
+      },
+      {
+        "input": "remove the second byte",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.9919363260269165,
+        "correct": true
+      },
+      {
+        "input": "Remove the second byte?",
+        "expected": "edit",
+        "predicted": "edit",
+        "confidence": 0.9801157712936401,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9995759129524231,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9987351298332214,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9986515641212463,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992191791534424,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999086856842041,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9994696974754333,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992387294769287,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9959143996238708,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996656179428101,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9989822506904602,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999500036239624,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999396562576294,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997672438621521,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992927312850952,
+        "correct": true
+      },
+      {
+        "input": "please remember that my name is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996881484985352,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my name is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993877410888672,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997729659080505,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988511800765991,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988831877708435,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9962421655654907,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9990291595458984,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9994271993637085,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996660947799683,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9986270666122437,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999047577381134,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988685846328735,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996069073677063,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993354678153992,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9998831748962402,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993178844451904,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite color is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.998725950717926,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite color is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999464213848114,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9878671169281006,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9958557486534119,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9852991104125977,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9868840575218201,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9980046153068542,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.990304172039032,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9816194772720337,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9925529360771179,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9945584535598755,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.988062858581543,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9912217855453491,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9961034059524536,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9967654943466187,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9976155757904053,
+        "correct": true
+      },
+      {
+        "input": "please remember that my favorite food is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9954738020896912,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my favorite food is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9909788370132446,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9987057447433472,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9936383366584778,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9966128468513489,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9994632601737976,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9962047934532166,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9994832277297974,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9976212382316589,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9905160069465637,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9974849224090576,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9987945556640625,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9994341731071472,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9982082843780518,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996846914291382,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9973946809768677,
+        "correct": true
+      },
+      {
+        "input": "please remember that my project is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997194409370422,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my project is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9985474944114685,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9989601373672485,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9941101670265198,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9866437315940857,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9953117370605469,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9983543157577515,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9973446726799011,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9984704852104187,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9905297160148621,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9973438382148743,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9941213726997375,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988766312599182,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9965105652809143,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996392726898193,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.995789110660553,
+        "correct": true
+      },
+      {
+        "input": "please remember that my preferred language is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9965770840644836,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my preferred language is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9990054965019226,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993345141410828,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993071556091309,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.998798131942749,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9995556473731995,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992161989212036,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997522234916687,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988391995429993,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9981920123100281,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997629523277283,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9991518259048462,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999541163444519,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997143149375916,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9997310042381287,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996709823608398,
+        "correct": true
+      },
+      {
+        "input": "please remember that my city is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996615648269653,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my city is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9995253086090088,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993158578872681,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9973970651626587,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9989094734191895,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9959180951118469,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9985790252685547,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988324046134949,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9987442493438721,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9939748644828796,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993833303451538,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9996401071548462,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992958307266235,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9991668462753296,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9995777010917664,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9988501071929932,
+        "correct": true
+      },
+      {
+        "input": "please remember that my pet is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999384880065918,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my pet is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.999715268611908,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9980354905128479,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is Lina?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9987874627113342,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9962318539619446,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is violet?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9858325719833374,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992468357086182,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is tacos?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992582201957703,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9962491393089294,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is Nova?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.997256338596344,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9980748891830444,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is Go?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.997826874256134,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9986488223075867,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is Oslo?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9987527132034302,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9992691874504089,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is bird?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9993250370025635,
+        "correct": true
+      },
+      {
+        "input": "please remember that my hobby is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9965420365333557,
+        "correct": true
+      },
+      {
+        "input": "Please remember that my hobby is cycling?",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.9986608028411865,
+        "correct": true
+      },
+      {
+        "input": "could you remember my name is Lina",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6335803866386414,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9796278476715088,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.935897171497345,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9977046847343445,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is tacos",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5325686931610107,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9887691736221313,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is Nova",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5544382333755493,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9758270978927612,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is Go",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5541685223579407,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9982024431228638,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5381220579147339,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my name is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9787647724151611,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9480250477790833,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9519553780555725,
+        "correct": false
+      },
+      {
+        "input": "could you remember my name is cycling",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9411979913711548,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my name is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9969438910484314,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5779004693031311,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite color is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9831673502922058,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5909467935562134,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my favorite color is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7823750972747803,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is tacos",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6277140974998474,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my favorite color is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8471497297286987,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.55336594581604,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite color is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9786887168884277,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.661279559135437,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite color is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9363566040992737,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.7998348474502563,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite color is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9788764715194702,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6862392425537109,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my favorite color is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.971648633480072,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite color is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5690066814422607,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite color is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8992251753807068,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.8248944282531738,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite food is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9183073043823242,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7709972858428955,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my favorite food is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8476174473762512,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.7029941082000732,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite food is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9728389382362366,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.8481041789054871,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite food is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9125319719314575,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.8865947723388672,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite food is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9339872002601624,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.8989408016204834,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite food is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.943784236907959,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6038712859153748,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my favorite food is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8950715661048889,
+        "correct": false
+      },
+      {
+        "input": "could you remember my favorite food is cycling",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.6771402955055237,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my favorite food is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7698163986206055,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is Lina",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7200713753700256,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9973694086074829,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7854925990104675,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9563595056533813,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is tacos",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8050514459609985,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9931836724281311,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is Nova",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6904996633529663,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9964214563369751,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.6372827291488647,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my project is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9966417551040649,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is Oslo",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7415690422058105,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.997920572757721,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9698504209518433,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9951605200767517,
+        "correct": false
+      },
+      {
+        "input": "could you remember my project is cycling",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8451734781265259,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my project is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9778990745544434,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is Lina",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.622046709060669,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my preferred language is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9695296287536621,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is violet",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5985025763511658,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my preferred language is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9857812523841858,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5799682140350342,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my preferred language is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9453630447387695,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is Nova",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6120831370353699,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my preferred language is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9662207961082458,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.7618247866630554,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my preferred language is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.938566267490387,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.57426518201828,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my preferred language is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9544956684112549,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7700060606002808,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my preferred language is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9474329352378845,
+        "correct": false
+      },
+      {
+        "input": "could you remember my preferred language is cycling",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7053548693656921,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my preferred language is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.915347695350647,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is Lina",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5348416566848755,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my city is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9651741981506348,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.865317702293396,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my city is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9947832226753235,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.6672325730323792,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my city is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.98381108045578,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5910558700561523,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my city is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9340459704399109,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is Go",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.6728480458259583,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my city is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9978412389755249,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.7185497283935547,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my city is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9508322477340698,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8927285075187683,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my city is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9253426790237427,
+        "correct": false
+      },
+      {
+        "input": "could you remember my city is cycling",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9414024949073792,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my city is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9946274161338806,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is Lina",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6842272281646729,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9914279580116272,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8804763555526733,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9855964183807373,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.8316757678985596,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my pet is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9521764516830444,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is Nova",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.6529371738433838,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9891786575317383,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is Go",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5549184679985046,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9843239784240723,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is Oslo",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5051456093788147,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9899270534515381,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is bird",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8973512053489685,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9856166839599609,
+        "correct": false
+      },
+      {
+        "input": "could you remember my pet is cycling",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.7403146028518677,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my pet is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.994983434677124,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is Lina",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.7779685854911804,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my hobby is Lina?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9805099964141846,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is violet",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.8113733530044556,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my hobby is violet?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9902757406234741,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is tacos",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5778881311416626,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my hobby is tacos?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9911966323852539,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is Nova",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.7955887913703918,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my hobby is Nova?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9776831865310669,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is Go",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.5044769048690796,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my hobby is Go?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9915628433227539,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is Oslo",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.8518853783607483,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my hobby is Oslo?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9769008159637451,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is bird",
+        "expected": "remember",
+        "predicted": "remember",
+        "confidence": 0.5901325345039368,
+        "correct": true
+      },
+      {
+        "input": "Could you remember my hobby is bird?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9661439657211304,
+        "correct": false
+      },
+      {
+        "input": "could you remember my hobby is cycling",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9117260575294495,
+        "correct": false
+      },
+      {
+        "input": "Could you remember my hobby is cycling?",
+        "expected": "remember",
+        "predicted": "recall",
+        "confidence": 0.9578132629394531,
+        "correct": false
+      },
+      {
+        "input": "please tell me my name",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9991896748542786,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my name?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9938741326332092,
+        "correct": true
+      },
+      {
+        "input": "please tell me my favorite color",
+        "expected": "recall",
+        "predicted": "forget",
+        "confidence": 0.8568359613418579,
+        "correct": false
+      },
+      {
+        "input": "Please tell me my favorite color?",
+        "expected": "recall",
+        "predicted": "forget",
+        "confidence": 0.5023914575576782,
+        "correct": false
+      },
+      {
+        "input": "please tell me my favorite food",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9628080725669861,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my favorite food?",
+        "expected": "recall",
+        "predicted": "forget",
+        "confidence": 0.861463189125061,
+        "correct": false
+      },
+      {
+        "input": "please tell me my project",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9985697269439697,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my project?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9885181188583374,
+        "correct": true
+      },
+      {
+        "input": "please tell me my preferred language",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9867435693740845,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my preferred language?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.8237471580505371,
+        "correct": true
+      },
+      {
+        "input": "please tell me my city",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9991776347160339,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my city?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.998855710029602,
+        "correct": true
+      },
+      {
+        "input": "please tell me my pet",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.999517560005188,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my pet?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9947757720947266,
+        "correct": true
+      },
+      {
+        "input": "please tell me my hobby",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9920727610588074,
+        "correct": true
+      },
+      {
+        "input": "Please tell me my hobby?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9895997047424316,
+        "correct": true
+      },
+      {
+        "input": "can you recall my name",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9651385545730591,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my name?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9666256308555603,
+        "correct": true
+      },
+      {
+        "input": "can you recall my favorite color",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9467304348945618,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my favorite color?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.8990905284881592,
+        "correct": true
+      },
+      {
+        "input": "can you recall my favorite food",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9795368909835815,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my favorite food?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9551089406013489,
+        "correct": true
+      },
+      {
+        "input": "can you recall my project",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9413299560546875,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my project?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9770544171333313,
+        "correct": true
+      },
+      {
+        "input": "can you recall my preferred language",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9694052934646606,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my preferred language?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9098648428916931,
+        "correct": true
+      },
+      {
+        "input": "can you recall my city",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9474813938140869,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my city?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9727528095245361,
+        "correct": true
+      },
+      {
+        "input": "can you recall my pet",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9835389852523804,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my pet?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.940053403377533,
+        "correct": true
+      },
+      {
+        "input": "can you recall my hobby",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9335123300552368,
+        "correct": true
+      },
+      {
+        "input": "Can you recall my hobby?",
+        "expected": "recall",
+        "predicted": "recall",
+        "confidence": 0.9234158396720886,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved name",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999027252197266,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved name?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9998681545257568,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved favorite color",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999847412109375,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved favorite color?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999809265136719,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved favorite food",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9998949766159058,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved favorite food?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999920129776001,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved project",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999805688858032,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved project?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999903440475464,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved preferred language",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999860525131226,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved preferred language?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999556541442871,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved city",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.999782145023346,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved city?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9995700716972351,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved pet",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9994822144508362,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved pet?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999808073043823,
+        "correct": true
+      },
+      {
+        "input": "please remove my saved hobby",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9999371767044067,
+        "correct": true
+      },
+      {
+        "input": "Please remove my saved hobby?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9998968839645386,
+        "correct": true
+      },
+      {
+        "input": "can you forget my name",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9786661863327026,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my name?",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9713606238365173,
+        "correct": false
+      },
+      {
+        "input": "can you forget my favorite color",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9901148080825806,
+        "correct": true
+      },
+      {
+        "input": "Can you forget my favorite color?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.8193363547325134,
+        "correct": true
+      },
+      {
+        "input": "can you forget my favorite food",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.5715336799621582,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my favorite food?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.9525327086448669,
+        "correct": true
+      },
+      {
+        "input": "can you forget my project",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.969395637512207,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my project?",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9829923510551453,
+        "correct": false
+      },
+      {
+        "input": "can you forget my preferred language",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.7170869708061218,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my preferred language?",
+        "expected": "forget",
+        "predicted": "forget",
+        "confidence": 0.8744869828224182,
+        "correct": true
+      },
+      {
+        "input": "can you forget my city",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9872130751609802,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my city?",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9932373762130737,
+        "correct": false
+      },
+      {
+        "input": "can you forget my pet",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9648714661598206,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my pet?",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9238811731338501,
+        "correct": false
+      },
+      {
+        "input": "can you forget my hobby",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.8387607932090759,
+        "correct": false
+      },
+      {
+        "input": "Can you forget my hobby?",
+        "expected": "forget",
+        "predicted": "recall",
+        "confidence": 0.9276806712150574,
+        "correct": false
+      },
+      {
+        "input": "sort it out",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.9906792044639587,
+        "correct": true
+      },
+      {
+        "input": "Sort it out?",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.8142693638801575,
+        "correct": true
+      },
+      {
+        "input": "I want you to help",
+        "expected": "clarify",
+        "predicted": "chat",
+        "confidence": 0.7528491020202637,
+        "correct": false
+      },
+      {
+        "input": "I want you to help?",
+        "expected": "clarify",
+        "predicted": "chat",
+        "confidence": 0.5901849865913391,
+        "correct": false
+      },
+      {
+        "input": "something needs to change",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.5614500045776367,
+        "correct": true
+      },
+      {
+        "input": "Something needs to change?",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.5417044162750244,
+        "correct": true
+      },
+      {
+        "input": "what can we do",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.9657230973243713,
+        "correct": true
+      },
+      {
+        "input": "What can we do?",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.9979374408721924,
+        "correct": true
+      },
+      {
+        "input": "make this work",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.9762142300605774,
+        "correct": true
+      },
+      {
+        "input": "Make this work?",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.8739622831344604,
+        "correct": true
+      },
+      {
+        "input": "can you take care of it",
+        "expected": "clarify",
+        "predicted": "question",
+        "confidence": 0.638841986656189,
+        "correct": false
+      },
+      {
+        "input": "Can you take care of it?",
+        "expected": "clarify",
+        "predicted": "clarify",
+        "confidence": 0.6819136142730713,
+        "correct": true
+      }
+    ]
+  },
+  "limitations": "Synthetic English, fixed seed, previously inspected Phase 12 and Phase 10 sets are development tests; distinct bytes do not measure appropriate responses."
+}

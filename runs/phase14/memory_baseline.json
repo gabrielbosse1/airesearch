@@ -1,0 +1,432 @@
+{
+  "scope": "structured owner-scoped vectors only; no transcript, gold answer or host fact fallback during recall",
+  "short_context": {
+    "statement": "My favorite color is blue",
+    "question": "What is my favorite color?",
+    "first_recorded": true,
+    "other_statement_recorded": true,
+    "normal": {
+      "text": "blue",
+      "hex": "626c7565",
+      "intent": "recall",
+      "action": "recall",
+      "source": "vector_reader",
+      "routing": "vector_recall",
+      "vector_only": true,
+      "vector_count": 1,
+      "retrieved_episode_count": 0,
+      "episode_recorded": true,
+      "episode_persisted": false
+    },
+    "normal_trace": {
+      "question_only_in_all_feature_calls": true,
+      "feature_calls": 2,
+      "vector_feature_calls": 1,
+      "fallbacks_forbidden": true
+    },
+    "correct": true,
+    "zeroed": {
+      "text": "I couldn't read that vector fact reliably. Could you clarify?",
+      "hex": "4920636f756c646e27742072656164207468617420766563746f7220666163742072656c6961626c792e20436f756c6420796f7520636c61726966793f",
+      "intent": "recall",
+      "action": "ask",
+      "source": "vector_reader_failed",
+      "routing": "vector_recall",
+      "vector_only": true,
+      "vector_count": 1,
+      "retrieved_episode_count": 0,
+      "episode_recorded": true,
+      "episode_persisted": false
+    },
+    "zero_trace": {
+      "question_only_in_all_feature_calls": true,
+      "feature_calls": 2,
+      "vector_feature_calls": 1,
+      "fallbacks_forbidden": true
+    },
+    "zero_changes_answer": true,
+    "swapped_other_user_vector": {
+      "text": "green",
+      "hex": "677265656e",
+      "intent": "recall",
+      "action": "recall",
+      "source": "vector_reader",
+      "routing": "vector_recall",
+      "vector_only": true,
+      "vector_count": 1,
+      "retrieved_episode_count": 0,
+      "episode_recorded": true,
+      "episode_persisted": false
+    },
+    "swapped_trace": {
+      "question_only_in_all_feature_calls": true,
+      "feature_calls": 2,
+      "vector_feature_calls": 1,
+      "fallbacks_forbidden": true
+    },
+    "swap_changes_answer": true,
+    "restored": {
+      "text": "blue",
+      "hex": "626c7565",
+      "intent": "recall",
+      "action": "recall",
+      "source": "vector_reader",
+      "routing": "vector_recall",
+      "vector_only": true,
+      "vector_count": 1,
+      "retrieved_episode_count": 0,
+      "episode_recorded": true,
+      "episode_persisted": false
+    },
+    "restored_trace": {
+      "question_only_in_all_feature_calls": true,
+      "feature_calls": 2,
+      "vector_feature_calls": 1,
+      "fallbacks_forbidden": true
+    },
+    "restoration_recovers_answer": true,
+    "unrelated_user": {
+      "text": "I don't have a matching vector fact available. What is it?",
+      "hex": "4920646f6e277420686176652061206d61746368696e6720766563746f72206661637420617661696c61626c652e20576861742069732069743f",
+      "intent": "recall",
+      "action": "ask",
+      "source": "vector_missing",
+      "routing": "vector_recall",
+      "vector_only": true,
+      "vector_count": 0,
+      "retrieved_episode_count": 0,
+      "episode_recorded": true,
+      "episode_persisted": false
+    },
+    "isolation_trace": {
+      "question_only_in_all_feature_calls": true,
+      "feature_calls": 1,
+      "vector_feature_calls": 0,
+      "fallbacks_forbidden": true
+    },
+    "isolation_passed": true
+  },
+  "fresh_final_cases": {
+    "count": 10,
+    "correct": 10,
+    "cases": [
+      {
+        "statement": "My favorite color is indigo.",
+        "question": "What is my favorite color?",
+        "expected_for_scoring_only": "indigo",
+        "first_recorded": true,
+        "result": {
+          "text": "indigo",
+          "hex": "696e6469676f",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My name is Soraya.",
+        "question": "What is my name?",
+        "expected_for_scoring_only": "Soraya",
+        "first_recorded": true,
+        "result": {
+          "text": "Soraya",
+          "hex": "536f72617961",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My favorite food is mango.",
+        "question": "What is my favorite food?",
+        "expected_for_scoring_only": "mango",
+        "first_recorded": true,
+        "result": {
+          "text": "mango",
+          "hex": "6d616e676f",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My pet is a ferret.",
+        "question": "Do you remember my pet?",
+        "expected_for_scoring_only": "a ferret",
+        "first_recorded": true,
+        "result": {
+          "text": "a ferret",
+          "hex": "6120666572726574",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My hometown is Valencia.",
+        "question": "Can you recall my hometown?",
+        "expected_for_scoring_only": "Valencia",
+        "first_recorded": true,
+        "result": {
+          "text": "Valencia",
+          "hex": "56616c656e636961",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My favorite drink is rooibos.",
+        "question": "What is my favorite drink?",
+        "expected_for_scoring_only": "rooibos",
+        "first_recorded": true,
+        "result": {
+          "text": "rooibos",
+          "hex": "726f6f69626f73",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My project is Helios.",
+        "question": "What was my project?",
+        "expected_for_scoring_only": "Helios",
+        "first_recorded": true,
+        "result": {
+          "text": "Helios",
+          "hex": "48656c696f73",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My hobby is origami.",
+        "question": "Do you remember my hobby?",
+        "expected_for_scoring_only": "origami",
+        "first_recorded": true,
+        "result": {
+          "text": "origami",
+          "hex": "6f726967616d69",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My preferred language is Swahili.",
+        "question": "What is my preferred language?",
+        "expected_for_scoring_only": "Swahili",
+        "first_recorded": true,
+        "result": {
+          "text": "Swahili",
+          "hex": "53776168696c69",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      },
+      {
+        "statement": "My instrument is mandolin.",
+        "question": "Tell me my instrument.",
+        "expected_for_scoring_only": "mandolin",
+        "first_recorded": true,
+        "result": {
+          "text": "mandolin",
+          "hex": "6d616e646f6c696e",
+          "intent": "recall",
+          "action": "recall",
+          "source": "vector_reader",
+          "routing": "vector_recall",
+          "vector_only": true,
+          "vector_count": 1,
+          "retrieved_episode_count": 0,
+          "episode_recorded": true,
+          "episode_persisted": false
+        },
+        "trace": {
+          "question_only_in_all_feature_calls": true,
+          "feature_calls": 2,
+          "vector_feature_calls": 1,
+          "fallbacks_forbidden": true
+        },
+        "correct": true
+      }
+    ]
+  },
+  "long_context": {
+    "filler_messages_sent": 500,
+    "filler_episodes_recorded": 500,
+    "bank_episodic_capacity": 96,
+    "bank_episodic_used": 96,
+    "first_recorded": true,
+    "answer": {
+      "text": "blue",
+      "hex": "626c7565",
+      "intent": "recall",
+      "action": "recall",
+      "source": "vector_reader",
+      "routing": "vector_recall",
+      "vector_only": true,
+      "vector_count": 1,
+      "retrieved_episode_count": 0,
+      "episode_recorded": true,
+      "episode_persisted": false
+    },
+    "trace": {
+      "question_only_in_all_feature_calls": true,
+      "feature_calls": 2,
+      "vector_feature_calls": 1,
+      "fallbacks_forbidden": true
+    },
+    "target_bytes_in_owner_transcripts_before_query": false,
+    "other_user_vector_intact": true,
+    "correct": true
+  },
+  "cross_session": {
+    "statement": "Alice works at ByteCorp",
+    "question": "Where does Alice work?",
+    "fresh_interpreter": true,
+    "persisted_setup": true,
+    "child": {
+      "result": {
+        "text": "ByteCorp",
+        "hex": "42797465436f7270",
+        "intent": "clarify",
+        "action": "recall",
+        "source": "vector_reader",
+        "routing": "exact_vector_read_only_recall",
+        "vector_only": true,
+        "vector_count": 1,
+        "retrieved_episode_count": 0,
+        "episode_recorded": true,
+        "episode_persisted": true
+      },
+      "trace": {
+        "question_only_in_all_feature_calls": true,
+        "feature_calls": 2,
+        "vector_feature_calls": 1,
+        "fallbacks_forbidden": true
+      }
+    },
+    "correct": true
+  }
+}

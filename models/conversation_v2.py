@@ -142,16 +142,25 @@ class ContextualConversationSession(ConversationSession):
                 recent = RetrievedEpisodes((), torch.empty((0, self.model.d_model)), ())
                 history = tuple(self.history[-self.episode_limit:])
             count = len(recent.turns)
-            # Intent classification uses the current turn alone, matching its
-            # protected held-out evaluation. The response feature pass injects
-            # the actual retrieved values as memory_context when available.
+            # Use only the last two session-local turns for routing. Never let
+            # history displace the current turn; long prior turns are omitted.
+            # Response and vector-only recall features remain current-only.
             packed = pack_conversation(msg, (), self.model.max_len)
+            routing_packed = pack_conversation(
+                msg, self.history[-2:], min(self.model.max_len, len(packed) + 200))
             device = self.model.byte_emb.weight.device
             ids = torch.tensor([list(packed)], dtype=torch.long, device=device)
             lengths = torch.tensor([len(packed)], dtype=torch.long, device=device)
             focus = torch.tensor([2], dtype=torch.long, device=device)
             base_features = self.model.conversation_features(ids, lengths, focus_start=focus)
-            logits = self.model.intent_classifier(base_features)
+            if routing_packed == packed:
+                routing_features = base_features
+            else:
+                routing_ids = torch.tensor([list(routing_packed)], dtype=torch.long, device=device)
+                routing_lengths = torch.tensor([len(routing_packed)], dtype=torch.long, device=device)
+                routing_focus = torch.tensor([len(routing_packed) - len(msg)], dtype=torch.long, device=device)
+                routing_features = self.model.conversation_features(routing_ids, routing_lengths, focus_start=routing_focus)
+            logits = self.model.intent_classifier(routing_features)
             if not bool(torch.isfinite(logits).all()):
                 if _NO_STORAGE.search(text):
                     if _NO_STORAGE_SESSION.search(text):
