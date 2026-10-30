@@ -770,6 +770,11 @@ python -m data.github_to_react --verify 60
 python -m data.mixed_react_dataset --output-dir runs/phase17
 OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
     --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.003
+# then continue twice more -- val loss was still falling after stage 2
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0012     --init-from runs/phase17/foundation.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0008     --init-from runs/phase17/foundation.pt
 python -m evaluation.github_eval --model runs/phase17/foundation.pt \
     --baseline runs/phase16/foundation.pt
 python -m demo.github_agent --once "Summarize the project python/cpython."
@@ -778,10 +783,14 @@ python -m demo.github_agent --once "Summarize the project python/cpython."
 | | Phase 16 checkpoint | Phase 17 checkpoint |
 | --- | --- | --- |
 | held-out requests | never trained on this data | trained on 3,580 real trajectories |
-| routed to the right tool | 0/448 | **n/a** |
-| argument byte-exact | 0/448 | **n/a** |
-| answer grounded in the observation | 0/448 | **n/a** |
+| routed to the right tool | 0/448 | **399/448** |
+| argument byte-exact | 0/448 | **0/448** |
+| answer grounded in the observation | 0/448 | **0/448** |
 
 **Grounding is the hallucination test.** For each tool the evaluator extracts the fields the tool looked *up* -- a commit's author and date, a pull request's state and comment count, the repository a search hit came from, a README's character count -- keeps only those absent from the request, and checks whether the answer contains one. An answer that does cannot have been copied out of the request.
 
-**Limits.** Ten repositories, 7,666,483 characters: enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap. Observations are capped at 200 bytes, so long bodies truncate. Grounding is a substring test -- a floor on honesty, not a ceiling on correctness. Scrubbing is heuristic. Scale is unchanged: d_model 64, 4 layers, 0 parameters. See `runs/phase17_report.md`.
+**Did it forget the old task?** Scored on Phase 16's own 480 synthetic test rows with the same evaluator: next-byte **92.03%** vs Phase 16's 94.63%; digits inside `Action:` **32.3%** vs 89.7%; free-running argument byte-exact **0/60** vs 42/60.
+
+**Where it breaks.** Routing transfers (399/448 of held-out requests reach the right tool); copying does not (0/448 byte-exact). Given `Explain commit 00c3ce0a55e5: ...` the model calls `explain_commit("cfe5ccfc3a2")` -- right shape, wrong content. The tool replies `no commit cfe5ccfc3a2 in the corpus`, and the model then writes an invented result on a `Thought:` line and answers as if the lookup had worked (182/324 of 324 not-found rows). The loop guarantees that every `Observation:` line came from a tool; it does not govern what the model writes inside a thought, and that gap is now measured instead of assumed.
+
+**Limits.** Ten repositories, 7,666,483 characters: enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap. Observations are capped at 200 bytes, so long bodies truncate. Grounding is a substring test -- a floor on honesty, not a ceiling on correctness. Scrubbing is heuristic. Scale is unchanged: d_model 64, 4 layers, 282,627 parameters. See `runs/phase17_report.md`.

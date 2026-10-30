@@ -55,6 +55,11 @@ _PR_STATE = re.compile(rb" is (\w+) with (\d+) comments")
 _SEARCH_HIT = re.compile(rb"#(\d+) \[([^\]]+)\]")
 _README_STATS = re.compile(rb"(\d+) headings, (\d+) code blocks, (\d+) characters")
 
+# A tool observation always begins with one of these. Seeing one *inside* a
+# ``Thought:`` line means the model wrote it itself: the loop only ever appends
+# observations on the ``Observation:`` channel.
+_FABRICATED = re.compile(rb"^Thought: (commit [0-9a-f]{6,}|PR \S+ is|found \d+ matching)")
+
 
 def grounding_facts(tool: bytes, observation: bytes) -> list[bytes]:
     """Facts carried by an observation that the request does not contain.
@@ -96,8 +101,15 @@ def build_tools(index: "CorpusIndex") -> dict[bytes, object]:
 
 
 def held_out_evaluation(model, rows, index, *, limit: int | None = None,
-                        max_new_bytes: int = 200, max_rounds: int = 1) -> dict:
-    """Drive the react loop over held-out requests and score what happens."""
+                        max_new_bytes: int = 200, max_rounds: int = 2) -> dict:
+    """Drive the react loop over held-out requests and score what happens.
+
+    ``max_rounds=2`` is the minimum that can measure grounding: round one emits
+    the action and the host appends the observation, round two is the first
+    chance the model has to write an answer that uses it. With one round the
+    transcript always ends at the observation and "did the answer quote the
+    tool's output" would be a measurement of nothing.
+    """
     model.eval()
     loop = ReactLoop(model, build_tools(index), max_rounds=max_rounds,
                      max_new_bytes=max_new_bytes)
@@ -105,7 +117,9 @@ def held_out_evaluation(model, rows, index, *, limit: int | None = None,
 
     counts = {"rows": len(subset), "routed": 0, "tool_correct": 0, "argument_exact": 0,
               "tool_executed": 0, "observation_matches_dataset": 0, "answered": 0,
-              "grounded": 0, "answer_exact": 0, "valid_lookup_key": 0}
+              "grounded": 0, "answer_exact": 0, "valid_lookup_key": 0,
+              "tool_reported_not_found": 0, "answered_despite_not_found": 0,
+              "fabricated_observation_in_thought": 0}
     per_kind: dict[str, dict[str, int]] = {}
     failures: list[dict] = []
 
@@ -142,6 +156,9 @@ def held_out_evaluation(model, rows, index, *, limit: int | None = None,
                 bucket["argument_exact"] += 1
             if action.tool in TOOL_NAMES:
                 counts["tool_executed"] += 1
+            not_found = step.observation.startswith(b"no ")
+            if not_found:
+                counts["tool_reported_not_found"] += 1
             # A key the corpus does not contain is not a formatting slip: it is
             # an identifier the model invented. "no commit X in the corpus" is
             # what the tool actually says, so it can be counted directly.
@@ -158,6 +175,15 @@ def held_out_evaluation(model, rows, index, *, limit: int | None = None,
             answer = run.answer
             if answer:
                 counts["answered"] += 1
+                if not_found:
+                    # The tool said the key does not exist; answering anyway is
+                    # the failure this architecture exists to prevent.
+                    counts["answered_despite_not_found"] += 1
+            # Anything that looks like a tool result but sits on a Thought line
+            # was written by the model, not by a tool.
+            if any(_FABRICATED.match(line.strip())
+                   for line in run.transcript.split(b"\n")):
+                counts["fabricated_observation_in_thought"] += 1
                 if answer.strip() == reference_answer.strip():
                     counts["answer_exact"] += 1
             facts = observation_only_facts(action.tool, step.observation, row.request)
@@ -171,6 +197,11 @@ def held_out_evaluation(model, rows, index, *, limit: int | None = None,
                                  "expected_fact": facts[0].decode("latin-1", "replace")})
 
     scored = max(counts["rows"], 1)
+    # Only rows where a corpus tool actually ran can say anything about whether
+    # the key existed; counting the rest would reward calling the wrong tool.
+    # A model that never reaches these tools has no rate at all -- reporting
+    # "277/1" would be worse than reporting nothing.
+    lookups = counts["tool_executed"]
     report = {
         "rows": counts["rows"],
         "tool_routing": f"{counts['tool_correct']}/{scored}",
@@ -178,13 +209,20 @@ def held_out_evaluation(model, rows, index, *, limit: int | None = None,
         "argument_byte_exact": f"{counts['argument_exact']}/{scored}",
         "argument_byte_exact_accuracy": round(counts["argument_exact"] / scored, 4),
         "tools_executed": counts["tool_executed"],
-        "valid_lookup_key": f"{counts['valid_lookup_key']}/{scored}",
-        "valid_lookup_key_rate": round(counts["valid_lookup_key"] / scored, 4),
+        "valid_lookup_key": (f"{counts['valid_lookup_key']}/{counts['tool_executed']}"
+                             if counts["tool_executed"] else "n/a"),
+        "valid_lookup_key_rate": (round(counts["valid_lookup_key"] / lookups, 4)
+                                  if lookups else None),
         "observation_reproduced_from_the_tool": f"{counts['observation_matches_dataset']}/{scored}",
         "answered": f"{counts['answered']}/{scored}",
         "grounded_in_observation": f"{counts['grounded']}/{scored}",
         "grounded_accuracy": round(counts["grounded"] / scored, 4),
         "answer_exact_match": f"{counts['answer_exact']}/{scored}",
+        "tool_reported_not_found": counts["tool_reported_not_found"],
+        "answered_despite_not_found": (str(counts["answered_despite_not_found"]) + "/"
+                                       + str(counts["tool_reported_not_found"])),
+        "fabricated_observation_in_thought": (str(counts["fabricated_observation_in_thought"])
+                                              + "/" + str(scored)),
         "per_kind": {kind: {key: value for key, value in bucket.items()}
                      for kind, bucket in sorted(per_kind.items())},
         "note": ("facts used for grounding are absent from the request by "
@@ -195,11 +233,13 @@ def held_out_evaluation(model, rows, index, *, limit: int | None = None,
     return report
 
 
-def evaluate_model(path: str, rows, index, *, limit: int | None = None) -> dict:
+def evaluate_model(path: str, rows, index, *, limit: int | None = None,
+                   max_rounds: int = 2) -> dict:
     model = load_foundation(path, device="cpu")
     return {"model": path, "parameters": model.parameters_count,
             "max_seq_len": model.config.max_seq_len,
-            "held_out": held_out_evaluation(model, rows, index, limit=limit)}
+            "held_out": held_out_evaluation(model, rows, index, limit=limit,
+                                            max_rounds=max_rounds)}
 
 
 def main() -> None:
@@ -210,6 +250,7 @@ def main() -> None:
     parser.add_argument("--held-out", default=DEFAULT_HELD_OUT)
     parser.add_argument("--corpus", default=DEFAULT_CORPUS)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--max-rounds", type=int, default=2)
     parser.add_argument("--output", default=DEFAULT_OUTPUT)
     args = parser.parse_args()
 
@@ -217,13 +258,18 @@ def main() -> None:
     index = CorpusIndex.from_jsonl(args.corpus)
     print(json.dumps({"held_out_rows": len(rows), "corpus": str(args.corpus)}), flush=True)
 
-    report = {"evaluation": evaluate_model(args.model, rows, index, limit=args.limit)}
+    report = {"max_rounds": args.max_rounds,
+              "evaluation": evaluate_model(args.model, rows, index, limit=args.limit,
+                                           max_rounds=args.max_rounds)}
     if args.baseline:
-        report["baseline"] = evaluate_model(args.baseline, rows, index, limit=args.limit)
+        report["baseline"] = evaluate_model(args.baseline, rows, index, limit=args.limit,
+                                            max_rounds=args.max_rounds)
         current = report["evaluation"]["held_out"]
         previous = report["baseline"]["held_out"]
         report["delta"] = {
-            metric: round(current[metric] - previous[metric], 4)
+            metric: (round(current[metric] - previous[metric], 4)
+                     if current.get(metric) is not None and previous.get(metric) is not None
+                     else None)
             for metric in ("tool_routing_accuracy", "argument_byte_exact_accuracy",
                            "grounded_accuracy", "valid_lookup_key_rate")
         }

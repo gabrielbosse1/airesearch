@@ -1,0 +1,22 @@
+{
+  "model": "runs/phase17/foundation_stage2.pt",
+  "rows": "runs/phase17/react_test.jsonl",
+  "synthetic": {
+    "label": "Phase 16 synthetic trajectories",
+    "rows_with_an_argument": 440,
+    "argument_bytes": 8156,
+    "teacher_forced_argument_byte_accuracy": 0.841,
+    "teacher_forced_hex_or_digit_accuracy": 0.5623,
+    "whole_argument_predicted_exactly": "0/440",
+    "note": "the gold prefix is fed for every position, so this is what the model can copy, not what it does copy"
+  },
+  "github": {
+    "label": "real GitHub trajectories",
+    "rows_with_an_argument": 448,
+    "argument_bytes": 10170,
+    "teacher_forced_argument_byte_accuracy": 0.4878,
+    "teacher_forced_hex_or_digit_accuracy": 0.3468,
+    "whole_argument_predicted_exactly": "0/448",
+    "note": "the gold prefix is fed for every position, so this is what the model can copy, not what it does copy"
+  }
+}
