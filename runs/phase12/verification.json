@@ -1,0 +1,33 @@
+{
+  "tests_total": 168,
+  "tests_passed": 168,
+  "test_log": "runs/phase12/unittest.log",
+  "phase9_source_tensors_unchanged": 155,
+  "phase9_three_way_diagnostic_exact": true,
+  "historical_checkpoint_sha256": {
+    "runs/model.pt": "7ed9dd3cb5faed61f8e38fe35f5e4943849c55825298100e7b81e4a93c0aebd2",
+    "runs/dual_memory/generator.pt": "2122e69c0a272fe3cc5b6d252799f31128df094b44d6b02012e531d5990995d6",
+    "runs/dual_memory/memory.pt": "52c1d939758a60ddafad738e3b0d29f7687680c4f5f10726385f3b9befb8995f",
+    "runs/phase9/structured_generator.pt": "7c431887646026b8c1de653d613f77763eb2155a4cc62b849a0870f1db96f76b",
+    "runs/phase9/generator.pt": "47a43294533a0f530e90f40cf7dc241cecc120d634db9323800831b67968a394",
+    "runs/phase9/diffusion/model.pt": "a14fb7c587382c47172205c6cf648f0312652c366091faa3a69fe673fa7e8395",
+    "runs/phase10/generator.pt": "65b15a46e79cbdc4d3568de5f19f393cb83f98a2ab84c2497f2f4fae9f2bed54",
+    "runs/phase10/response.pt": "219489b397e8f44bfb4a3a006c377f7eb9f0c609d23f89c03080ab7ea87ea038",
+    "runs/phase11/generator.pt": "a193f3633d4a8b9beb7d958fadefa6b2ccacf33ccf951466b5280bf878249898",
+    "runs/phase11/response.pt": "1db7c7e63c65a72f4b17ac93eb27f680d403ce4e42e18be632c2c5acf1ae19bf",
+    "runs/real_traces/memory.pt": "108bb8b877d7e5c2c87c27fc47953b01de956ca0367453b3211175879eee0402"
+  },
+  "historical_files_unchanged_during_verification": true,
+  "all_response_checkpoint_bindings_verified": true,
+  "guarded_replay_loaded_and_audited": 1000,
+  "cli_vector_cross_process": true,
+  "cli_unencrypted_warning": true,
+  "cli_user_isolation": true,
+  "cli_no_episode_opt_out": true,
+  "cli_no_storage_turn": true,
+  "legacy_phase10_cli": true,
+  "legacy_phase11_cli": true,
+  "compileall": true,
+  "git_diff_check": true,
+  "external_tokenizer_reference_scan": true
+}

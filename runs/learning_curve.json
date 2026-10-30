@@ -1,0 +1,5776 @@
+{
+  "protocol": {
+    "task": "teacher-forced raw-byte continuation conditioned on top-K procedural memories",
+    "split": "unique validation prefixes excluded from training prefix set; validation outputs never written to memory",
+    "retrieval_accuracy": "top-1 stored metadata concept equals validation example concept, not exact-output replay",
+    "confidence": "ECE measures the current uncalibrated head; it is not an adaptive-halting validation",
+    "train_examples": 96,
+    "validation_examples": 64,
+    "epochs": 6,
+    "batch_size": 16,
+    "learning_rate": 0.0001
+  },
+  "history": [
+    {
+      "epoch": 0,
+      "train": {
+        "loss": 5.983003644711727,
+        "accuracy": 0.008613938919342208,
+        "ece": 0.0038288855114215134,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 6.0094297910066246,
+        "accuracy": 0.00576036866359447,
+        "ece": 0.007169577520563855,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    },
+    {
+      "epoch": 1,
+      "train": {
+        "loss": 5.737537739513997,
+        "accuracy": 0.00548159749412686,
+        "ece": 0.00934019918387979,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 5.75233157109555,
+        "accuracy": 0.009216589861751152,
+        "ece": 0.006035113698601173,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    },
+    {
+      "epoch": 2,
+      "train": {
+        "loss": 5.604643126437696,
+        "accuracy": 0.004698512137823023,
+        "ece": 0.019825387935714974,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 5.62042714483727,
+        "accuracy": 0.01152073732718894,
+        "ece": 0.013680234163021027,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    },
+    {
+      "epoch": 3,
+      "train": {
+        "loss": 5.543951334762872,
+        "accuracy": 0.007047768206734534,
+        "ece": 0.03721729344516969,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 5.5656421854748706,
+        "accuracy": 0.01152073732718894,
+        "ece": 0.034134451875008194,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    },
+    {
+      "epoch": 4,
+      "train": {
+        "loss": 5.514574832064898,
+        "accuracy": 0.008613938919342208,
+        "ece": 0.04983313642763121,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 5.546613561392929,
+        "accuracy": 0.012672811059907835,
+        "ece": 0.04773888530956435,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    },
+    {
+      "epoch": 5,
+      "train": {
+        "loss": 5.486989331226752,
+        "accuracy": 0.007830853563038372,
+        "ece": 0.039938333596722074,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 5.532139931955645,
+        "accuracy": 0.012672811059907835,
+        "ece": 0.036729773171761064,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    },
+    {
+      "epoch": 6,
+      "train": {
+        "loss": 5.464791413667898,
+        "accuracy": 0.008613938919342208,
+        "ece": 0.0251407552285874,
+        "retrieval_accuracy": 0.2916666666666667,
+        "retrieval_queries": 96,
+        "bytes": 1277,
+        "retrieval_details": [
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "the",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "car",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "red",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "dog",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "bee",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:click",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "ice",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "sun",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "blue",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "wind",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "duck",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "sand",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "rock",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "snow",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      },
+      "validation": {
+        "loss": 5.52317127983691,
+        "accuracy": 0.012672811059907835,
+        "ece": 0.022214253188415606,
+        "retrieval_accuracy": 0.3125,
+        "retrieval_queries": 64,
+        "bytes": 868,
+        "retrieval_details": [
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "fox",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "fire",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "ant",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "cat",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "tree",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "moon",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "gold",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "silk",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "pig",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:tone",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "a",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "wolf",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:chirp",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "shape",
+            "retrieved": "shape",
+            "hit": true
+          },
+          {
+            "expected": "audio:noise",
+            "retrieved": "shape",
+            "hit": false
+          }
+        ]
+      }
+    }
+  ]
+}

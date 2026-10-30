@@ -1,0 +1,3230 @@
+{
+  "protocol": {
+    "source": "real repository working-tree code/text before/after excerpts, not an external benchmark",
+    "split": "disjoint source files; held-out outputs written only after all model evaluation",
+    "distance": "optimal unit-cost byte Levenshtein; MOVE is not a primitive",
+    "generation": "autonomous cognitive_generate, no host controller and no target supplied",
+    "train_epochs": 80,
+    "batch_size": 2,
+    "learning_rate": 0.0003,
+    "warning": "Host-controlled trace execution and exact stored-output replay are not learned generation; the saved verification memory contains held-out targets.",
+    "saved_memory_contains_heldout_targets": true
+  },
+  "counts": {
+    "train": 10,
+    "validation": 4,
+    "test": 8
+  },
+  "replay": {
+    "count": 22,
+    "matched": 22,
+    "examples": [
+      {
+        "id": "train-code-01",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 96
+      },
+      {
+        "id": "train-code-02",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 97
+      },
+      {
+        "id": "train-code-03",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 98
+      },
+      {
+        "id": "train-code-04",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 99
+      },
+      {
+        "id": "train-code-05",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 100
+      },
+      {
+        "id": "train-code-06",
+        "matched": true,
+        "distance": 2,
+        "trace_steps": 6,
+        "latent_steps": 4,
+        "slot": 101
+      },
+      {
+        "id": "train-code-07",
+        "matched": true,
+        "distance": 3,
+        "trace_steps": 7,
+        "latent_steps": 4,
+        "slot": 102
+      },
+      {
+        "id": "train-code-08",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 103
+      },
+      {
+        "id": "train-code-09",
+        "matched": true,
+        "distance": 2,
+        "trace_steps": 6,
+        "latent_steps": 4,
+        "slot": 104
+      },
+      {
+        "id": "train-text-01",
+        "matched": true,
+        "distance": 2,
+        "trace_steps": 6,
+        "latent_steps": 4,
+        "slot": 105
+      },
+      {
+        "id": "validation-code-01",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 106
+      },
+      {
+        "id": "validation-code-02",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 107
+      },
+      {
+        "id": "validation-code-03",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 108
+      },
+      {
+        "id": "validation-code-04",
+        "matched": true,
+        "distance": 2,
+        "trace_steps": 6,
+        "latent_steps": 4,
+        "slot": 109
+      },
+      {
+        "id": "test-code-01",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 110
+      },
+      {
+        "id": "test-code-02",
+        "matched": true,
+        "distance": 3,
+        "trace_steps": 7,
+        "latent_steps": 4,
+        "slot": 111
+      },
+      {
+        "id": "test-code-03",
+        "matched": true,
+        "distance": 3,
+        "trace_steps": 7,
+        "latent_steps": 4,
+        "slot": 112
+      },
+      {
+        "id": "test-code-04",
+        "matched": true,
+        "distance": 3,
+        "trace_steps": 7,
+        "latent_steps": 4,
+        "slot": 113
+      },
+      {
+        "id": "test-code-05",
+        "matched": true,
+        "distance": 1,
+        "trace_steps": 5,
+        "latent_steps": 4,
+        "slot": 114
+      },
+      {
+        "id": "test-code-06",
+        "matched": true,
+        "distance": 2,
+        "trace_steps": 6,
+        "latent_steps": 4,
+        "slot": 115
+      },
+      {
+        "id": "test-text-01",
+        "matched": true,
+        "distance": 5,
+        "trace_steps": 9,
+        "latent_steps": 4,
+        "slot": 116
+      },
+      {
+        "id": "test-text-02",
+        "matched": true,
+        "distance": 45,
+        "trace_steps": 49,
+        "latent_steps": 4,
+        "slot": 117
+      }
+    ]
+  },
+  "co_training": [
+    {
+      "gen_loss": 4.63496961593628,
+      "retrieval_sim": 0.37890590354800224,
+      "consistency_sim": 0.42782277762889864,
+      "consistency_loss": -0.42782277762889864,
+      "confidence_loss": 0.4433944046497345,
+      "cognitive_trace_loss": 8.232734870910644,
+      "confidence_accuracy": 0.8980997562408447
+    },
+    {
+      "gen_loss": 4.4568146705627445,
+      "retrieval_sim": 0.7958971261978149,
+      "consistency_sim": 0.8975464463233948,
+      "consistency_loss": -0.8975464463233948,
+      "confidence_loss": 0.49772371649742125,
+      "cognitive_trace_loss": 5.939311599731445,
+      "confidence_accuracy": 0.8733166217803955
+    },
+    {
+      "gen_loss": 4.307751083374024,
+      "retrieval_sim": 0.8728944420814514,
+      "consistency_sim": 0.9525908470153809,
+      "consistency_loss": -0.9525908470153809,
+      "confidence_loss": 0.4846371948719025,
+      "cognitive_trace_loss": 5.1394775390625,
+      "confidence_accuracy": 0.866109037399292
+    },
+    {
+      "gen_loss": 4.191974306106568,
+      "retrieval_sim": 0.8807785391807557,
+      "consistency_sim": 0.9486257076263428,
+      "consistency_loss": -0.9486257076263428,
+      "confidence_loss": 0.4346210271120071,
+      "cognitive_trace_loss": 4.652687644958496,
+      "confidence_accuracy": 0.8636399507522583
+    },
+    {
+      "gen_loss": 4.076837730407715,
+      "retrieval_sim": 0.8875395774841308,
+      "consistency_sim": 0.9546897053718567,
+      "consistency_loss": -0.9546897053718567,
+      "confidence_loss": 0.4654287099838257,
+      "cognitive_trace_loss": 4.212273979187012,
+      "confidence_accuracy": 0.8487874269485474
+    },
+    {
+      "gen_loss": 3.9984734058380127,
+      "retrieval_sim": 0.8942027688026428,
+      "consistency_sim": 0.9690109729766846,
+      "consistency_loss": -0.9690109729766846,
+      "confidence_loss": 0.4289012610912323,
+      "cognitive_trace_loss": 3.6393808364868163,
+      "confidence_accuracy": 0.8530278921127319
+    },
+    {
+      "gen_loss": 3.926119899749756,
+      "retrieval_sim": 0.9002949595451355,
+      "consistency_sim": 0.9822393417358398,
+      "consistency_loss": -0.9822393417358398,
+      "confidence_loss": 0.4223501443862915,
+      "cognitive_trace_loss": 3.355536699295044,
+      "confidence_accuracy": 0.848873245716095
+    },
+    {
+      "gen_loss": 3.851718282699585,
+      "retrieval_sim": 0.9046768069267273,
+      "consistency_sim": 0.9902386426925659,
+      "consistency_loss": -0.9902386426925659,
+      "confidence_loss": 0.46317739486694337,
+      "cognitive_trace_loss": 3.0987837314605713,
+      "confidence_accuracy": 0.8301857829093933
+    },
+    {
+      "gen_loss": 3.803305721282959,
+      "retrieval_sim": 0.9066500186920166,
+      "consistency_sim": 0.9939728736877441,
+      "consistency_loss": -0.9939728736877441,
+      "confidence_loss": 0.4179303705692291,
+      "cognitive_trace_loss": 2.9759021282196043,
+      "confidence_accuracy": 0.8489689111709595
+    },
+    {
+      "gen_loss": 3.7693707942962646,
+      "retrieval_sim": 0.9088085293769836,
+      "consistency_sim": 0.9949035763740539,
+      "consistency_loss": -0.9949035763740539,
+      "confidence_loss": 0.4587274849414825,
+      "cognitive_trace_loss": 2.835309314727783,
+      "confidence_accuracy": 0.8205750226974488
+    },
+    {
+      "gen_loss": 3.745814657211304,
+      "retrieval_sim": 0.9120367765426636,
+      "consistency_sim": 0.9963818073272706,
+      "consistency_loss": -0.9963818073272706,
+      "confidence_loss": 0.4265426516532898,
+      "cognitive_trace_loss": 2.6537702560424803,
+      "confidence_accuracy": 0.8457442283630371
+    },
+    {
+      "gen_loss": 3.692283582687378,
+      "retrieval_sim": 0.915594756603241,
+      "consistency_sim": 0.9974068880081177,
+      "consistency_loss": -0.9974068880081177,
+      "confidence_loss": 0.4363003134727478,
+      "cognitive_trace_loss": 2.4787842988967896,
+      "confidence_accuracy": 0.8387059450149537
+    },
+    {
+      "gen_loss": 3.6281978607177736,
+      "retrieval_sim": 0.9181823968887329,
+      "consistency_sim": 0.997291111946106,
+      "consistency_loss": -0.997291111946106,
+      "confidence_loss": 0.4343044519424438,
+      "cognitive_trace_loss": 2.319826912879944,
+      "confidence_accuracy": 0.8345079064369202
+    },
+    {
+      "gen_loss": 3.611068773269653,
+      "retrieval_sim": 0.9194543480873107,
+      "consistency_sim": 0.9966594696044921,
+      "consistency_loss": -0.9966594696044921,
+      "confidence_loss": 0.41927497982978823,
+      "cognitive_trace_loss": 2.1979080200195313,
+      "confidence_accuracy": 0.8438625335693359
+    },
+    {
+      "gen_loss": 3.5643399238586424,
+      "retrieval_sim": 0.9217694759368896,
+      "consistency_sim": 0.9961956143379211,
+      "consistency_loss": -0.9961956143379211,
+      "confidence_loss": 0.44250670075416565,
+      "cognitive_trace_loss": 2.077364921569824,
+      "confidence_accuracy": 0.8240382194519043
+    },
+    {
+      "gen_loss": 3.5146474838256836,
+      "retrieval_sim": 0.9241865515708924,
+      "consistency_sim": 0.9957632541656494,
+      "consistency_loss": -0.9957632541656494,
+      "confidence_loss": 0.44999470710754397,
+      "cognitive_trace_loss": 1.9839617013931274,
+      "confidence_accuracy": 0.823635709285736
+    },
+    {
+      "gen_loss": 3.490147066116333,
+      "retrieval_sim": 0.9257026433944702,
+      "consistency_sim": 0.9963982462882995,
+      "consistency_loss": -0.9963982462882995,
+      "confidence_loss": 0.4241814613342285,
+      "cognitive_trace_loss": 1.9475986957550049,
+      "confidence_accuracy": 0.8376334190368653
+    },
+    {
+      "gen_loss": 3.46544508934021,
+      "retrieval_sim": 0.9284505605697632,
+      "consistency_sim": 0.9972103476524353,
+      "consistency_loss": -0.9972103476524353,
+      "confidence_loss": 0.4681189715862274,
+      "cognitive_trace_loss": 1.8886550903320312,
+      "confidence_accuracy": 0.8072889924049378
+    },
+    {
+      "gen_loss": 3.4308110237121583,
+      "retrieval_sim": 0.9308448672294617,
+      "consistency_sim": 0.9973932385444642,
+      "consistency_loss": -0.9973932385444642,
+      "confidence_loss": 0.4545868575572968,
+      "cognitive_trace_loss": 1.7844149351119996,
+      "confidence_accuracy": 0.8190425634384155
+    },
+    {
+      "gen_loss": 3.4161517143249513,
+      "retrieval_sim": 0.9324450969696045,
+      "consistency_sim": 0.997894549369812,
+      "consistency_loss": -0.997894549369812,
+      "confidence_loss": 0.4434329986572266,
+      "cognitive_trace_loss": 1.7091538429260253,
+      "confidence_accuracy": 0.8304012298583985
+    },
+    {
+      "gen_loss": 3.385943365097046,
+      "retrieval_sim": 0.9350046753883362,
+      "consistency_sim": 0.9981884360313416,
+      "consistency_loss": -0.9981884360313416,
+      "confidence_loss": 0.43290785551071165,
+      "cognitive_trace_loss": 1.5876380681991578,
+      "confidence_accuracy": 0.827643895149231
+    },
+    {
+      "gen_loss": 3.3529787063598633,
+      "retrieval_sim": 0.9357940435409546,
+      "consistency_sim": 0.9984375238418579,
+      "consistency_loss": -0.9984375238418579,
+      "confidence_loss": 0.42994098663330077,
+      "cognitive_trace_loss": 1.4733276963233948,
+      "confidence_accuracy": 0.8299083352088928
+    },
+    {
+      "gen_loss": 3.334016799926758,
+      "retrieval_sim": 0.9378185153007508,
+      "consistency_sim": 0.9982193946838379,
+      "consistency_loss": -0.9982193946838379,
+      "confidence_loss": 0.44852020740509035,
+      "cognitive_trace_loss": 1.4575462341308594,
+      "confidence_accuracy": 0.8141069173812866
+    },
+    {
+      "gen_loss": 3.3314022064208983,
+      "retrieval_sim": 0.9394415020942688,
+      "consistency_sim": 0.9984042286872864,
+      "consistency_loss": -0.9984042286872864,
+      "confidence_loss": 0.45801501274108886,
+      "cognitive_trace_loss": 1.403073751926422,
+      "confidence_accuracy": 0.8162318468093872
+    },
+    {
+      "gen_loss": 3.3014662742614744,
+      "retrieval_sim": 0.9411565661430359,
+      "consistency_sim": 0.9986902952194214,
+      "consistency_loss": -0.9986902952194214,
+      "confidence_loss": 0.4639409124851227,
+      "cognitive_trace_loss": 1.3486709475517273,
+      "confidence_accuracy": 0.8026573896408081
+    },
+    {
+      "gen_loss": 3.2682307720184327,
+      "retrieval_sim": 0.9433202505111694,
+      "consistency_sim": 0.9987965941429138,
+      "consistency_loss": -0.9987965941429138,
+      "confidence_loss": 0.4626631081104279,
+      "cognitive_trace_loss": 1.2697808742523193,
+      "confidence_accuracy": 0.8072161197662353
+    },
+    {
+      "gen_loss": 3.2712233543395994,
+      "retrieval_sim": 0.9434769034385682,
+      "consistency_sim": 0.9986161470413208,
+      "consistency_loss": -0.9986161470413208,
+      "confidence_loss": 0.48649168014526367,
+      "cognitive_trace_loss": 1.2212363123893737,
+      "confidence_accuracy": 0.795441210269928
+    },
+    {
+      "gen_loss": 3.227636957168579,
+      "retrieval_sim": 0.9455029129981994,
+      "consistency_sim": 0.9986121892929077,
+      "consistency_loss": -0.9986121892929077,
+      "confidence_loss": 0.4763558566570282,
+      "cognitive_trace_loss": 1.2039450883865357,
+      "confidence_accuracy": 0.7901847720146179
+    },
+    {
+      "gen_loss": 3.221195363998413,
+      "retrieval_sim": 0.9465609550476074,
+      "consistency_sim": 0.9987627983093261,
+      "consistency_loss": -0.9987627983093261,
+      "confidence_loss": 0.46752291917800903,
+      "cognitive_trace_loss": 1.1088629722595216,
+      "confidence_accuracy": 0.8096577048301696
+    },
+    {
+      "gen_loss": 3.186860275268555,
+      "retrieval_sim": 0.9480738997459411,
+      "consistency_sim": 0.9987493515014648,
+      "consistency_loss": -0.9987493515014648,
+      "confidence_loss": 0.4868416368961334,
+      "cognitive_trace_loss": 1.078497588634491,
+      "confidence_accuracy": 0.7763086438179017
+    },
+    {
+      "gen_loss": 3.1676275730133057,
+      "retrieval_sim": 0.9493874430656433,
+      "consistency_sim": 0.99885493516922,
+      "consistency_loss": -0.99885493516922,
+      "confidence_loss": 0.4758321940898895,
+      "cognitive_trace_loss": 1.0636839389801025,
+      "confidence_accuracy": 0.7982183337211609
+    },
+    {
+      "gen_loss": 3.160886287689209,
+      "retrieval_sim": 0.950131869316101,
+      "consistency_sim": 0.9990839242935181,
+      "consistency_loss": -0.9990839242935181,
+      "confidence_loss": 0.45216297507286074,
+      "cognitive_trace_loss": 1.0046621799468993,
+      "confidence_accuracy": 0.7934607863426208
+    },
+    {
+      "gen_loss": 3.1262492179870605,
+      "retrieval_sim": 0.9524466037750244,
+      "consistency_sim": 0.9986954808235169,
+      "consistency_loss": -0.9986954808235169,
+      "confidence_loss": 0.5020386219024658,
+      "cognitive_trace_loss": 0.9737466812133789,
+      "confidence_accuracy": 0.7601141929626465
+    },
+    {
+      "gen_loss": 3.1185354709625246,
+      "retrieval_sim": 0.9516876816749573,
+      "consistency_sim": 0.9988155841827393,
+      "consistency_loss": -0.9988155841827393,
+      "confidence_loss": 0.46600563526153566,
+      "cognitive_trace_loss": 0.9441268086433411,
+      "confidence_accuracy": 0.7872120499610901
+    },
+    {
+      "gen_loss": 3.0815884590148928,
+      "retrieval_sim": 0.9535836219787598,
+      "consistency_sim": 0.9985711455345154,
+      "consistency_loss": -0.9985711455345154,
+      "confidence_loss": 0.5434470653533936,
+      "cognitive_trace_loss": 0.9457093477249146,
+      "confidence_accuracy": 0.737170958518982
+    },
+    {
+      "gen_loss": 3.0671299934387206,
+      "retrieval_sim": 0.9546166181564331,
+      "consistency_sim": 0.9988775134086609,
+      "consistency_loss": -0.9988775134086609,
+      "confidence_loss": 0.5000227332115174,
+      "cognitive_trace_loss": 0.8684553503990173,
+      "confidence_accuracy": 0.7632404088973999
+    },
+    {
+      "gen_loss": 3.069180965423584,
+      "retrieval_sim": 0.9562165260314941,
+      "consistency_sim": 0.9986878275871277,
+      "consistency_loss": -0.9986878275871277,
+      "confidence_loss": 0.5770540833473206,
+      "cognitive_trace_loss": 0.8490606784820557,
+      "confidence_accuracy": 0.7283459663391113
+    },
+    {
+      "gen_loss": 3.036033344268799,
+      "retrieval_sim": 0.9564302682876586,
+      "consistency_sim": 0.9988458633422852,
+      "consistency_loss": -0.9988458633422852,
+      "confidence_loss": 0.503149026632309,
+      "cognitive_trace_loss": 0.8275874376296997,
+      "confidence_accuracy": 0.7557939171791077
+    },
+    {
+      "gen_loss": 2.9981436252593996,
+      "retrieval_sim": 0.9569866776466369,
+      "consistency_sim": 0.998835825920105,
+      "consistency_loss": -0.998835825920105,
+      "confidence_loss": 0.5366687953472138,
+      "cognitive_trace_loss": 0.8261241495609284,
+      "confidence_accuracy": 0.7283634066581726
+    },
+    {
+      "gen_loss": 2.9968751430511475,
+      "retrieval_sim": 0.9594128370285034,
+      "consistency_sim": 0.9988160133361816,
+      "consistency_loss": -0.9988160133361816,
+      "confidence_loss": 0.5300622761249543,
+      "cognitive_trace_loss": 0.8109640717506409,
+      "confidence_accuracy": 0.7320557594299316
+    },
+    {
+      "gen_loss": 2.9685766220092775,
+      "retrieval_sim": 0.9604848265647888,
+      "consistency_sim": 0.9987733483314514,
+      "consistency_loss": -0.9987733483314514,
+      "confidence_loss": 0.5366085052490235,
+      "cognitive_trace_loss": 0.7775434732437134,
+      "confidence_accuracy": 0.7434025168418884
+    },
+    {
+      "gen_loss": 2.95525918006897,
+      "retrieval_sim": 0.9598681569099426,
+      "consistency_sim": 0.9988581299781799,
+      "consistency_loss": -0.9988581299781799,
+      "confidence_loss": 0.5203451931476593,
+      "cognitive_trace_loss": 0.7665358722209931,
+      "confidence_accuracy": 0.7232212424278259
+    },
+    {
+      "gen_loss": 2.9285479545593263,
+      "retrieval_sim": 0.9603349566459656,
+      "consistency_sim": 0.9985923171043396,
+      "consistency_loss": -0.9985923171043396,
+      "confidence_loss": 0.5415848374366761,
+      "cognitive_trace_loss": 0.7452802121639251,
+      "confidence_accuracy": 0.7243836760520935
+    },
+    {
+      "gen_loss": 2.912009525299072,
+      "retrieval_sim": 0.9613574147224426,
+      "consistency_sim": 0.9988273620605469,
+      "consistency_loss": -0.9988273620605469,
+      "confidence_loss": 0.510871684551239,
+      "cognitive_trace_loss": 0.7215917646884918,
+      "confidence_accuracy": 0.7257811307907105
+    },
+    {
+      "gen_loss": 2.894342279434204,
+      "retrieval_sim": 0.9629004120826721,
+      "consistency_sim": 0.9988732814788819,
+      "consistency_loss": -0.9988732814788819,
+      "confidence_loss": 0.5275348067283631,
+      "cognitive_trace_loss": 0.7102602303028107,
+      "confidence_accuracy": 0.7219903230667114
+    },
+    {
+      "gen_loss": 2.8534267425537108,
+      "retrieval_sim": 0.9632241606712342,
+      "consistency_sim": 0.9988182067871094,
+      "consistency_loss": -0.9988182067871094,
+      "confidence_loss": 0.5424579560756684,
+      "cognitive_trace_loss": 0.7137431561946869,
+      "confidence_accuracy": 0.6846445560455322
+    },
+    {
+      "gen_loss": 2.843276834487915,
+      "retrieval_sim": 0.9647687911987305,
+      "consistency_sim": 0.9986008286476136,
+      "consistency_loss": -0.9986008286476136,
+      "confidence_loss": 0.5274595618247986,
+      "cognitive_trace_loss": 0.6760551810264588,
+      "confidence_accuracy": 0.6896551728248597
+    },
+    {
+      "gen_loss": 2.820605659484863,
+      "retrieval_sim": 0.9650524139404297,
+      "consistency_sim": 0.9984723329544067,
+      "consistency_loss": -0.9984723329544067,
+      "confidence_loss": 0.522012197971344,
+      "cognitive_trace_loss": 0.6661088466644287,
+      "confidence_accuracy": 0.6877472043037415
+    },
+    {
+      "gen_loss": 2.8068196296691896,
+      "retrieval_sim": 0.9651729226112366,
+      "consistency_sim": 0.9985584735870361,
+      "consistency_loss": -0.9985584735870361,
+      "confidence_loss": 0.5018044233322143,
+      "cognitive_trace_loss": 0.6319978535175323,
+      "confidence_accuracy": 0.7538954257965088
+    },
+    {
+      "gen_loss": 2.737149143218994,
+      "retrieval_sim": 0.9661656498908997,
+      "consistency_sim": 0.9979031443595886,
+      "consistency_loss": -0.9979031443595886,
+      "confidence_loss": 0.5344530582427979,
+      "cognitive_trace_loss": 0.6764537632465363,
+      "confidence_accuracy": 0.7130138397216796
+    },
+    {
+      "gen_loss": 2.74959716796875,
+      "retrieval_sim": 0.9666727304458618,
+      "consistency_sim": 0.9978970527648926,
+      "consistency_loss": -0.9978970527648926,
+      "confidence_loss": 0.5887426435947418,
+      "cognitive_trace_loss": 0.6418633878231048,
+      "confidence_accuracy": 0.6752790331840515
+    },
+    {
+      "gen_loss": 2.7268208503723144,
+      "retrieval_sim": 0.9665128588676453,
+      "consistency_sim": 0.9976439237594604,
+      "consistency_loss": -0.9976439237594604,
+      "confidence_loss": 0.5420373499393463,
+      "cognitive_trace_loss": 0.6268240809440613,
+      "confidence_accuracy": 0.7215422630310059
+    },
+    {
+      "gen_loss": 2.7015411376953127,
+      "retrieval_sim": 0.9677633166313171,
+      "consistency_sim": 0.9977033495903015,
+      "consistency_loss": -0.9977033495903015,
+      "confidence_loss": 0.5623466014862061,
+      "cognitive_trace_loss": 0.6065876424312592,
+      "confidence_accuracy": 0.72741140127182
+    },
+    {
+      "gen_loss": 2.6510623931884765,
+      "retrieval_sim": 0.9680930376052856,
+      "consistency_sim": 0.9983648061752319,
+      "consistency_loss": -0.9983648061752319,
+      "confidence_loss": 0.5666361927986145,
+      "cognitive_trace_loss": 0.5858350038528443,
+      "confidence_accuracy": 0.7323045492172241
+    },
+    {
+      "gen_loss": 2.6215301513671876,
+      "retrieval_sim": 0.968574070930481,
+      "consistency_sim": 0.9977756261825561,
+      "consistency_loss": -0.9977756261825561,
+      "confidence_loss": 0.5541137099266052,
+      "cognitive_trace_loss": 0.6109721422195434,
+      "confidence_accuracy": 0.6964069366455078
+    },
+    {
+      "gen_loss": 2.6037952423095705,
+      "retrieval_sim": 0.9682122349739075,
+      "consistency_sim": 0.9982187867164611,
+      "consistency_loss": -0.9982187867164611,
+      "confidence_loss": 0.5313112020492554,
+      "cognitive_trace_loss": 0.575746488571167,
+      "confidence_accuracy": 0.7298665165901184
+    },
+    {
+      "gen_loss": 2.579030084609985,
+      "retrieval_sim": 0.9691528677940369,
+      "consistency_sim": 0.9975593328475952,
+      "consistency_loss": -0.9975593328475952,
+      "confidence_loss": 0.5975576758384704,
+      "cognitive_trace_loss": 0.5786107271909714,
+      "confidence_accuracy": 0.6900408387184143
+    },
+    {
+      "gen_loss": 2.5710152626037597,
+      "retrieval_sim": 0.9683874607086181,
+      "consistency_sim": 0.9971027493476867,
+      "consistency_loss": -0.9971027493476867,
+      "confidence_loss": 0.5548859655857086,
+      "cognitive_trace_loss": 0.5747716665267945,
+      "confidence_accuracy": 0.7184818863868714
+    },
+    {
+      "gen_loss": 2.5232803344726564,
+      "retrieval_sim": 0.9694728136062623,
+      "consistency_sim": 0.9975408434867858,
+      "consistency_loss": -0.9975408434867858,
+      "confidence_loss": 0.5731433212757111,
+      "cognitive_trace_loss": 0.6032764554023743,
+      "confidence_accuracy": 0.7505060791969299
+    },
+    {
+      "gen_loss": 2.507453203201294,
+      "retrieval_sim": 0.9703235983848572,
+      "consistency_sim": 0.9973643183708191,
+      "consistency_loss": -0.9973643183708191,
+      "confidence_loss": 0.5903374135494233,
+      "cognitive_trace_loss": 0.5895571112632751,
+      "confidence_accuracy": 0.7241114139556885
+    },
+    {
+      "gen_loss": 2.473172903060913,
+      "retrieval_sim": 0.9712753653526306,
+      "consistency_sim": 0.9973172307014465,
+      "consistency_loss": -0.9973172307014465,
+      "confidence_loss": 0.6235828995704651,
+      "cognitive_trace_loss": 0.5272100806236267,
+      "confidence_accuracy": 0.6491522908210754
+    },
+    {
+      "gen_loss": 2.4385040760040284,
+      "retrieval_sim": 0.9713677048683167,
+      "consistency_sim": 0.9969562649726867,
+      "consistency_loss": -0.9969562649726867,
+      "confidence_loss": 0.5661709845066071,
+      "cognitive_trace_loss": 0.5284489214420318,
+      "confidence_accuracy": 0.7271517634391784
+    },
+    {
+      "gen_loss": 2.395307493209839,
+      "retrieval_sim": 0.9702817678451539,
+      "consistency_sim": 0.9969519257545472,
+      "consistency_loss": -0.9969519257545472,
+      "confidence_loss": 0.6271745204925537,
+      "cognitive_trace_loss": 0.5185774266719818,
+      "confidence_accuracy": 0.693651533126831
+    },
+    {
+      "gen_loss": 2.4139058589935303,
+      "retrieval_sim": 0.9713036894798279,
+      "consistency_sim": 0.9970750331878662,
+      "consistency_loss": -0.9970750331878662,
+      "confidence_loss": 0.6065209031105041,
+      "cognitive_trace_loss": 0.5207883000373841,
+      "confidence_accuracy": 0.66104736328125
+    },
+    {
+      "gen_loss": 2.368665266036987,
+      "retrieval_sim": 0.9723394274711609,
+      "consistency_sim": 0.9975324273109436,
+      "consistency_loss": -0.9975324273109436,
+      "confidence_loss": 0.600892186164856,
+      "cognitive_trace_loss": 0.4996735841035843,
+      "confidence_accuracy": 0.6666666626930237
+    },
+    {
+      "gen_loss": 2.2875792026519775,
+      "retrieval_sim": 0.9723669290542603,
+      "consistency_sim": 0.9964511275291443,
+      "consistency_loss": -0.9964511275291443,
+      "confidence_loss": 0.6290130853652954,
+      "cognitive_trace_loss": 0.4930541753768921,
+      "confidence_accuracy": 0.7038301587104797
+    },
+    {
+      "gen_loss": 2.253257083892822,
+      "retrieval_sim": 0.9741690874099731,
+      "consistency_sim": 0.9968433499336242,
+      "consistency_loss": -0.9968433499336242,
+      "confidence_loss": 0.6538846731185913,
+      "cognitive_trace_loss": 0.4886177837848663,
+      "confidence_accuracy": 0.6219188928604126
+    },
+    {
+      "gen_loss": 2.2707458972930907,
+      "retrieval_sim": 0.973961591720581,
+      "consistency_sim": 0.9961590051651001,
+      "consistency_loss": -0.9961590051651001,
+      "confidence_loss": 0.6210624217987061,
+      "cognitive_trace_loss": 0.47724720239639284,
+      "confidence_accuracy": 0.6732479572296143
+    },
+    {
+      "gen_loss": 2.2375511646270754,
+      "retrieval_sim": 0.9720834970474244,
+      "consistency_sim": 0.9962909340858459,
+      "consistency_loss": -0.9962909340858459,
+      "confidence_loss": 0.6023536324501038,
+      "cognitive_trace_loss": 0.47423436045646666,
+      "confidence_accuracy": 0.6961203932762146
+    },
+    {
+      "gen_loss": 2.1695229053497314,
+      "retrieval_sim": 0.9742920994758606,
+      "consistency_sim": 0.9955140709877014,
+      "consistency_loss": -0.9955140709877014,
+      "confidence_loss": 0.6392010569572448,
+      "cognitive_trace_loss": 0.4922502040863037,
+      "confidence_accuracy": 0.6607142806053161
+    },
+    {
+      "gen_loss": 2.1519940853118897,
+      "retrieval_sim": 0.9729230999946594,
+      "consistency_sim": 0.9958299160003662,
+      "consistency_loss": -0.9958299160003662,
+      "confidence_loss": 0.6404142618179322,
+      "cognitive_trace_loss": 0.45098119378089907,
+      "confidence_accuracy": 0.6863000750541687
+    },
+    {
+      "gen_loss": 2.113924503326416,
+      "retrieval_sim": 0.9742862939834595,
+      "consistency_sim": 0.995234489440918,
+      "consistency_loss": -0.995234489440918,
+      "confidence_loss": 0.6510155439376831,
+      "cognitive_trace_loss": 0.4543056428432465,
+      "confidence_accuracy": 0.6483363628387451
+    },
+    {
+      "gen_loss": 2.0701658964157104,
+      "retrieval_sim": 0.974386727809906,
+      "consistency_sim": 0.9957075357437134,
+      "consistency_loss": -0.9957075357437134,
+      "confidence_loss": 0.6893040060997009,
+      "cognitive_trace_loss": 0.44021083116531373,
+      "confidence_accuracy": 0.5879808902740479
+    },
+    {
+      "gen_loss": 2.042102408409119,
+      "retrieval_sim": 0.9747294902801513,
+      "consistency_sim": 0.9946469902992249,
+      "consistency_loss": -0.9946469902992249,
+      "confidence_loss": 0.6749197840690613,
+      "cognitive_trace_loss": 0.4404968857765198,
+      "confidence_accuracy": 0.6103746771812439
+    },
+    {
+      "gen_loss": 2.0173264741897583,
+      "retrieval_sim": 0.9735902905464172,
+      "consistency_sim": 0.9948196411132812,
+      "consistency_loss": -0.9948196411132812,
+      "confidence_loss": 0.6442023277282715,
+      "cognitive_trace_loss": 0.4264870434999466,
+      "confidence_accuracy": 0.6291315436363221
+    },
+    {
+      "gen_loss": 1.9668802261352538,
+      "retrieval_sim": 0.9735789895057678,
+      "consistency_sim": 0.9959538459777832,
+      "consistency_loss": -0.9959538459777832,
+      "confidence_loss": 0.6536194562911988,
+      "cognitive_trace_loss": 0.42162307500839236,
+      "confidence_accuracy": 0.6305459141731262
+    },
+    {
+      "gen_loss": 1.9763543367385865,
+      "retrieval_sim": 0.9756154894828797,
+      "consistency_sim": 0.9951524019241333,
+      "consistency_loss": -0.9951524019241333,
+      "confidence_loss": 0.6451409339904786,
+      "cognitive_trace_loss": 0.42516441345214845,
+      "confidence_accuracy": 0.6186597466468811
+    },
+    {
+      "gen_loss": 1.9183215379714966,
+      "retrieval_sim": 0.975712776184082,
+      "consistency_sim": 0.9942444205284119,
+      "consistency_loss": -0.9942444205284119,
+      "confidence_loss": 0.633104932308197,
+      "cognitive_trace_loss": 0.40806967616081236,
+      "confidence_accuracy": 0.6739057183265686
+    },
+    {
+      "gen_loss": 1.9028980016708374,
+      "retrieval_sim": 0.9750643253326416,
+      "consistency_sim": 0.9945751428604126,
+      "consistency_loss": -0.9945751428604126,
+      "confidence_loss": 0.6560984015464782,
+      "cognitive_trace_loss": 0.41355365216732026,
+      "confidence_accuracy": 0.6164035677909852
+    },
+    {
+      "gen_loss": 1.878807258605957,
+      "retrieval_sim": 0.9753678321838379,
+      "consistency_sim": 0.9944644689559936,
+      "consistency_loss": -0.9944644689559936,
+      "confidence_loss": 0.6352908372879028,
+      "cognitive_trace_loss": 0.4005211263895035,
+      "confidence_accuracy": 0.6952930450439453
+    }
+  ],
+  "baseline_test": {
+    "count": 8,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 0.875,
+    "by_kind": {
+      "code": {
+        "count": 6,
+        "exact": 0,
+        "accuracy": 0.0
+      },
+      "text": {
+        "count": 2,
+        "exact": 0,
+        "accuracy": 0.0
+      }
+    },
+    "examples": [
+      {
+        "id": "test-code-01",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.0727815106511116,
+        "output_hex": "2020202020202020666f72205f20696e2072616e6765286e21",
+        "target_hex": "2020202020202020666f72206920696e2072616e6765286e",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 24,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "21",
+            "destination": 24,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-02",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.07917852699756622,
+        "output_hex": "655d6576656c5d203d2073755b6c",
+        "target_hex": "655d5b6c6576656c5d203d20696e7075",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 14,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-03",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.07623612880706787,
+        "output_hex": "6e74726164696374696f6e206465",
+        "target_hex": "6e74726164696374696f6e206576696465",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 14,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 14,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-04",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": false,
+        "halt_reason": "max_steps",
+        "steps": 16,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.048759788274765015,
+        "output_hex": "5f4449522c20226d656d6f72792e7074",
+        "target_hex": "5f6469722c20226d656d6f72792e7074",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 16,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 16,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-05",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.07376232743263245,
+        "output_hex": "20706e74282220202a204c697269",
+        "target_hex": "207072696e74282220202a205469",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 14,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-06",
+        "kind": "code",
+        "optimal_distance": 2,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.042639024555683136,
+        "output_hex": "206636206578616d706c657320726f6d20",
+        "target_hex": "2066726f6d206578616d706c657320",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 6,
+            "end": 17,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-01",
+        "kind": "text",
+        "optimal_distance": 5,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 17,
+        "think_steps": 1,
+        "thought_confidence": 0.11119116842746735,
+        "output_hex": "746578742d3e766f696365",
+        "target_hex": "7465787420616e6420766f696365",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 11,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 11,
+            "kind": "move",
+            "data_hex": "",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-02",
+        "kind": "text",
+        "optimal_distance": 45,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 57,
+        "think_steps": 1,
+        "thought_confidence": 0.041113611310720444,
+        "output_hex": "677261797363616c6520696d616765732c20616e6420382d6269742050434d20617564696f2061726520616c6c206665642061732062797465206172726179732e204e6f2065787465726e616c21",
+        "target_hex": "382d62697420677261797363616c652062797465732c20616e6420617564696f20697320382d6269742050434d2062797465732e205468657265206973202a2a6e6f2065787465726e616c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 77,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 77,
+            "end": 77,
+            "kind": "insert",
+            "data_hex": "21",
+            "destination": 77,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "trained_train": {
+    "count": 10,
+    "exact": 5,
+    "exact_fraction": 0.5,
+    "done_fraction": 1.0,
+    "by_kind": {
+      "code": {
+        "count": 9,
+        "exact": 4,
+        "accuracy": 0.4444444444444444
+      },
+      "text": {
+        "count": 1,
+        "exact": 1,
+        "accuracy": 1.0
+      }
+    },
+    "examples": [
+      {
+        "id": "train-code-01",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.47616222500801086,
+        "output_hex": "656d625f7765696768742c206261",
+        "target_hex": "656d625f7765696768742c207661",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-02",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": true,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.46532967686653137,
+        "output_hex": "206520696e2062617463682929",
+        "target_hex": "206520696e2062617463682929",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 12,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-03",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": true,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.38648879528045654,
+        "output_hex": "28655b226f7574707574225d292c2064747970653d746f7263",
+        "target_hex": "28655b226f7574707574225d292c2064747970653d746f7263",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-04",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": true,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4537316858768463,
+        "output_hex": "2020202062203d20696e7075745f696473",
+        "target_hex": "2020202062203d20696e7075745f696473",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 4,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-05",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": true,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4579348564147949,
+        "output_hex": "206920696e2072616e67652862293a",
+        "target_hex": "206920696e2072616e67652862293a",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 15,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-06",
+        "kind": "code",
+        "optimal_distance": 2,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4912014603614807,
+        "output_hex": "286262",
+        "target_hex": "2828622c2031292c2047656e657261",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 2,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 14,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-07",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 7,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.41709840297698975,
+        "output_hex": "656d625f7765696768742c2074297570",
+        "target_hex": "656d625f7765696768742c206f757470",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 13,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 13,
+            "end": 14,
+            "kind": "insert",
+            "data_hex": "75",
+            "destination": 13,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 15,
+            "kind": "insert",
+            "data_hex": "74",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-08",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.5177319645881653,
+        "output_hex": "6d656d2c206f70745f67656e29",
+        "target_hex": "6d656d2c206f70745f67656e2c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 12,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "insert",
+            "data_hex": "29",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-code-09",
+        "kind": "code",
+        "optimal_distance": 2,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 7,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.44771823287010193,
+        "output_hex": "2075666c6f6174203d20312e30",
+        "target_hex": "20666c6f6174203d20312e302c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "2c",
+            "destination": 13,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 14,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 14,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 12,
+            "kind": "insert",
+            "data_hex": "75",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "train-text-01",
+        "kind": "text",
+        "optimal_distance": 2,
+        "exact": true,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 6,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.39246800541877747,
+        "output_hex": "6f7574736964652074686520636f6e74657874",
+        "target_hex": "6f7574736964652074686520636f6e74657874",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 21,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 0,
+            "end": 1,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 8,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 7,
+            "end": 8,
+            "kind": "delete",
+            "data_hex": "",
+            "destination": 7,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "trained_test": {
+    "count": 8,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 1.0,
+    "by_kind": {
+      "code": {
+        "count": 6,
+        "exact": 0,
+        "accuracy": 0.0
+      },
+      "text": {
+        "count": 2,
+        "exact": 0,
+        "accuracy": 0.0
+      }
+    },
+    "examples": [
+      {
+        "id": "test-code-01",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.3694939613342285,
+        "output_hex": "2020202020202020666f72203f5f20696e2072616e6765286e",
+        "target_hex": "2020202020202020666f72206920696e2072616e6765286e",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-02",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4598926901817322,
+        "output_hex": "655d5b6c6576656c5d203d203f75",
+        "target_hex": "655d5b6c6576656c5d203d20696e7075",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 5,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-03",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4793512225151062,
+        "output_hex": "6e74726164696374696f6e206265",
+        "target_hex": "6e74726164696374696f6e206576696465",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-04",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4598158001899719,
+        "output_hex": "5f4449526220226d656d6f72792e7074",
+        "target_hex": "5f6469722c20226d656d6f72792e7074",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 16,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 4,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-05",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4861149787902832,
+        "output_hex": "20627072696e74282220202a204c69",
+        "target_hex": "207072696e74282220202a205469",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-06",
+        "kind": "code",
+        "optimal_distance": 2,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.442056804895401,
+        "output_hex": "2066726f6d2036206578616d62706c657320",
+        "target_hex": "2066726f6d206578616d706c657320",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-01",
+        "kind": "text",
+        "optimal_distance": 5,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 17,
+        "think_steps": 1,
+        "thought_confidence": 0.49361053109169006,
+        "output_hex": "7465623e766f696365",
+        "target_hex": "7465787420616e6420766f696365",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 11,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-02",
+        "kind": "text",
+        "optimal_distance": 45,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 57,
+        "think_steps": 1,
+        "thought_confidence": 0.3476296365261078,
+        "output_hex": "677261797363616c6520696d6167657329",
+        "target_hex": "382d62697420677261797363616c652062797465732c20616e6420617564696f20697320382d6269742050434d2062797465732e205468657265206973202a2a6e6f2065787465726e616c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 77,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 16,
+            "end": 77,
+            "kind": "replace",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "trained_test_with_train_memory": {
+    "count": 8,
+    "exact": 0,
+    "exact_fraction": 0.0,
+    "done_fraction": 1.0,
+    "by_kind": {
+      "code": {
+        "count": 6,
+        "exact": 0,
+        "accuracy": 0.0
+      },
+      "text": {
+        "count": 2,
+        "exact": 0,
+        "accuracy": 0.0
+      }
+    },
+    "examples": [
+      {
+        "id": "test-code-01",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.3400481939315796,
+        "output_hex": "2020202020202020666f72203f5f20696e2072616e6765286e",
+        "target_hex": "2020202020202020666f72206920696e2072616e6765286e",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 24,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 24,
+            "kind": "insert",
+            "data_hex": "3f",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-02",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4322580099105835,
+        "output_hex": "655d5b6c6576656c5d203d203f",
+        "target_hex": "655d5b6c6576656c5d203d20696e7075",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 14,
+            "kind": "replace",
+            "data_hex": "3f",
+            "destination": 5,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-03",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.46190813183784485,
+        "output_hex": "6e74726164696374696f6e206265",
+        "target_hex": "6e74726164696374696f6e206576696465",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 13,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-04",
+        "kind": "code",
+        "optimal_distance": 3,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.44691601395606995,
+        "output_hex": "5f4449526220226d656d6f72792e7074",
+        "target_hex": "5f6469722c20226d656d6f72792e7074",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 16,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 4,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 4,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-05",
+        "kind": "code",
+        "optimal_distance": 1,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.4756271243095398,
+        "output_hex": "20627072696e74282220202a204c69",
+        "target_hex": "207072696e74282220202a205469",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 14,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 1,
+            "end": 1,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 1,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-code-06",
+        "kind": "code",
+        "optimal_distance": 2,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 16,
+        "think_steps": 1,
+        "thought_confidence": 0.42500925064086914,
+        "output_hex": "2066726f6d2036206578616d62706c657320",
+        "target_hex": "2066726f6d206578616d706c657320",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 17,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 12,
+            "end": 12,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 12,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-01",
+        "kind": "text",
+        "optimal_distance": 5,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 17,
+        "think_steps": 1,
+        "thought_confidence": 0.47227856516838074,
+        "output_hex": "7465623e766f696365",
+        "target_hex": "7465787420616e6420766f696365",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 11,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 2,
+            "end": 5,
+            "kind": "replace",
+            "data_hex": "62",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      },
+      {
+        "id": "test-text-02",
+        "kind": "text",
+        "optimal_distance": 45,
+        "exact": false,
+        "done": true,
+        "halt_reason": "done",
+        "steps": 5,
+        "budget": 57,
+        "think_steps": 1,
+        "thought_confidence": 0.3322887122631073,
+        "output_hex": "677261797363616c6520696d6167657329",
+        "target_hex": "382d62697420677261797363616c652062797465732c20616e6420617564696f20697320382d6269742050434d2062797465732e205468657265206973202a2a6e6f2065787465726e616c",
+        "actions": [
+          {
+            "token": 259,
+            "start": 0,
+            "end": 77,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 261,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 262,
+            "start": 16,
+            "end": 77,
+            "kind": "replace",
+            "data_hex": "29",
+            "destination": 2,
+            "think_steps": 1
+          },
+          {
+            "token": 260,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          },
+          {
+            "token": 263,
+            "start": null,
+            "end": null,
+            "kind": null,
+            "data_hex": "",
+            "destination": null,
+            "think_steps": 1
+          }
+        ]
+      }
+    ]
+  },
+  "phase6_checkpoint_update": "The historical verification memory was found to contain 12 held-out pairs and was replaced by the guarded train-only runs/phase6/real_traces/memory.pt. Historical replay metrics describe the old verification run, not the replacement checkpoint."
+}

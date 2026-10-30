@@ -1,0 +1,3787 @@
+{
+  "protocol": {
+    "synthetic": "held-out three-byte I/D/R/M tasks with original cognitive checkpoint",
+    "real": "disjoint-file repository excerpts; autonomous generator after trace co-training",
+    "confidence": "thought confidence is uncalibrated and must not be used as a quality guarantee",
+    "overlap": "Real examples with multiple optimal edit kinds contribute to each applicable row; MOVE is not a Levenshtein primitive."
+  },
+  "synthetic": {
+    "count": 256,
+    "by_operation": {
+      "insert": {
+        "count": 64,
+        "exact_fraction": 1.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.07938699825899675,
+        "failures": {}
+      },
+      "delete": {
+        "count": 64,
+        "exact_fraction": 1.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.2092486524488777,
+        "failures": {}
+      },
+      "replace": {
+        "count": 64,
+        "exact_fraction": 1.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.3096054643392563,
+        "failures": {}
+      },
+      "move": {
+        "count": 64,
+        "exact_fraction": 1.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.17170149413868785,
+        "failures": {}
+      }
+    },
+    "examples": [
+      {
+        "id": "493a666466",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07209455221891403,
+        "failure": "success"
+      },
+      {
+        "id": "443a666466",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17318782210350037,
+        "failure": "success"
+      },
+      {
+        "id": "523a666466",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.30310532450675964,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666466",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1950867921113968,
+        "failure": "success"
+      },
+      {
+        "id": "493a686464",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08948025852441788,
+        "failure": "success"
+      },
+      {
+        "id": "443a686464",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23795641958713531,
+        "failure": "success"
+      },
+      {
+        "id": "523a686464",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.36759403347969055,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686464",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21205870807170868,
+        "failure": "success"
+      },
+      {
+        "id": "493a686363",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07214338332414627,
+        "failure": "success"
+      },
+      {
+        "id": "443a686363",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2323647141456604,
+        "failure": "success"
+      },
+      {
+        "id": "523a686363",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3807363510131836,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686363",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18165302276611328,
+        "failure": "success"
+      },
+      {
+        "id": "493a666661",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.09055164456367493,
+        "failure": "success"
+      },
+      {
+        "id": "443a666661",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1958158165216446,
+        "failure": "success"
+      },
+      {
+        "id": "523a666661",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.31806689500808716,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666661",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20726393163204193,
+        "failure": "success"
+      },
+      {
+        "id": "493a636263",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07420454919338226,
+        "failure": "success"
+      },
+      {
+        "id": "443a636263",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.254094660282135,
+        "failure": "success"
+      },
+      {
+        "id": "523a636263",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.40387436747550964,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636263",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.196344256401062,
+        "failure": "success"
+      },
+      {
+        "id": "493a636164",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08388008922338486,
+        "failure": "success"
+      },
+      {
+        "id": "443a636164",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23021300137043,
+        "failure": "success"
+      },
+      {
+        "id": "523a636164",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.35562482476234436,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636164",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18994879722595215,
+        "failure": "success"
+      },
+      {
+        "id": "493a686465",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0823274552822113,
+        "failure": "success"
+      },
+      {
+        "id": "443a686465",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21932844817638397,
+        "failure": "success"
+      },
+      {
+        "id": "523a686465",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2835673987865448,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686465",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1476731300354004,
+        "failure": "success"
+      },
+      {
+        "id": "493a656463",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07677572220563889,
+        "failure": "success"
+      },
+      {
+        "id": "443a656463",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2332090586423874,
+        "failure": "success"
+      },
+      {
+        "id": "523a656463",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.373050332069397,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656463",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19186702370643616,
+        "failure": "success"
+      },
+      {
+        "id": "493a656166",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0623328760266304,
+        "failure": "success"
+      },
+      {
+        "id": "443a656166",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16214914619922638,
+        "failure": "success"
+      },
+      {
+        "id": "523a656166",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.24906432628631592,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656166",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1470499336719513,
+        "failure": "success"
+      },
+      {
+        "id": "493a656664",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08446160703897476,
+        "failure": "success"
+      },
+      {
+        "id": "443a656664",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21037574112415314,
+        "failure": "success"
+      },
+      {
+        "id": "523a656664",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.32753732800483704,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656664",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18307027220726013,
+        "failure": "success"
+      },
+      {
+        "id": "493a656261",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.09170380979776382,
+        "failure": "success"
+      },
+      {
+        "id": "443a656261",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2293701022863388,
+        "failure": "success"
+      },
+      {
+        "id": "523a656261",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2970667779445648,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656261",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18943335115909576,
+        "failure": "success"
+      },
+      {
+        "id": "493a656168",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07585787773132324,
+        "failure": "success"
+      },
+      {
+        "id": "443a656168",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19525299966335297,
+        "failure": "success"
+      },
+      {
+        "id": "523a656168",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.265156090259552,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656168",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1363135129213333,
+        "failure": "success"
+      },
+      {
+        "id": "493a676761",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07501489669084549,
+        "failure": "success"
+      },
+      {
+        "id": "443a676761",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17944267392158508,
+        "failure": "success"
+      },
+      {
+        "id": "523a676761",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.27233800292015076,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676761",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.15875253081321716,
+        "failure": "success"
+      },
+      {
+        "id": "493a616166",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06502767652273178,
+        "failure": "success"
+      },
+      {
+        "id": "443a616166",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16858838498592377,
+        "failure": "success"
+      },
+      {
+        "id": "523a616166",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.25706449151039124,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a616166",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1618860512971878,
+        "failure": "success"
+      },
+      {
+        "id": "493a666366",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08020997792482376,
+        "failure": "success"
+      },
+      {
+        "id": "443a666366",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18296559154987335,
+        "failure": "success"
+      },
+      {
+        "id": "523a666366",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3159083425998688,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666366",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20301811397075653,
+        "failure": "success"
+      },
+      {
+        "id": "493a666465",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.09110236912965775,
+        "failure": "success"
+      },
+      {
+        "id": "443a666465",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21749576926231384,
+        "failure": "success"
+      },
+      {
+        "id": "523a666465",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2948469817638397,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666465",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16108635067939758,
+        "failure": "success"
+      },
+      {
+        "id": "493a626164",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08262728154659271,
+        "failure": "success"
+      },
+      {
+        "id": "443a626164",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.22373062372207642,
+        "failure": "success"
+      },
+      {
+        "id": "523a626164",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.32854223251342773,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626164",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1882615089416504,
+        "failure": "success"
+      },
+      {
+        "id": "493a626867",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06935055553913116,
+        "failure": "success"
+      },
+      {
+        "id": "443a626867",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2084590196609497,
+        "failure": "success"
+      },
+      {
+        "id": "523a626867",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3055010437965393,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626867",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1642298698425293,
+        "failure": "success"
+      },
+      {
+        "id": "493a676168",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07134784013032913,
+        "failure": "success"
+      },
+      {
+        "id": "443a676168",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18509706854820251,
+        "failure": "success"
+      },
+      {
+        "id": "523a676168",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2656764090061188,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676168",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.13136166334152222,
+        "failure": "success"
+      },
+      {
+        "id": "493a676862",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07928015291690826,
+        "failure": "success"
+      },
+      {
+        "id": "443a676862",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18009395897388458,
+        "failure": "success"
+      },
+      {
+        "id": "523a676862",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.27729418873786926,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676862",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.15243090689182281,
+        "failure": "success"
+      },
+      {
+        "id": "493a676264",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0791177898645401,
+        "failure": "success"
+      },
+      {
+        "id": "443a676264",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21187704801559448,
+        "failure": "success"
+      },
+      {
+        "id": "523a676264",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3386234939098358,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676264",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1838720440864563,
+        "failure": "success"
+      },
+      {
+        "id": "493a636161",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08570021390914917,
+        "failure": "success"
+      },
+      {
+        "id": "443a636161",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2239537239074707,
+        "failure": "success"
+      },
+      {
+        "id": "523a636161",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3222160339355469,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636161",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18481820821762085,
+        "failure": "success"
+      },
+      {
+        "id": "493a676667",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06736661493778229,
+        "failure": "success"
+      },
+      {
+        "id": "443a676667",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18806128203868866,
+        "failure": "success"
+      },
+      {
+        "id": "523a676667",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.305738240480423,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676667",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16492027044296265,
+        "failure": "success"
+      },
+      {
+        "id": "493a666367",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08364267647266388,
+        "failure": "success"
+      },
+      {
+        "id": "443a666367",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2254481017589569,
+        "failure": "success"
+      },
+      {
+        "id": "523a666367",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3485276699066162,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666367",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19646409153938293,
+        "failure": "success"
+      },
+      {
+        "id": "493a656764",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07843615114688873,
+        "failure": "success"
+      },
+      {
+        "id": "443a656764",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1967250555753708,
+        "failure": "success"
+      },
+      {
+        "id": "523a656764",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.31636273860931396,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656764",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16888079047203064,
+        "failure": "success"
+      },
+      {
+        "id": "493a646862",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08456786721944809,
+        "failure": "success"
+      },
+      {
+        "id": "443a646862",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2072896659374237,
+        "failure": "success"
+      },
+      {
+        "id": "523a646862",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.29716259241104126,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a646862",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16270184516906738,
+        "failure": "success"
+      },
+      {
+        "id": "493a636664",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.09001949429512024,
+        "failure": "success"
+      },
+      {
+        "id": "443a636664",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23003625869750977,
+        "failure": "success"
+      },
+      {
+        "id": "523a636664",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.36132195591926575,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636664",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20372700691223145,
+        "failure": "success"
+      },
+      {
+        "id": "493a646863",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07255076617002487,
+        "failure": "success"
+      },
+      {
+        "id": "443a646863",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21986716985702515,
+        "failure": "success"
+      },
+      {
+        "id": "523a646863",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.35662969946861267,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a646863",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1763090044260025,
+        "failure": "success"
+      },
+      {
+        "id": "493a666761",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08315905928611755,
+        "failure": "success"
+      },
+      {
+        "id": "443a666761",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18738187849521637,
+        "failure": "success"
+      },
+      {
+        "id": "523a666761",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2981654405593872,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666761",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18732644617557526,
+        "failure": "success"
+      },
+      {
+        "id": "493a626267",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07822155207395554,
+        "failure": "success"
+      },
+      {
+        "id": "443a626267",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2463933676481247,
+        "failure": "success"
+      },
+      {
+        "id": "523a626267",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3440287709236145,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626267",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1963636875152588,
+        "failure": "success"
+      },
+      {
+        "id": "493a636365",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08817727863788605,
+        "failure": "success"
+      },
+      {
+        "id": "443a636365",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23387855291366577,
+        "failure": "success"
+      },
+      {
+        "id": "523a636365",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.30978214740753174,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636365",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.14897382259368896,
+        "failure": "success"
+      },
+      {
+        "id": "493a646861",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07688304781913757,
+        "failure": "success"
+      },
+      {
+        "id": "443a646861",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1995689868927002,
+        "failure": "success"
+      },
+      {
+        "id": "523a646861",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2987135648727417,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a646861",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16734656691551208,
+        "failure": "success"
+      },
+      {
+        "id": "493a666263",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0765792727470398,
+        "failure": "success"
+      },
+      {
+        "id": "443a666263",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.22983689606189728,
+        "failure": "success"
+      },
+      {
+        "id": "523a666263",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.38211601972579956,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666263",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.202976793050766,
+        "failure": "success"
+      },
+      {
+        "id": "493a616565",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0817519798874855,
+        "failure": "success"
+      },
+      {
+        "id": "443a616565",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19294802844524384,
+        "failure": "success"
+      },
+      {
+        "id": "523a616565",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2251625657081604,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a616565",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.12872827053070068,
+        "failure": "success"
+      },
+      {
+        "id": "493a686564",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0775826945900917,
+        "failure": "success"
+      },
+      {
+        "id": "443a686564",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20335520803928375,
+        "failure": "success"
+      },
+      {
+        "id": "523a686564",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3115485608577728,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686564",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1613047569990158,
+        "failure": "success"
+      },
+      {
+        "id": "493a626768",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07235279679298401,
+        "failure": "success"
+      },
+      {
+        "id": "443a626768",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19772323966026306,
+        "failure": "success"
+      },
+      {
+        "id": "523a626768",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2756493389606476,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626768",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1424069106578827,
+        "failure": "success"
+      },
+      {
+        "id": "493a646265",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.078725665807724,
+        "failure": "success"
+      },
+      {
+        "id": "443a646265",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.22407667338848114,
+        "failure": "success"
+      },
+      {
+        "id": "523a646265",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2717617452144623,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a646265",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.13867823779582977,
+        "failure": "success"
+      },
+      {
+        "id": "493a616462",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.10413596779108047,
+        "failure": "success"
+      },
+      {
+        "id": "443a616462",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.24133242666721344,
+        "failure": "success"
+      },
+      {
+        "id": "523a616462",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3327820301055908,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a616462",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20804226398468018,
+        "failure": "success"
+      },
+      {
+        "id": "493a626468",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0799981951713562,
+        "failure": "success"
+      },
+      {
+        "id": "443a626468",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21802178025245667,
+        "failure": "success"
+      },
+      {
+        "id": "523a626468",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.30332231521606445,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626468",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16250361502170563,
+        "failure": "success"
+      },
+      {
+        "id": "493a626165",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08594189584255219,
+        "failure": "success"
+      },
+      {
+        "id": "443a626165",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.22238227725028992,
+        "failure": "success"
+      },
+      {
+        "id": "523a626165",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.252227246761322,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626165",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1376466602087021,
+        "failure": "success"
+      },
+      {
+        "id": "493a686164",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08245556056499481,
+        "failure": "success"
+      },
+      {
+        "id": "443a686164",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2205871045589447,
+        "failure": "success"
+      },
+      {
+        "id": "523a686164",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3348811864852905,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686164",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1830691397190094,
+        "failure": "success"
+      },
+      {
+        "id": "493a676466",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06112021580338478,
+        "failure": "success"
+      },
+      {
+        "id": "443a676466",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1584523469209671,
+        "failure": "success"
+      },
+      {
+        "id": "523a676466",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2797953486442566,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676466",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16621536016464233,
+        "failure": "success"
+      },
+      {
+        "id": "493a676367",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06989585608243942,
+        "failure": "success"
+      },
+      {
+        "id": "443a676367",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21346096694469452,
+        "failure": "success"
+      },
+      {
+        "id": "523a676367",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.33618468046188354,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a676367",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1724364012479782,
+        "failure": "success"
+      },
+      {
+        "id": "493a656768",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0730290412902832,
+        "failure": "success"
+      },
+      {
+        "id": "443a656768",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18517416715621948,
+        "failure": "success"
+      },
+      {
+        "id": "523a656768",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2645116150379181,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656768",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.14162443578243256,
+        "failure": "success"
+      },
+      {
+        "id": "493a636761",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08085610717535019,
+        "failure": "success"
+      },
+      {
+        "id": "443a636761",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20639939606189728,
+        "failure": "success"
+      },
+      {
+        "id": "523a636761",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3094867765903473,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636761",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17496466636657715,
+        "failure": "success"
+      },
+      {
+        "id": "493a666167",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07487565279006958,
+        "failure": "success"
+      },
+      {
+        "id": "443a666167",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2087431102991104,
+        "failure": "success"
+      },
+      {
+        "id": "523a666167",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3199074864387512,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666167",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1779717653989792,
+        "failure": "success"
+      },
+      {
+        "id": "493a616568",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07469748705625534,
+        "failure": "success"
+      },
+      {
+        "id": "443a616568",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18421365320682526,
+        "failure": "success"
+      },
+      {
+        "id": "523a616568",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.25025832653045654,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a616568",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.13405700027942657,
+        "failure": "success"
+      },
+      {
+        "id": "493a656363",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07225225120782852,
+        "failure": "success"
+      },
+      {
+        "id": "443a656363",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.22498512268066406,
+        "failure": "success"
+      },
+      {
+        "id": "523a656363",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.37189117074012756,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656363",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.179909810423851,
+        "failure": "success"
+      },
+      {
+        "id": "493a656561",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08362001925706863,
+        "failure": "success"
+      },
+      {
+        "id": "443a656561",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19795118272304535,
+        "failure": "success"
+      },
+      {
+        "id": "523a656561",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.26633045077323914,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656561",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.15537753701210022,
+        "failure": "success"
+      },
+      {
+        "id": "493a626368",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0828225314617157,
+        "failure": "success"
+      },
+      {
+        "id": "443a626368",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.22913098335266113,
+        "failure": "success"
+      },
+      {
+        "id": "523a626368",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.31691256165504456,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626368",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16111013293266296,
+        "failure": "success"
+      },
+      {
+        "id": "493a616865",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07884053140878677,
+        "failure": "success"
+      },
+      {
+        "id": "443a616865",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18904820084571838,
+        "failure": "success"
+      },
+      {
+        "id": "523a616865",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23534539341926575,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a616865",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1316627562046051,
+        "failure": "success"
+      },
+      {
+        "id": "493a686161",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07936444878578186,
+        "failure": "success"
+      },
+      {
+        "id": "443a686161",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2074171006679535,
+        "failure": "success"
+      },
+      {
+        "id": "523a686161",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2927587032318115,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686161",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1647988259792328,
+        "failure": "success"
+      },
+      {
+        "id": "493a686263",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07066110521554947,
+        "failure": "success"
+      },
+      {
+        "id": "443a686263",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23365497589111328,
+        "failure": "success"
+      },
+      {
+        "id": "523a686263",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3720702528953552,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a686263",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17777514457702637,
+        "failure": "success"
+      },
+      {
+        "id": "493a656761",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08290524780750275,
+        "failure": "success"
+      },
+      {
+        "id": "443a656761",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1957775354385376,
+        "failure": "success"
+      },
+      {
+        "id": "523a656761",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2770382761955261,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656761",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17034532129764557,
+        "failure": "success"
+      },
+      {
+        "id": "493a636464",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.09032374620437622,
+        "failure": "success"
+      },
+      {
+        "id": "443a636464",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.24458134174346924,
+        "failure": "success"
+      },
+      {
+        "id": "523a636464",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.38350415229797363,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a636464",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21592071652412415,
+        "failure": "success"
+      },
+      {
+        "id": "493a626166",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06751313805580139,
+        "failure": "success"
+      },
+      {
+        "id": "443a626166",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18730157613754272,
+        "failure": "success"
+      },
+      {
+        "id": "523a626166",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2751046419143677,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626166",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1684952676296234,
+        "failure": "success"
+      },
+      {
+        "id": "493a616864",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0803164467215538,
+        "failure": "success"
+      },
+      {
+        "id": "443a616864",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20174720883369446,
+        "failure": "success"
+      },
+      {
+        "id": "523a616864",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3152562081813812,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a616864",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17812612652778625,
+        "failure": "success"
+      },
+      {
+        "id": "493a626162",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0939088761806488,
+        "failure": "success"
+      },
+      {
+        "id": "443a626162",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.23669101297855377,
+        "failure": "success"
+      },
+      {
+        "id": "523a626162",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3108360767364502,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626162",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1781580001115799,
+        "failure": "success"
+      },
+      {
+        "id": "493a626568",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.06975062191486359,
+        "failure": "success"
+      },
+      {
+        "id": "443a626568",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.19072313606739044,
+        "failure": "success"
+      },
+      {
+        "id": "523a626568",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2550593912601471,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626568",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.12629593908786774,
+        "failure": "success"
+      },
+      {
+        "id": "493a666362",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.10710488259792328,
+        "failure": "success"
+      },
+      {
+        "id": "443a666362",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2331688404083252,
+        "failure": "success"
+      },
+      {
+        "id": "523a666362",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3509216606616974,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666362",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21578750014305115,
+        "failure": "success"
+      },
+      {
+        "id": "493a626561",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.08433673530817032,
+        "failure": "success"
+      },
+      {
+        "id": "443a626561",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.2113436907529831,
+        "failure": "success"
+      },
+      {
+        "id": "523a626561",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.27407169342041016,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626561",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16201487183570862,
+        "failure": "success"
+      },
+      {
+        "id": "493a656164",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0804222971200943,
+        "failure": "success"
+      },
+      {
+        "id": "443a656164",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.20826905965805054,
+        "failure": "success"
+      },
+      {
+        "id": "523a656164",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3169381618499756,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a656164",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.16940471529960632,
+        "failure": "success"
+      },
+      {
+        "id": "493a626266",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.0730762705206871,
+        "failure": "success"
+      },
+      {
+        "id": "443a626266",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.21152697503566742,
+        "failure": "success"
+      },
+      {
+        "id": "523a626266",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.30155983567237854,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a626266",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.18739739060401917,
+        "failure": "success"
+      },
+      {
+        "id": "493a666767",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.07193326205015182,
+        "failure": "success"
+      },
+      {
+        "id": "443a666767",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "delete"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.1922164261341095,
+        "failure": "success"
+      },
+      {
+        "id": "523a666767",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3106677532196045,
+        "failure": "success"
+      },
+      {
+        "id": "4d3a666767",
+        "expected_kinds": [
+          "move"
+        ],
+        "actual_kinds": [
+          "move"
+        ],
+        "exact": true,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.17319577932357788,
+        "failure": "success"
+      }
+    ]
+  },
+  "real_test": {
+    "count": 8,
+    "by_operation": {
+      "insert": {
+        "count": 4,
+        "exact_fraction": 0.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.44512102007865906,
+        "failures": {
+          "wrong_position_payload_or_edit_count": 3,
+          "wrong_operation": 1
+        }
+      },
+      "delete": {
+        "count": 2,
+        "exact_fraction": 0.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.3948432207107544,
+        "failures": {
+          "wrong_operation": 1,
+          "wrong_position_payload_or_edit_count": 1
+        }
+      },
+      "replace": {
+        "count": 6,
+        "exact_fraction": 0.0,
+        "mean_think_steps": 1.0,
+        "mean_thought_confidence": 0.43609293301900226,
+        "failures": {
+          "wrong_operation": 1,
+          "wrong_position_payload_or_edit_count": 5
+        }
+      },
+      "move": {
+        "count": 0,
+        "exact_fraction": null,
+        "mean_think_steps": null,
+        "mean_thought_confidence": null,
+        "failures": {}
+      }
+    },
+    "examples": [
+      {
+        "id": "test-code-01",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "insert"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3694939613342285,
+        "failure": "wrong_operation"
+      },
+      {
+        "id": "test-code-02",
+        "expected_kinds": [
+          "insert",
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.4598926901817322,
+        "failure": "wrong_position_payload_or_edit_count"
+      },
+      {
+        "id": "test-code-03",
+        "expected_kinds": [
+          "insert"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.4793512225151062,
+        "failure": "wrong_operation"
+      },
+      {
+        "id": "test-code-04",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.4598158001899719,
+        "failure": "wrong_position_payload_or_edit_count"
+      },
+      {
+        "id": "test-code-05",
+        "expected_kinds": [
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.4861149787902832,
+        "failure": "wrong_position_payload_or_edit_count"
+      },
+      {
+        "id": "test-code-06",
+        "expected_kinds": [
+          "delete"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.442056804895401,
+        "failure": "wrong_operation"
+      },
+      {
+        "id": "test-text-01",
+        "expected_kinds": [
+          "insert",
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.49361053109169006,
+        "failure": "wrong_position_payload_or_edit_count"
+      },
+      {
+        "id": "test-text-02",
+        "expected_kinds": [
+          "delete",
+          "insert",
+          "replace"
+        ],
+        "actual_kinds": [
+          "replace"
+        ],
+        "exact": false,
+        "done": true,
+        "think_steps": 1,
+        "confidence": 0.3476296365261078,
+        "failure": "wrong_position_payload_or_edit_count"
+      }
+    ]
+  }
+}

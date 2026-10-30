@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import random
 import sys
 import time
 from pathlib import Path
@@ -21,14 +22,62 @@ def count_params(m: torch.nn.Module) -> int:
     return sum(p.numel() for p in m.parameters())
 
 
-def train_epoch(model, loader, opt, device):
+def corrupt_edit_batch(ids, lengths, *, rng, probability=0.5, fraction=0.1):
+    """Produce paired insertion/deletion inputs at the original tensor width.
+
+    Insertions are cropped and deletions are padded with byte 0, exactly as in
+    the position-wise robustness benchmark; the clean target mask distinguishes
+    literal NUL bytes from padding. This is a fixed-length corruption task, not
+    proof that the model can infer the true output length.
+    """
+    if not 0 <= probability <= 1 or not 0 <= fraction <= 1:
+        raise ValueError("edit corruption probability and fraction must be in [0,1]")
+    if ids.ndim != 2 or len(lengths) != ids.shape[0]:
+        raise ValueError("ids and lengths must agree")
+    result = ids.clone()
+    for i, raw_length in enumerate(lengths):
+        length = int(raw_length)
+        if not 0 <= length <= ids.shape[1]:
+            raise ValueError("sequence length exceeds its tensor")
+        if not length or not fraction or rng.random() >= probability:
+            continue
+        source = ids[i, :length].tolist()
+        k = min(length, max(1, round(length * fraction)))
+        if rng.randrange(2) == 0:
+            sites = set(rng.sample(range(length + 1), k))
+            edited = []
+            for j in range(length + 1):
+                if j in sites:
+                    edited.append(rng.randrange(256))
+                if j < length:
+                    edited.append(source[j])
+            edited = edited[:length]
+        else:
+            removed = set(rng.sample(range(length), k))
+            edited = [byte for j, byte in enumerate(source) if j not in removed]
+            edited.extend([0] * (length - len(edited)))
+        result[i, :length] = torch.tensor(edited, dtype=ids.dtype, device=ids.device)
+    return result
+
+
+def train_epoch(model, loader, opt, device, *, alignment_loss_weight=0.0, alignment_gamma=0.02,
+                edit_noise_probability=0.0, edit_noise_fraction=0.1, rng=None, timestep_limit=None,
+                confidence_weight=0.1):
     model.train()
     total_loss = 0.0
+    rng = rng if rng is not None else random.Random()
     for batch in loader:
-        x0 = batch["input_ids"].to(device)  # (B, L) byte ids
-        x0_emb = model.bytes_to_emb(x0)  # (B, L, d)
+        x0 = batch["input_ids"].to(device)
+        x0_emb = model.bytes_to_emb(x0)
+        lengths = torch.tensor(batch["real_lens"], device=device)
+        valid = torch.arange(x0.shape[1], device=device)[None, :] < lengths[:, None]
+        corrupted = corrupt_edit_batch(x0, batch["real_lens"], rng=rng, probability=edit_noise_probability,
+                                       fraction=edit_noise_fraction) if edit_noise_probability else None
+        source_emb = model.bytes_to_emb(corrupted) if corrupted is not None else None
         opt.zero_grad()
-        loss = model.compute_loss(x0_emb)
+        loss = model.compute_loss(x0_emb, valid_mask=valid, corrupted_emb=source_emb,
+                                  alignment_loss_weight=alignment_loss_weight, alignment_gamma=alignment_gamma,
+                                  timestep_limit=timestep_limit, confidence_weight=confidence_weight)
         loss.backward()
         opt.step()
         total_loss += loss.item()
@@ -36,13 +85,16 @@ def train_epoch(model, loader, opt, device):
 
 
 @torch.no_grad()
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, *, alignment_loss_weight=0.0, alignment_gamma=0.02, timestep_limit=None):
     model.eval()
     total_loss = 0.0
     for batch in loader:
         x0 = batch["input_ids"].to(device)
         x0_emb = model.bytes_to_emb(x0)
-        loss = model.compute_loss(x0_emb)
+        lengths = torch.tensor(batch["real_lens"], device=device)
+        valid = torch.arange(x0.shape[1], device=device)[None, :] < lengths[:, None]
+        loss = model.compute_loss(x0_emb, valid_mask=valid, alignment_loss_weight=alignment_loss_weight,
+                                  alignment_gamma=alignment_gamma, timestep_limit=timestep_limit)
         total_loss += loss.item()
     return total_loss / max(len(loader), 1)
 
@@ -65,8 +117,10 @@ def reconstruction_accuracy(model, loader, device, n_batches=25):
         xt_emb = model.q_sample(x0_emb, t_int)
         pred_emb = model.core(xt_emb, t_int.float() / model.diffusion_timesteps)
         pred_bytes = model.core.embed_to_bytes(pred_emb)  # (B, L)
-        correct += int((pred_bytes == x0).sum().item())
-        total += b * l
+        lengths = torch.tensor(batch["real_lens"], device=device)
+        valid = torch.arange(l, device=device)[None, :] < lengths[:, None]
+        correct += int(((pred_bytes == x0) & valid).sum().item())
+        total += int(valid.sum().item())
     return correct / max(total, 1)
 
 
@@ -85,6 +139,8 @@ def main():
     d_cfg = cfg["data"]
 
     os.makedirs(args.runs_dir, exist_ok=True)
+    torch.manual_seed(int(tr_cfg.get("seed", 42)))
+    edit_rng = random.Random(int(tr_cfg.get("seed", 42)) + 1)
 
     train_ds = ByteMultimodalDataset(
         os.path.join(d_cfg["processed_dir"], "train.jsonl"),
@@ -118,8 +174,15 @@ def main():
     best_val = float("inf")
     for epoch in range(1, tr_cfg["epochs"] + 1):
         t0 = time.time()
-        train_loss = train_epoch(model, loader_train, opt, device)
-        val_loss = evaluate(model, loader_val, device)
+        alignment_weight = float(tr_cfg.get("alignment_loss_weight", 0.0))
+        alignment_gamma = float(tr_cfg.get("alignment_gamma", 0.02))
+        timestep_limit = tr_cfg.get("timestep_limit")
+        train_loss = train_epoch(model, loader_train, opt, device, alignment_loss_weight=alignment_weight,
+                                 alignment_gamma=alignment_gamma, timestep_limit=timestep_limit,
+                                 edit_noise_probability=float(tr_cfg.get("edit_noise_probability", 0.0)),
+                                 edit_noise_fraction=float(tr_cfg.get("edit_noise_fraction", 0.1)), rng=edit_rng)
+        val_loss = evaluate(model, loader_val, device, alignment_loss_weight=alignment_weight,
+                            alignment_gamma=alignment_gamma, timestep_limit=timestep_limit)
         print(f"[epoch {epoch:2d}] train_loss {train_loss:.4f} "
               f"val_loss {val_loss:.4f}  ({time.time() - t0:.1f}s)",
               flush=True)

@@ -1,0 +1,61 @@
+{
+  "scope": "synthetic I/D/R/M byte edits, three-byte payload",
+  "train_trace_loss": [
+    8.585346897443136,
+    5.245112703492244,
+    2.3100705667360066,
+    1.027727982068124,
+    0.6938065664216992,
+    0.5738007504405687,
+    0.6032341421402331,
+    0.4339719395623736,
+    0.38563871906626446,
+    0.34596403676732734
+  ],
+  "train": {
+    "count": 192,
+    "done_fraction": 1.0,
+    "exact_task_fraction": 1.0,
+    "by_command": {
+      "I": {
+        "correct": 48,
+        "count": 48
+      },
+      "D": {
+        "correct": 48,
+        "count": 48
+      },
+      "R": {
+        "correct": 48,
+        "count": 48
+      },
+      "M": {
+        "correct": 48,
+        "count": 48
+      }
+    }
+  },
+  "held_out": {
+    "count": 256,
+    "done_fraction": 1.0,
+    "exact_task_fraction": 1.0,
+    "by_command": {
+      "I": {
+        "correct": 64,
+        "count": 64
+      },
+      "D": {
+        "correct": 64,
+        "count": 64
+      },
+      "R": {
+        "correct": 64,
+        "count": 64
+      },
+      "M": {
+        "correct": 64,
+        "count": 64
+      }
+    }
+  }
+}

@@ -2,42 +2,54 @@
 
 ## Overview
 - **Model**: ByteCore-Diffusion (byte-level diffusion, raw bytes 0-255)
-- **Parameters**: 187,328  (0.75 MB, < 50 MB)
-- **Reconstruction accuracy (clean)**: 0.9982
-- **Robustness score** (mean max-noise acc / clean): 0.9989
-- **Inference time**: 0.210 ms/sample
+- **Parameters**: 195,905  (0.78 MB, < 50 MB)
+- **Reconstruction (first batch, padded)**: 0.9987
+- **Reconstruction (all real bytes)**: 0.9973
+- **Corrupted-input reconstruction ratio** (not recovery): 0.9984
+- **Original-byte recovery ratio at maximum corruption**: 0.5560
+- **Inference time**: 1.801 ms/sample
 
-## Per-modality reconstruction accuracy
+## Per-modality reconstruction (real bytes, no padding)
 
 | Modality | Accuracy |
 |----------|----------|
-| audio | 0.9982 |
+| audio | 0.9966 |
 | text | 1.0000 |
-| image | 0.9976 |
+| image | 0.9977 |
 
-## Byte-level noise robustness (denoising accuracy after corruption)
-
+## Corrupted-input reconstruction (includes padding)
+This is a self-reconstruction metric, not recovery of the original.
 
 ### Per noise mode
 | Mode | clean | 0.02 | 0.05 | 0.10 |
 |------|-------|------|------|------|
-| substitute | 0.9982 | 0.9982 | 0.9972 | 0.9957 |
-| insert | 0.9982 | 0.9986 | 0.9981 | 0.9971 |
-| delete | 0.9982 | 0.9985 | 0.9987 | 0.9986 |
+| substitute | 0.9987 | 0.9984 | 0.9973 | 0.9959 |
+| insert | 0.9987 | 0.9985 | 0.9975 | 0.9961 |
+| delete | 0.9987 | 0.9990 | 0.9989 | 0.9991 |
+
+## Recovery against the original (real bytes, position-wise)
+
+| Mode | 0.02 | 0.05 | 0.10 |
+|------|------|------|------|
+| substitute | 0.9774 | 0.9519 | 0.9128 |
+| insert | 0.6314 | 0.4566 | 0.3693 |
+| delete | 0.6404 | 0.4664 | 0.3812 |
 
 ## Concept storage — learn new concepts without retraining
 
 New concepts are written directly to the concept bank (a memory write, no gradient step). The model can then generate conditioned on them.
 
-| Modality | Concept written | Generated-vs-example byte match |
-|----------|-----------------|---------------------------------|
-| text | new:text | 0.5781 |
-| image | new:image | 0.5234 |
-| audio | new:audio | 0.5000 |
+| Modality | Concept written | Match on real bytes | Match including padding |
+|----------|-----------------|---------------------|-------------------------|
+| text | new:text | 0.1250 | 0.5234 |
+| image | new:image | 0.0312 | 0.5156 |
+| audio | new:audio | 0.0156 | 0.5078 |
 
 ## Notes
 - Raw bytes (0-255) throughout; no external tokenizers.
-- Reconstruction accuracy = exact byte match after one denoising step (light noise, t=2/50).
-- Robustness score = mean accuracy at max noise level / clean accuracy, averaged over substitute/insert/delete modes.
+- Reconstruction = exact byte match after one denoising step (light noise, t=2/50).
+- Corrupted-input reconstruction compares to the corrupted input, not the clean target.
+- Original-byte recovery excludes padding and compares to clean bytes at the same positions; insertions/deletions are not realigned.
+- Ratios divide maximum-corruption accuracy by the corresponding clean accuracy.
 - Concept bank: new concepts stored as memory entries (write, not train); instantly available at inference — no retraining required.
 - Inference time measured on CPU, one denoising step.

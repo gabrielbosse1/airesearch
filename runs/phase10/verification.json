@@ -1,0 +1,21 @@
+{
+  "tests_total": 120,
+  "tests_passed": 120,
+  "test_command": "python -m unittest discover -s tests -v",
+  "phase9_source_tensors_unchanged": 155,
+  "phase9_hello_diagnostic": "all three paths exact; example in training",
+  "historical_checkpoint_sha256": {
+    "runs/model.pt": "7ed9dd3cb5faed61f8e38fe35f5e4943849c55825298100e7b81e4a93c0aebd2",
+    "runs/dual_memory/generator.pt": "2122e69c0a272fe3cc5b6d252799f31128df094b44d6b02012e531d5990995d6",
+    "runs/dual_memory/memory.pt": "52c1d939758a60ddafad738e3b0d29f7687680c4f5f10726385f3b9befb8995f"
+  },
+  "phase9_structured_generator_sha256": "7c431887646026b8c1de653d613f77763eb2155a4cc62b849a0870f1db96f76b",
+  "phase10_generator_sha256": "65b15a46e79cbdc4d3568de5f19f393cb83f98a2ab84c2497f2f4fae9f2bed54",
+  "phase10_response_sha256": "219489b397e8f44bfb4a3a006c377f7eb9f0c609d23f89c03080ab7ea87ea038",
+  "matching_decoder_strict_load": true,
+  "cli_memory_cross_process_smoke": true,
+  "compileall": true,
+  "git_diff_check": true,
+  "external_tokenizer_reference_scan": true,
+  "benchmark_matches_checkpoint_hashes": true
+}
