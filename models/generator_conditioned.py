@@ -283,7 +283,18 @@ class GeneratorConditioned(nn.Module):
     THINK: int = 261
     EDIT_OP: int = 262
     DONE: int = 263
-    VOCAB_SIZE: int = 264
+    # Phase 15 external tool use. These controls are never serialized as bytes
+    # and are never executed by the model: the host intercepts TOOL_CALL, runs
+    # an external sandbox and injects TOOL_RESULT. See models/tool_use.py.
+    TOOL_CALL: int = 264
+    TOOL_ARG_START: int = 265
+    TOOL_ARG_END: int = 266
+    TOOL_RESULT: int = 267
+    VOCAB_SIZE: int = 268
+    TOOL_TOKEN_START: int = 264
+    # A checkpoint that predates the tool controls keeps its old predictions
+    # exactly: new rows are seeded conservatively and biased against emission.
+    TOOL_UNTRAINED_BIAS: float = -8.0
     VALID_MODES: tuple[str, str, str] = ("hybrid", "cross_attn", "prefix")
 
     def __init__(
@@ -457,6 +468,8 @@ class GeneratorConditioned(nn.Module):
             "memory_gate.weight" in migrated or "memory_proj.weight" in migrated
         )
         defaults = self.state_dict()
+        pre_tool_head_rows = int(migrated["head.weight"].shape[0]) if "head.weight" in migrated else self.VOCAB_SIZE
+        pre_tool_control_rows = int(migrated["control_emb.weight"].shape[0]) if "control_emb.weight" in migrated else self.VOCAB_SIZE - self.VOCAB_BYTES
         if old_vocab:
             for key, old_rows in (("control_emb.weight", 3), ("head.weight", 259), ("head.bias", 259)):
                 if key not in migrated or migrated[key].shape[0] != old_rows:
@@ -492,6 +505,37 @@ class GeneratorConditioned(nn.Module):
             for key, value in defaults.items():
                 if key.startswith(new_prefixes):
                     migrated.setdefault(key, value)
+        # Phase 15: grow any pre-tool vocabulary tensor in place. Existing rows
+        # are copied unchanged into freshly allocated targets, so the caller's
+        # tensors are never mutated and old predictions cannot shift.
+        for key in ("control_emb.weight", "head.weight", "head.bias"):
+            old = migrated.get(key)
+            current = defaults[key]
+            if old is None or tuple(old.shape) == tuple(current.shape):
+                continue
+            if (old.ndim != current.ndim or old.shape[0] > current.shape[0]
+                    or tuple(old.shape[1:]) != tuple(current.shape[1:])):
+                raise RuntimeError(f"incompatible vocabulary tensor: {key}")
+            if old.shape[0] < 1:
+                raise RuntimeError(f"incompatible vocabulary tensor: {key}")
+            target = current.detach().clone().to(device=old.device, dtype=old.dtype)
+            target[: old.shape[0]].copy_(old)
+            migrated[key] = target
+        # A checkpoint that predates the tool controls must behave exactly as
+        # it did before: seed the new rows from the old ones and bias the head
+        # against emitting tool IDs until a tool head is actually trained.
+        tool_control_start = self.TOOL_TOKEN_START - self.VOCAB_BYTES
+        if pre_tool_control_rows <= tool_control_start:
+            control = migrated["control_emb.weight"].clone()
+            control[tool_control_start:] = control[:tool_control_start].mean(0, keepdim=True)
+            migrated["control_emb.weight"] = control
+        if pre_tool_head_rows <= self.TOOL_TOKEN_START:
+            weight = migrated["head.weight"].clone()
+            weight[self.TOOL_TOKEN_START:] = weight[: self.VOCAB_BYTES].mean(0, keepdim=True)
+            bias = migrated["head.bias"].clone()
+            bias[self.TOOL_TOKEN_START:] = self.TOOL_UNTRAINED_BIAS
+            migrated["head.weight"] = weight
+            migrated["head.bias"] = bias
         # Phase 1-6 checkpoints have no reasoning head. Initialize only when the
         # whole head is absent; a partially missing/corrupt new head must still
         # fail strict loading. Existing parameters are never overwritten.
@@ -727,7 +771,7 @@ class GeneratorConditioned(nn.Module):
         if input_ids.dtype not in (torch.int64, torch.int32):
             raise TypeError("input_ids must contain integer byte/control IDs")
         if bool(((input_ids < 0) | (input_ids >= self.VOCAB_SIZE)).any()):
-            raise ValueError("input_ids must be in [0, 263]")
+            raise ValueError(f"input_ids must be in [0, {self.VOCAB_SIZE - 1}]")
         input_ids = input_ids.long()
         b, l = input_ids.shape
         device = input_ids.device

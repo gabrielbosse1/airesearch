@@ -681,3 +681,36 @@ The system parses a limited affirmative fact grammar and stores 1–40 UTF-8 val
 The capacity-1,000 guarded replay snapshot contains synthetic training examples only and is never populated automatically from user conversations. Intent training used 90 new and 38 old examples per batch; the new decoder objectives did not all use a 70/30 mix. Response diversity is trained with a differentiable loss over predicted byte distributions plus byte cross-entropy. Styles are synthetic and may be memorized.
 
 Measured on small synthetic tests: **10/10** vector-only structured fact recalls; the public blue answer changed when vectors were zeroed or swapped; retention passed after **500 actual filler messages** and after a fresh-process save/reload. Fresh intent was **62/70 (88.6%)**. The inspected old Phase 10 development set improved to **298/384** from Phase 11's **229/384**, but this does not guarantee no forgetting. Direct decoding on one protected prompt yielded **14 distinct/20** and no structural/template-proxy failures; the complete session misrouted that prompt and produced only **1 distinct/20**. An exploratory raw-byte probe decoded 256/256 individual byte values but failed some multi-byte binary sequences. The full suite passed **168/168**. See `runs/phase12_report.md` for all limitations, ablations and reproduction commands.
+
+## Phase 15: external tool use and sandbox execution
+
+The pivot away from internal semantic verification. **Verification is outsourced to the sandbox; the model's role is reliable tool routing and iterative editing.** A frozen Phase 12 generator plus a small trained policy emits a tool-call frame; the host executes it and feeds the result bytes back.
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_tool_use --epochs 60 --lr 0.002 --lr-step 20 --lr-decay 0.4 --output-dir runs/phase15
+python -m evaluation.tool_eval --with-regression
+python -m evaluation.copy_probe --output runs/phase15/copy_probe.json
+python -m demo.tool_agent --generator runs/phase12/generator.pt --policy runs/phase15/tool_policy.pt
+```
+
+*How a turn works*
+
+1. The user types one line. The policy encodes `[request] + [optional TOOL_RESULT bytes]` and predicts a route.
+2. If the route is a tool, the decoder emits `[TOOL_CALL] [tool] [TOOL_ARG_START] [argument bytes] [TOOL_ARG_END]`. Generation pauses.
+3. The host parses the frame **fail-closed** (unknown tool, missing terminator, over-long argument or an unparsable frame aborts the turn) and runs `ByteSandbox`.
+4. The host injects `[TOOL_RESULT] [result bytes]` and lets the model continue, so the next turn sees the execution output. The model itself never emits `TOOL_RESULT`.
+
+*Measurements (final-epoch checkpoint, fixed seeds)*
+
+| Check | Result | Target |
+| --- | --- | --- |
+| Tool routing (exact frame) | **17/20** | >18/20 |
+| Tool routing (correct tool only) | **20/20** | >18/20 |
+| Routing execution match | **17/20** | -- |
+| Iterative debugging | **2/5** | >=3/5 |
+| Phase 12 vector-only recall | **10/10** | 10/10 |
+| Unit tests | **209** | all passing |
+
+Full validation: route **85.3%**, frame **72.1%**, call-frame **72.6%** (481 rows), decline **100.0%** (371 rows). Decline behaviour: **18/40** conversational prompts and **48/60** across all Phase 10 intents produce no tool call.
+
+**Limits.** The sandbox is hardening, not a security boundary: child processes inherit the host filesystem and network. Routing and debugging prompts are synthetic single-line Python from a fixed template pool, so these numbers are not a generalisation claim. Argument bytes come from a copy head, not from parsing the program; the policy fails when an argument is long enough to exceed its copy fidelity, and `os.listdir` requests can fall into a degenerate free-running loop. See `runs/phase15_report.md` for the full analysis, ablations and reproduction commands.

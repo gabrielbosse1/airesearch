@@ -25,12 +25,14 @@ class CognitiveTests(unittest.TestCase):
         ids = torch.tensor([[0, 255, 259, 260, 261, 262, 263]])
         state = g(ids, return_state=True)
         self.assertIsInstance(state, GeneratorState)
-        self.assertEqual(state.output.shape, (1, 7, 264))
+        # Phase 15 added the four tool controls, so the head width is dynamic.
+        self.assertEqual(state.output.shape, (1, 7, g.VOCAB_SIZE))
+        self.assertEqual([g.TOOL_CALL, g.TOOL_ARG_START, g.TOOL_ARG_END, g.TOOL_RESULT], list(range(264, 268)))
         self.assertEqual(state.thought.shape, (1, 7, 16))
         self.assertEqual(state.confidence.shape, (1, 7))
         self.assertTrue(bool(((state.confidence >= 0) & (state.confidence <= 1)).all()))
         with self.assertRaises(ValueError):
-            g(torch.tensor([[264]]))
+            g(torch.tensor([[g.VOCAB_SIZE]]))
         with self.assertRaises(ValueError):
             g(torch.tensor([[-1]]))
 

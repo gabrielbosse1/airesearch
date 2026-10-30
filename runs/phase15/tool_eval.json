@@ -1,0 +1,873 @@
+{
+  "routing": {
+    "count": 20,
+    "correct": 17,
+    "route_correct": 20,
+    "argument_correct": 17,
+    "frame_parses": 17,
+    "execution_matches": 17,
+    "rows": [
+      {
+        "request": "Calculate 18 * 10.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(18*10)",
+        "expected_argument": "print(18*10)"
+      },
+      {
+        "request": "Give me 19 + 4.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(19+4)",
+        "expected_argument": "print(19+4)"
+      },
+      {
+        "request": "Compute 19 - 20.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(19-20)",
+        "expected_argument": "print(19-20)"
+      },
+      {
+        "request": "Reverse the string 'xocuta'.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print('xocuta'[::-1])",
+        "expected_argument": "print('xocuta'[::-1])"
+      },
+      {
+        "request": "Reverse the string 'zequmu'.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print('zequmu'[::-1])",
+        "expected_argument": "print('zequmu'[::-1])"
+      },
+      {
+        "request": "Uppercase the text 'xahaxu'.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 0.9994,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print('xahaxu'.upper())",
+        "expected_argument": "print('xahaxu'.upper())"
+      },
+      {
+        "request": "Uppercase the text 'xuwadu'.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print('xuwadu'.upper())",
+        "expected_argument": "print('xuwadu'.upper())"
+      },
+      {
+        "request": "Uppercase the text 'zogi'.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print('zogi'.upper())",
+        "expected_argument": "print('zogi'.upper())"
+      },
+      {
+        "request": "How many characters are in 'xocuta'?",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(len('xocuta'))",
+        "expected_argument": "print(len('xocuta'))"
+      },
+      {
+        "request": "How many characters are in 'zequmu'?",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(len('zequmu'))",
+        "expected_argument": "print(len('zequmu'))"
+      },
+      {
+        "request": "Sum the numbers from 1 to 362.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(sum(range(1, 362+1)))",
+        "expected_argument": "print(sum(range(1, 362+1)))"
+      },
+      {
+        "request": "Sum the numbers from 1 to 378.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(sum(range(1, 378+1)))",
+        "expected_argument": "print(sum(range(1, 378+1)))"
+      },
+      {
+        "request": "Sum the numbers from 1 to 394.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "print(sum(range(1, 394+1)))",
+        "expected_argument": "print(sum(range(1, 394+1)))"
+      },
+      {
+        "request": "Sort the numbers 56, 5 and 1.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": false,
+        "frame_parses": false,
+        "executed_matches_reference": false,
+        "exact": false,
+        "argument": "print(sorted([56, 5d, .]))",
+        "expected_argument": "print(sorted([56, 5, 1]))"
+      },
+      {
+        "request": "Sort the numbers 58, 15 and 5.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": false,
+        "frame_parses": false,
+        "executed_matches_reference": false,
+        "exact": false,
+        "argument": "print(sorted([58, 15, 55]))",
+        "expected_argument": "print(sorted([58, 15, 5]))"
+      },
+      {
+        "request": "Tell me the files in this directory.",
+        "expected_tool": "exec_python",
+        "route": "exec_python",
+        "route_confidence": 0.5204,
+        "route_ok": true,
+        "argument_ok": false,
+        "frame_parses": false,
+        "executed_matches_reference": false,
+        "exact": false,
+        "argument": "print(len(htnnyorted()))",
+        "expected_argument": "import os\nprint(sorted(os.listdir()))"
+      },
+      {
+        "request": "Open and print ximu.txt.",
+        "expected_tool": "read_file",
+        "route": "read_file",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "ximu.txt",
+        "expected_argument": "ximu.txt"
+      },
+      {
+        "request": "Open and print zana.md.",
+        "expected_tool": "read_file",
+        "route": "read_file",
+        "route_confidence": 0.9998,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "zana.md",
+        "expected_argument": "zana.md"
+      },
+      {
+        "request": "Create xebime.csv containing hello sandbox.",
+        "expected_tool": "write_file",
+        "route": "write_file",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "xebime.csv\nhello sandbox",
+        "expected_argument": "xebime.csv\nhello sandbox"
+      },
+      {
+        "request": "Create xuboha.log containing hello sandbox.",
+        "expected_tool": "write_file",
+        "route": "write_file",
+        "route_confidence": 1.0,
+        "route_ok": true,
+        "argument_ok": true,
+        "frame_parses": true,
+        "executed_matches_reference": true,
+        "exact": true,
+        "argument": "xuboha.log\nhello sandbox",
+        "expected_argument": "xuboha.log\nhello sandbox"
+      }
+    ]
+  },
+  "decline_conversational": {
+    "count": 40,
+    "declined": 18,
+    "rows": [
+      {
+        "request": "hello friend",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "How is your day?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you explain a river to me",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "What do you know about the internet?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "give me an explanation of the internet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please replace byte at position 15 with 128?",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my name is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remember that my name is Oslo?",
+        "route": "write_file",
+        "declined": false
+      },
+      {
+        "request": "please remember that my favorite color is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remember that my favorite color is bird?",
+        "route": "write_file",
+        "declined": false
+      },
+      {
+        "request": "please remember that my favorite food is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remember that my favorite food is cycling?",
+        "route": "write_file",
+        "declined": false
+      },
+      {
+        "request": "please remember that my project is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "Please remember that my preferred language is Lina?",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my preferred language is Oslo",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remember that my city is violet?",
+        "route": "write_file",
+        "declined": false
+      },
+      {
+        "request": "please remember that my city is bird",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remember that my pet is tacos?",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my pet is cycling",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remember that my hobby is Nova?",
+        "route": "write_file",
+        "declined": false
+      },
+      {
+        "request": "could you remember my name is Lina",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Could you remember my name is Go?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my favorite color is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Could you remember my favorite color is Oslo?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my favorite food is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Could you remember my favorite food is bird?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my project is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Could you remember my project is cycling?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my preferred language is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "Could you remember my city is Lina?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my city is Oslo",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "Could you remember my pet is violet?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my pet is bird",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "Could you remember my hobby is tacos?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my hobby is cycling",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "Please tell me my project?",
+        "route": "write_file",
+        "declined": false
+      },
+      {
+        "request": "can you recall my name",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Can you recall my preferred language?",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "please remove my saved favorite color",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "Please remove my saved city?",
+        "route": "none",
+        "declined": true
+      }
+    ]
+  },
+  "decline_all_phase10": {
+    "count": 60,
+    "declined": 48,
+    "rows": [
+      {
+        "request": "hello friend",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "I appreciate it",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you explain entropy to me",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you explain a river to me",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "what do you know about a bicycle",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "give me an explanation of a planet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "give me an explanation of the internet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please replace byte at position 11 with 71",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "revise this document",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my name is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my name is Go",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my name is cycling",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my favorite color is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my favorite color is Oslo",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my favorite food is Lina",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my favorite food is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my favorite food is bird",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my project is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my project is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "please remember that my project is cycling",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my preferred language is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my preferred language is Oslo",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my city is Lina",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my city is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my city is bird",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my pet is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my pet is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "please remember that my pet is cycling",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my hobby is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remember that my hobby is Oslo",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my name is Lina",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my name is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my name is bird",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my favorite color is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my favorite color is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my favorite color is cycling",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my favorite food is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my favorite food is Oslo",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my project is Lina",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my project is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my project is bird",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my preferred language is violet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my preferred language is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my preferred language is cycling",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my city is tacos",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my city is Oslo",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my pet is Lina",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my pet is Nova",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "could you remember my pet is bird",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my hobby is violet",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my hobby is Go",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "could you remember my hobby is cycling",
+        "route": "exec_python",
+        "declined": false
+      },
+      {
+        "request": "please tell me my favorite food",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please tell me my city",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "can you recall my name",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "can you recall my project",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "can you recall my pet",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remove my saved favorite color",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remove my saved preferred language",
+        "route": "none",
+        "declined": true
+      },
+      {
+        "request": "please remove my saved hobby",
+        "route": "none",
+        "declined": true
+      }
+    ]
+  },
+  "iterative_debugging": {
+    "count": 5,
+    "success": 2,
+    "corrected_call_emitted": 4,
+    "clean_after_correction": 2,
+    "output_matches_reference": 2,
+    "max_rounds": 3,
+    "rows": [
+      {
+        "request": "Run this Python and fix any error: prin(1 + 1)",
+        "rounds": 2,
+        "first_attempt_failed": true,
+        "corrected_call_emitted": true,
+        "corrected_execution_clean": false,
+        "output_matches_reference": false,
+        "success": false,
+        "last_result_tail": "...    print(11+ 1:1)\n               ^\nSyntaxError: invalid syntax\n\n---EXIT---\n1"
+      },
+      {
+        "request": "Execute this and repair it if it fails: if 10 < 3 print(1 + 1)",
+        "rounds": 2,
+        "first_attempt_failed": true,
+        "corrected_call_emitted": true,
+        "corrected_execution_clean": true,
+        "output_matches_reference": true,
+        "success": true,
+        "last_result_tail": "\n---STDERR---\n"
+      },
+      {
+        "request": "Please run: print(sorted([2, 9])",
+        "rounds": 1,
+        "first_attempt_failed": false,
+        "corrected_call_emitted": false,
+        "corrected_execution_clean": false,
+        "output_matches_reference": false,
+        "success": false,
+        "last_result_tail": "[2, 2]\n\n---STDERR---\n"
+      },
+      {
+        "request": "Run this Python and fix any error: print(3 + '4')",
+        "rounds": 2,
+        "first_attempt_failed": true,
+        "corrected_call_emitted": true,
+        "corrected_execution_clean": true,
+        "output_matches_reference": true,
+        "success": true,
+        "last_result_tail": "7\n\n---STDERR---\n"
+      },
+      {
+        "request": "Execute this and repair it if it fails: vertex = 28; print(vetrex)",
+        "rounds": 2,
+        "first_attempt_failed": true,
+        "corrected_call_emitted": true,
+        "corrected_execution_clean": false,
+        "output_matches_reference": false,
+        "success": false,
+        "last_result_tail": "...txxx= ;xprint(vevtx)\n             ^\nSyntaxError: invalid syntax\n\n---EXIT---\n1"
+      }
+    ]
+  },
+  "generator_regression": {
+    "checkpoint_sha256": "96b53fb369c20a552781d098906ddcf3e3a63050d66487a6762b77a8bca807e1",
+    "state_dict_bit_identical": true,
+    "vocabulary_size": 268,
+    "control_rows": 12,
+    "intent_classes": 7,
+    "note": "Phase 15 trains a separate tool head; the generator file and all Phase 10/12 decoders bound to its hash are unchanged."
+  },
+  "phase12_memory_regression": {
+    "vector_only_fresh_cases": "10/10",
+    "short_context": true,
+    "long_context": true,
+    "cross_session_fresh_interpreter": true,
+    "scope": "structured owner-scoped vectors only; no transcript, gold answer or host fact fallback during recall"
+  },
+  "targets": {
+    "routing_exact": ">18/20",
+    "debugging_success": ">=3/5",
+    "phase12_vector_recall": "10/10"
+  },
+  "caveats": "Prompts and code templates recur across instance-disjoint splits; held-out prompts use unseen numbers, words and filenames. Debugging corrections are a closed template set. This measures routing plus sandbox-grounded copying, not code understanding.",
+  "unit_tests": {
+    "exit_code": 0,
+    "tail": [
+      "Ran 209 tests in 161.662s",
+      "",
+      "OK"
+    ]
+  }
+}

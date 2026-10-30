@@ -57,7 +57,9 @@ class CompatibilityAndTrainingTests(unittest.TestCase):
             old_logits = original(ids, mem)[..., :259]
             new_logits = restored(ids, mem)[..., :259]
         self.assertTrue(torch.equal(old_logits, new_logits))
-        self.assertEqual(tuple(restored.head.weight.shape), (264, 16))
+        # A pre-tool checkpoint is grown in place to the Phase 15 vocabulary.
+        self.assertEqual(tuple(restored.head.weight.shape), (GeneratorConditioned.VOCAB_SIZE, 16))
+        self.assertEqual(restored.control_emb.num_embeddings, GeneratorConditioned.VOCAB_SIZE - 256)
         self.assertTrue(torch.equal(restored.control_emb.weight[:3], legacy["control_emb.weight"]))
         del legacy["blocks.0.linear1.bias"]
         with self.assertRaises(RuntimeError):
