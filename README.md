@@ -794,3 +794,35 @@ python -m demo.github_agent --once "Summarize the project python/cpython."
 **Where it breaks.** Routing transfers (399/448 of held-out requests reach the right tool); copying does not (0/448 byte-exact). Given `Explain commit 00c3ce0a55e5: ...` the model calls `explain_commit("cfe5ccfc3a2")` -- right shape, wrong content. The tool replies `no commit cfe5ccfc3a2 in the corpus`, and the model then writes an invented result on a `Thought:` line and answers as if the lookup had worked (182/324 of 324 not-found rows). The loop guarantees that every `Observation:` line came from a tool; it does not govern what the model writes inside a thought, and that gap is now measured instead of assumed.
 
 **Limits.** Ten repositories, 7,666,483 characters: enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap. Observations are capped at 200 bytes, so long bodies truncate. Grounding is a substring test -- a floor on honesty, not a ceiling on correctness. Scrubbing is heuristic. Scale is unchanged: d_model 64, 4 layers, 282,627 parameters. See `runs/phase17_report.md`.
+
+## Phase 18: reference-based arguments and grounded refusal
+
+Phase 17 found the model could not copy a twelve-character sha (0/448), invented results when a lookup failed (182/324), and forgot the synthetic task. Phase 18 answers each with a mechanism.
+
+**The model no longer spells identifiers -- it points at them.**
+
+```
+Request: Explain commit [REF]00c3ce0a55e5[/REF]: Update coverage to 7.17.0
+Thought: The user quotes a commit; I should look up who made it and what it says.
+Action: explain_commit("[REF]1[/REF]")
+Observation: commit 00c3ce0a55e5 by renovate[bot] on 2026-10-30: Update coverage to 7.17.0
+Answer: [REF]1[/REF] is a commit by renovate[bot] on 2026-10-30: Update coverage to 7.17.0
+```
+
+Two control ids (`REF_START = 259`, `REF_END = 260`) and a per-request wrapper, `models.react.reference_tools`, that resolves `[REF]N[/REF]` against the request before the tool is called. **A reference that is not in the request fails closed** -- so a hallucinated identifier cannot reach a tool, structurally rather than by training.
+
+| | Phase 17 | Phase 18 | target |
+| --- | --- | --- | --- |
+| reference resolved to the right identifier | 0/448 | **n/a** | 0.90 -- not measured |
+| grounded refusal (says so, invents nothing) | 182/324 answered anyway | **n/a** | 0.80 -- not measured |
+| Phase 16 synthetic argument byte-exact | 0/60 | **n/a** | 35/60 -- not measured |
+
+```bash
+python -m data.phase18_corpus --output-dir runs/phase18
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
+    --refusal-weight 2.0 --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
+```
+
+**Limits.** A reference only names what the request already contains; it cannot express "the commit before this one". One entity is marked per request, so choosing among several is untested. Refusal is judged by phrase and identifier shape, not meaning, and the refusal identifiers were generated to be absent rather than sampled from real failures. See `runs/phase18_report.md`.

@@ -242,3 +242,22 @@ python -m evaluation.github_eval --model runs/phase17/foundation.pt \
 python -m evaluation.copy_diagnostic --model runs/phase17/foundation.pt
 python -m demo.github_agent --once "Summarize the project python/cpython."
 ```
+
+## Phase 18: reference-based arguments and grounded refusal
+
+**Why.** Phase 17 measured three failures: argument byte-exactness **0/448** on real requests, **182/324** answers produced after the tool reported "not in the corpus", and catastrophic forgetting on the synthetic task (digits inside `Action:` 89.7% -> 32.3%). Phase 18 answers each with a mechanism, not with more epochs.
+
+- **References (`18.1`).** Two control ids are added to the foundation: `REF_START = 259`, `REF_END = 260` (vocabulary 259 -> 261). Entities in a request are wrapped as `[REF]00c3ce0a55e5[/REF]` and the action points at them by index -- `explain_commit("[REF]1[/REF]")`. `models.react.reference_tools` wraps tool handlers so the reference is resolved against the **request** before the tool is called; `ReactLoop` is untouched. **A reference that does not name an entity in the request fails closed** with `ERROR: unresolved reference`, so the model cannot pass a hallucinated identifier to a tool -- not by learning, but because no path exists. This is the official answer to the byte-copying capacity limit: byte-exactness becomes a lookup, not a generation problem.
+- **Grounded refusal (`18.2`).** `data/phase18_corpus.py` adds **1,164** refusal trajectories (five kinds: absent commit, absent pull request, no-match query, missing README, out-of-range reference). Every one is a real lookup that really fails -- the generator discards anything that resolves -- and each ends in an answer that says so. The `Answer:` bytes carry weight **2.0** whenever the observation reports a failure (`training/train_foundation.py --refusal-weight`; markers matched against the observation line only, so a subject containing "error" cannot trigger it).
+- **Anti-forgetting (`18.3`).** `--balance "exec,file,chat,repair,memory:0.5;github:0.5"` fixes the composition of **every batch** at 50% synthetic / 50% real. Groups are kept as separate sub-batches and their losses summed; concatenating them pads short synthetic rows out to the longest real row and cost roughly twice the compute per epoch.
+- **Results.** Reference resolution **n/a** (target 0.90, not measured); grounded refusal **n/a** (target 0.80, not measured); anti-forgetting **n/a** against a target of 35/60 (not measured), where Phase 16 scored 42/60 and Phase 17 scored 0/60. Regression **not run**; Phase 12 recall **10/10**.
+- **Limits.** A reference can only name something already in the request -- it cannot express "the commit before this one". The corpus marks one entity per request, so choosing between several is untested. Refusal is detected by phrase and identifier shape, not by meaning. The refusal identifiers were generated to be absent and then verified absent; real not-found traffic (typos, deletions, permission errors) is not represented. Scale is unchanged at 282,885 parameters on two CPU cores.
+- **Reproduce:**
+
+```bash
+python -m data.phase18_corpus --output-dir runs/phase18
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
+    --refusal-weight 2.0 --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
+```

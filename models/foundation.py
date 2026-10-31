@@ -12,13 +12,21 @@ machinery:
 * no internal verifier -- verification is outsourced to the sandbox, and
   the observation comes back as bytes in the same stream.
 
-Vocabulary: bytes 0-255 plus three control ids.
+Vocabulary: bytes 0-255 plus five control ids.
 
-===========  ==========================================
-``BOS`` 256  beginning of sequence
-``EOS`` 257  end of sequence (the only learned stop)
-``PAD`` 258  padding, masked out of the loss
-===========  ==========================================
+=============  ==============================================================
+``BOS`` 256    beginning of sequence
+``EOS`` 257    end of sequence (the only learned stop)
+``PAD`` 258    padding, masked out of the loss
+``REF_START`` 259  opens a reference to a span of the request
+``REF_END`` 260    closes it
+=============  ==============================================================
+
+The two reference ids exist because a byte-level model at this scale cannot
+reproduce an arbitrary identifier -- Phase 17 measured 0/448 on twelve-character
+shas. A reference lets the model *point at* bytes it was shown instead of
+spelling them, and the host resolves it against the request rather than trusting
+what the model wrote. See :mod:`models.react`.
 
 The architecture is identical at every scale: only ``d_model``, ``n_layers``,
 ``n_heads``, ``d_ff`` and ``max_seq_len`` change. The CPU configuration used
@@ -38,8 +46,18 @@ from torch import nn
 BOS = 256
 EOS = 257
 PAD = 258
-VOCAB_SIZE = 259
-CONTROL_NAMES = {BOS: "<bos>", EOS: "<eos>", PAD: "<pad>"}
+REF_START = 259
+REF_END = 260
+VOCAB_SIZE = 261
+CONTROL_NAMES = {BOS: "<bos>", EOS: "<eos>", PAD: "<pad>",
+                 REF_START: "<ref>", REF_END: "</ref>"}
+
+# The on-the-wire spelling of the two reference ids. They are ordinary text so
+# that a ReAct stream stays readable and so the interceptor is a bytes match,
+# not a token match -- the model, the dataset and the host all agree on these
+# eight bytes and nothing else.
+REF_OPEN = b"[REF]"
+REF_CLOSE = b"[/REF]"
 
 
 @dataclass(frozen=True)
@@ -56,7 +74,8 @@ class FoundationConfig:
 
     def __post_init__(self) -> None:
         if self.vocab_size != VOCAB_SIZE:
-            raise ValueError(f"vocab_size must be {VOCAB_SIZE} (256 bytes + BOS/EOS/PAD)")
+            raise ValueError(f"vocab_size must be {VOCAB_SIZE} "
+                             "(256 bytes + BOS/EOS/PAD/REF_START/REF_END)")
         for name in ("d_model", "n_layers", "n_heads", "d_ff", "max_seq_len"):
             if int(getattr(self, name)) < 1:
                 raise ValueError(f"{name} must be a positive integer")
@@ -233,20 +252,49 @@ class CausalByteTransformer(nn.Module):
 # on decode, so round-tripping text is exact and never emits a control byte.
 # --------------------------------------------------------------------------
 def encode_bytes(data: bytes, *, bos: bool = True, eos: bool = False) -> torch.Tensor:
-    """Encode raw bytes to ids, optionally framing with BOS/EOS."""
+    """Encode raw bytes to ids, optionally framing with BOS/EOS.
+
+    Reference markers are written into the stream as the two-byte sequences the
+    rest of the code uses for them, so this function stays a pure bytes->ids map.
+    """
     if not isinstance(data, (bytes, bytearray)):
         raise TypeError("data must be bytes")
-    values = list(data)
-    if any(not 0 <= value <= 255 for value in values):
-        raise ValueError("byte ids must be in 0..255")
+    values: list[int] = []
+    index = 0
+    raw = bytes(data)
+    while index < len(raw):
+        if raw.startswith(REF_OPEN, index):
+            values.append(REF_START)
+            index += len(REF_OPEN)
+        elif raw.startswith(REF_CLOSE, index):
+            values.append(REF_END)
+            index += len(REF_CLOSE)
+        else:
+            values.append(raw[index])
+            index += 1
+    allowed = set(range(256)) | {REF_START, REF_END}
+    if any(value not in allowed for value in values):
+        raise ValueError("byte ids must be in 0..255 or a reference control id")
     ids = ([BOS] if bos else []) + values + ([EOS] if eos else [])
     return torch.tensor(ids, dtype=torch.long)
 
 
 def decode_ids(ids: torch.Tensor | list[int]) -> bytes:
-    """Decode ids to raw bytes, dropping BOS/EOS/PAD."""
+    """Decode ids to raw bytes, dropping BOS/EOS/PAD.
+
+    Reference ids come back as their marker text, so a decoded stream is
+    byte-identical to what was encoded.
+    """
     values = ids.tolist() if isinstance(ids, torch.Tensor) else list(ids)
-    return bytes(value for value in values if 0 <= value <= 255)
+    out = bytearray()
+    for value in values:
+        if 0 <= value <= 255:
+            out.append(value)
+        elif value == REF_START:
+            out += REF_OPEN
+        elif value == REF_END:
+            out += REF_CLOSE
+    return bytes(out)
 
 
 def pad_batch(sequences: list[torch.Tensor], length: int) -> tuple[torch.Tensor, torch.Tensor]:

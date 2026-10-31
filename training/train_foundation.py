@@ -70,7 +70,8 @@ def _encode_all(rows: list[Trajectory], max_len: int) -> list[torch.Tensor]:
 
 
 def _batches(sequences: list[torch.Tensor], batch_size: int, shuffle: bool,
-             generator: random.Random, token_budget: int = 8192):
+             generator: random.Random, token_budget: int = 8192,
+             weights: list[torch.Tensor] | None = None):
     """Batches bounded by **tokens**, not just rows.
 
     Attention activations scale as ``rows * heads * length^2``, so a fixed row
@@ -101,14 +102,151 @@ def _batches(sequences: list[torch.Tensor], batch_size: int, shuffle: bool,
             batches.append(current)
         generator.shuffle(batches)
         for indices in batches:
-            chunk = [sequences[index] for index in indices]
-            length = max(int(sequence.shape[0]) for sequence in chunk)
-            yield pad_batch(chunk, length)
+            yield _collate(sequences, indices, weights)
         return
     for start in range(0, len(order), batch_size):
-        chunk = [sequences[index] for index in order[start:start + batch_size]]
-        length = max(int(sequence.shape[0]) for sequence in chunk)
-        yield pad_batch(chunk, length)
+        yield _collate(sequences, order[start:start + batch_size], weights)
+
+
+def _collate(sequences, indices, weights):
+    chunk = [sequences[index] for index in indices]
+    length = max(int(sequence.shape[0]) for sequence in chunk)
+    if weights is None:
+        ids, targets = pad_batch(chunk, length)
+        return ids, targets, torch.ones_like(targets, dtype=torch.float).masked_fill(targets == PAD, 0.0)
+    return pad_batch_with_weights(chunk, [weights[index] for index in indices], length)
+
+
+REFUSAL_WEIGHT = 2.0
+#: Substrings that mark an observation as a failure. Matched against the
+#: observation line only, so a commit subject containing "error" cannot trigger
+#: it.
+FAILURE_MARKERS = (b"ERROR", b"not found", b"no commit", b"no pull request",
+                   b"no issue", b"no README", b"unresolved reference")
+
+
+def is_failure_observation(text: bytes) -> bool:
+    """Does the observation in this trajectory report a failure?"""
+    if b"\nObservation: " not in text:
+        return False
+    line = text.split(b"\nObservation: ", 1)[1].split(b"\n", 1)[0]
+    return any(marker in line for marker in FAILURE_MARKERS)
+
+
+def answer_span(text: bytes) -> tuple[int, int] | None:
+    """Byte range of the ``Answer:`` line, or ``None``."""
+    marker = b"\nAnswer: "
+    start = text.find(marker)
+    if start == -1:
+        return None
+    begin = start + 1  # predictions are aligned with the byte, not the newline
+    end = text.find(b"\n", start + len(marker))
+    if end == -1:
+        end = len(text)
+    return begin, end
+
+
+def refusal_weights(text: bytes, length: int) -> torch.Tensor:
+    """Per-target-position loss weights for one trajectory.
+
+    Everything is 1.0. The bytes of the ``Answer:`` line get an extra
+    ``REFUSAL_WEIGHT - 1`` when the observation reported a failure, because
+    "say you could not find it" is the behaviour most worth reinforcing and it
+    is a small fraction of the corpus: without the extra weight the model
+    averages it away against thousands of successful lookups.
+    """
+    weights = torch.ones(length, dtype=torch.float)
+    if not is_failure_observation(text):
+        return weights
+    span = answer_span(text)
+    if span is None:
+        return weights
+    begin, end = span
+    # Targets are the inputs shifted by one, so the byte at offset k is
+    # predicted from position k-1 in the shifted view.
+    lo = max(begin - 1, 0)
+    hi = min(end - 1, length)
+    if hi > lo:
+        weights[lo:hi] = REFUSAL_WEIGHT
+    return weights
+
+
+def pad_batch_with_weights(sequences, weights, length: int):
+    """``pad_batch`` extended to carry a per-position weight tensor."""
+    from models.foundation import pad_batch
+
+    ids, targets = pad_batch(sequences, length)
+    padded = torch.ones(ids.shape[0], length, dtype=torch.float)
+    for index, weight in enumerate(weights):
+        size = min(int(weight.shape[0]), length)
+        padded[index, :size] = weight[:size]
+    padded[targets == PAD] = 0.0
+    return ids, targets, padded
+
+
+def _pack(sequences: list[torch.Tensor], indices: list[int], batch_size: int,
+          token_budget: int, generator: random.Random | None = None) -> list[list[int]]:
+    """Greedily pack indices into batches bounded by rows *and* tokens."""
+    if generator is not None:
+        generator.shuffle(indices)
+        indices.sort(key=lambda index: int(sequences[index].shape[0]))
+    batches: list[list[int]] = []
+    current: list[int] = []
+    longest = 0
+    for index in indices:
+        length = int(sequences[index].shape[0])
+        candidate = max(longest, length)
+        if current and (len(current) + 1 > batch_size
+                        or (len(current) + 1) * candidate > token_budget):
+            batches.append(current)
+            current, longest = [index], length
+        else:
+            current.append(index)
+            longest = candidate
+    if current:
+        batches.append(current)
+    return batches
+
+
+def balanced_batches(groups: list[list[int]], shares: list[float],
+                     sequences: list[torch.Tensor], batch_size: int,
+                     generator: random.Random, token_budget: int = 8192,
+                     weights: list[torch.Tensor] | None = None):
+    """Batches whose composition is fixed: ``shares[i]`` of every batch is group ``i``.
+
+    Phase 17 mixed one hard, long, high-entropy corpus into an easy templated
+    one and the model lost the easy task (digits inside ``Action:`` fell from
+    89.7% to 32.3%). A fixed composition per batch -- rather than per epoch --
+    is the blunt, checkable fix: whichever way the gradient pulls, it pulls on
+    both distributions in known proportion at every step.
+
+    Each group is yielded as its **own** sub-batch rather than concatenated.
+    Concatenating would pad every short synthetic trajectory out to the length
+    of the longest real one, which measured at roughly twice the compute per
+    epoch for no benefit; the trainer sums the sub-batch losses instead, so the
+    composition is exactly as fixed and the padding is not paid for.
+    """
+    if len(groups) != len(shares):
+        raise ValueError("groups and shares must be the same length")
+    total = sum(shares)
+    if total <= 0:
+        raise ValueError("shares must be positive")
+    packs = []
+    for group, share in zip(groups, shares):
+        if not group:
+            packs.append([])
+            continue
+        budget = max(int(token_budget * share / total), 1)
+        rows = max(int(batch_size * share / total), 1)
+        packs.append(_pack(sequences, list(group), rows, budget, generator))
+    depth = max(len(pack) for pack in packs)
+    for round_index in range(depth):
+        sub_batches = []
+        for pack in packs:
+            if pack:
+                sub_batches.append(_collate(sequences, pack[round_index % len(pack)], weights))
+        generator.shuffle(sub_batches)
+        yield sub_batches
 
 
 @torch.no_grad()
@@ -118,8 +256,9 @@ def evaluate(model: CausalByteTransformer, sequences: list[torch.Tensor], batch_
     model.eval()
     total_loss, correct, counted = 0.0, 0, 0
     batches = 0
-    for ids, targets in _batches(sequences, batch_size, shuffle=False, generator=random.Random(0),
-                                 token_budget=token_budget):
+    for ids, targets, _weights in _batches(sequences, batch_size, shuffle=False,
+                                           generator=random.Random(0),
+                                           token_budget=token_budget):
         logits = model(ids)
         loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), targets.reshape(-1), ignore_index=PAD)
         mask = targets != PAD
@@ -188,6 +327,11 @@ def main() -> None:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--token-budget", type=int, default=None,
                         help="max tokens per batch (memory is bounded by this)")
+    parser.add_argument("--balance", default=None,
+                        help=('comma-separated kind groups given a fixed share of every '
+                              'batch, e.g. "exec,file,chat,repair,memory:0.5;github:0.5"'))
+    parser.add_argument("--refusal-weight", type=float, default=None,
+                        help="extra loss weight on Answer: bytes that follow a failed lookup")
     args = parser.parse_args()
 
     config, training_defaults = load_configuration(
@@ -202,6 +346,8 @@ def main() -> None:
     token_budget = int(args.token_budget if args.token_budget is not None
                        else training_defaults.get("token_budget", 8192))
     warmup = int(training_defaults.get("warmup_epochs", 1))
+    refusal_weight = (float(args.refusal_weight) if args.refusal_weight is not None
+                      else float(training_defaults.get("refusal_weight", 1.0)))
 
     torch.manual_seed(seed)
     random.seed(seed)
@@ -231,6 +377,15 @@ def main() -> None:
     print(json.dumps({"dataset": statistics}), flush=True)
 
     sequences = {split: _encode_all(rows, config.max_seq_len) for split, rows in raw.items()}
+    weights = None
+    if refusal_weight and refusal_weight > 1.0:
+        weights = {split: [refusal_weights(row.text, int(sequence.shape[0]))
+                           for row, sequence in zip(raw[split], sequences[split])]
+                   for split in sequences}
+        refusal_rows = sum(1 for split in raw for row in raw[split]
+                           if is_failure_observation(row.text))
+        print(json.dumps({"refusal_weight": refusal_weight,
+                          "weighted_trajectories": refusal_rows}), flush=True)
     longest = max(int(sequence.shape[0]) for sequence in sequences["train"])
     if longest > config.max_seq_len:
         raise ValueError(f"trajectory length {longest} exceeds max_seq_len {config.max_seq_len}")
@@ -245,6 +400,22 @@ def main() -> None:
     print(json.dumps({"config": config.to_dict(), "parameters": model.parameters_count}), flush=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     generator = random.Random(seed)
+
+    groups: list[list[int]] = []
+    shares: list[float] = []
+    if args.balance:
+        for clause in args.balance.split(";"):
+            if not clause.strip():
+                continue
+            kinds, _, share = clause.partition(":")
+            wanted = {kind.strip() for kind in kinds.split(",") if kind.strip()}
+            shares.append(float(share) if share else 1.0)
+            groups.append([index for index, row in enumerate(raw["train"])
+                           if any(row.kind.startswith(kind) for kind in wanted)])
+        if not groups:
+            raise ValueError("--balance could not be parsed; expected kinds:share pairs")
+        print(json.dumps({"balanced_groups": [len(group) for group in groups],
+                          "shares": shares}), flush=True)
 
     history: list[dict] = []
     started = time.time()
@@ -263,18 +434,47 @@ def main() -> None:
             group["lr"] = rate
 
         running, correct, counted, batches = 0.0, 0, 0, 0
-        for ids, targets in _batches(sequences["train"], batch_size, shuffle=True, generator=generator,
-                                 token_budget=token_budget):
-            ids, targets = ids.to(args.device), targets.to(args.device)
-            logits = model(ids)
-            loss = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), targets.reshape(-1), ignore_index=PAD)
+        if groups:
+            def sub_batch_stream():
+                for sub_batches in balanced_batches(
+                        groups, shares, sequences["train"], batch_size, generator,
+                        token_budget, weights["train"] if weights else None):
+                    yield sub_batches
+        else:
+            def sub_batch_stream():
+                for single in _batches(sequences["train"], batch_size, shuffle=True,
+                                       generator=generator, token_budget=token_budget,
+                                       weights=weights["train"] if weights else None):
+                    yield [single]
+
+        for sub_batches in sub_batch_stream():
+            # Weighted mean: the refusal bytes count for more, everything else
+            # for exactly one, and padding counts for nothing. Normalising by
+            # the total weight keeps the loss on the same scale as Phase 17, so
+            # the learning rate does not have to be re-tuned. With balanced
+            # groups the sub-batches are summed, which is what keeps padding
+            # proportional to each group's own lengths.
+            loss = None
+            total_weight = torch.zeros((), device=args.device)
+            for ids, targets, batch_weights in sub_batches:
+                ids, targets = ids.to(args.device), targets.to(args.device)
+                batch_weights = batch_weights.to(args.device)
+                logits = model(ids)
+                per_token = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+                                            targets.reshape(-1),
+                                            ignore_index=PAD, reduction="none")
+                weight = batch_weights.sum()
+                term = (per_token * batch_weights.reshape(-1)).sum()
+                loss = term if loss is None else loss + term
+                total_weight = total_weight + weight
+                mask = targets != PAD
+                correct += int(((logits.argmax(dim=-1) == targets) & mask).sum().item())
+                counted += int(mask.sum().item())
+            loss = loss / total_weight.clamp(min=1.0)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
-            mask = targets != PAD
-            correct += int(((logits.argmax(dim=-1) == targets) & mask).sum().item())
-            counted += int(mask.sum().item())
             running += float(loss.item())
             batches += 1
 
@@ -297,7 +497,8 @@ def main() -> None:
         _write_report(output, config, model, statistics, longest, history,
                       {"epochs": epochs, "batch_size": batch_size, "lr": lr,
                        "weight_decay": weight_decay, "seed": seed, "warmup_epochs": warmup,
-                       "device": str(args.device), "preset": args.preset, "complete": False})
+                       "device": str(args.device), "preset": args.preset, "complete": False,
+                       "refusal_weight": refusal_weight, "balance": args.balance})
         print(json.dumps({key: (round(value, 6) if isinstance(value, float) else value)
                           for key, value in record.items() if key != "validation"}
                          | {"val_loss": round(validation["loss"], 6),
@@ -312,7 +513,8 @@ def main() -> None:
     _write_report(output, config, model, statistics, longest, history,
                            {"epochs": epochs, "batch_size": batch_size, "lr": lr,
                             "weight_decay": weight_decay, "seed": seed, "warmup_epochs": warmup,
-                            "device": str(args.device), "preset": args.preset, "complete": True},
+                            "device": str(args.device), "preset": args.preset, "complete": True,
+                            "refusal_weight": refusal_weight, "balance": args.balance},
                            test=test,
                            sample={"prompt": sample_prompt.decode("latin-1"),
                                    "continuation": sample.decode("latin-1", "replace"),

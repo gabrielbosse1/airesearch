@@ -25,7 +25,7 @@ import torch
 from data.github_to_react import TOOLS, CorpusIndex
 from evaluation.github_eval import build_tools, grounding_facts
 from models.foundation import load_foundation
-from models.react import ReactLoop
+from models.react import ReactLoop, reference_tools, strip_references
 
 DEFAULT_MODEL = "runs/phase17/foundation.pt"
 DEFAULT_CORPUS = "data/github_raw/github_stories.jsonl"
@@ -33,22 +33,29 @@ DEFAULT_CORPUS = "data/github_raw/github_stories.jsonl"
 
 @dataclass
 class GitHubAgent:
-    """Foundation model + the four real corpus tools, driven by the react loop."""
+    """Foundation model + the four real corpus tools, driven by the react loop.
+
+    The tools are wrapped per request so that ``[REF]N[/REF]`` arguments resolve
+    against what the user actually typed before the tool is called. That is the
+    phase's central mechanism: the identifier the tool receives is a span of the
+    request, never a span the model invented.
+    """
 
     model: object
     index: CorpusIndex
 
     def __post_init__(self) -> None:
-        self.loop = ReactLoop(self.model, build_tools(self.index), max_rounds=2,
-                              max_new_bytes=200)
+        self.loop = ReactLoop(self.model, {}, max_rounds=2, max_new_bytes=200)
 
     def respond(self, request: bytes):
+        self.loop.tools = reference_tools(build_tools(self.index), request)
         return self.loop.run(request)
 
 
 def render(run, *, show_grounding: bool = True) -> str:
     """Print one run, flagging which facts in the answer came from a tool."""
-    lines = [run.transcript.decode("latin-1", "replace")]
+    # Markers are an internal addressing mechanism; show the bytes they refer to.
+    lines = [strip_references(run.transcript).decode("latin-1", "replace")]
     if show_grounding and run.steps:
         facts = [fact for step in run.steps
                  for fact in grounding_facts(step.action.tool, step.observation)

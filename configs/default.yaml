@@ -81,7 +81,8 @@ adaptive_halting:
 # The architecture is identical at every scale -- only these numbers change.
 # ===========================================================================
 foundation:
-  vocab_size: 259        # bytes 0-255 + <bos> 256 + <eos> 257 + <pad> 258
+  # bytes 0-255 + <bos> 256 + <eos> 257 + <pad> 258 + <ref> 259 + </ref> 260
+  vocab_size: 261
   d_model: 64            # 512+ for a production run
   n_layers: 4            # 12+ for a production run
   n_heads: 4             # 8 for a production run

@@ -318,3 +318,108 @@ def _decode(ids) -> bytes:
     from .foundation import decode_ids
 
     return decode_ids(ids)
+
+
+# ------------------------------------------------------------- references
+#: On-the-wire markers. Kept identical to ``models.foundation`` so that what the
+#: dataset writes, what the model emits and what the host matches are the same
+#: bytes; a test asserts the two modules agree.
+REF_OPEN = b"[REF]"
+REF_CLOSE = b"[/REF]"
+REF_SPAN_RE = re.compile(re.escape(REF_OPEN) + rb"(.*?)" + re.escape(REF_CLOSE), re.DOTALL)
+
+
+class UnresolvedReference(Exception):
+    """A reference the request does not contain. Raised, then reported."""
+
+
+def mark(text: bytes) -> bytes:
+    """Wrap ``text`` in reference markers."""
+    if not isinstance(text, (bytes, bytearray)):
+        raise TypeError("text must be bytes")
+    return REF_OPEN + bytes(text) + REF_CLOSE
+
+
+def reference_spans(request: bytes) -> list[bytes]:
+    """The marked spans of a request, in order, markers stripped."""
+    if not isinstance(request, (bytes, bytearray)):
+        raise TypeError("request must be bytes")
+    return REF_SPAN_RE.findall(bytes(request))
+
+
+def strip_references(text: bytes) -> bytes:
+    """Remove the markers, leaving the referenced bytes in place."""
+    return REF_SPAN_RE.sub(rb"\1", bytes(text))
+
+
+def resolve_reference(payload: bytes, request: bytes) -> bytes:
+    """Turn one reference payload into the bytes the request actually contains.
+
+    Two forms are accepted:
+
+    * **an index** into the marked spans of the request -- ``[REF]2[/REF]`` is
+      the second marked entity. Copying one digit is within the model's
+      capacity, so this is the form the corpus is written in.
+    * **the literal bytes**, which resolve only if they appear verbatim inside a
+      marked span of the request.
+
+    Anything else raises :class:`UnresolvedReference`. This is the whole point
+    of the mechanism: the identifier the tool receives is always a span of the
+    user's own request, so byte-exactness is guaranteed by construction and a
+    hallucinated identifier cannot reach a tool.
+    """
+    if not isinstance(request, (bytes, bytearray)):
+        raise TypeError("request must be bytes")
+    spans = reference_spans(bytes(request))
+    payload = bytes(payload).strip()
+    if payload.isdigit():
+        index = int(payload)
+        if 1 <= index <= len(spans):
+            return spans[index - 1]
+        raise UnresolvedReference(
+            b"reference " + payload + b" is out of range; the request marks "
+            + str(len(spans)).encode() + b" entities")
+    if payload in spans:
+        return payload
+    raise UnresolvedReference(b"reference " + payload[:60] + b" is not in the request")
+
+
+def resolve_arguments(args: tuple[bytes, ...], request: bytes) -> tuple[bytes, ...]:
+    """Resolve every referenced argument against the request."""
+    resolved: list[bytes] = []
+    for argument in args:
+        if REF_OPEN in argument and REF_CLOSE in argument:
+            payload = argument[len(REF_OPEN):argument.rindex(REF_CLOSE)]
+            resolved.append(resolve_reference(payload, request))
+        elif argument.startswith(REF_OPEN.lstrip(b"[")) and argument.isdigit():
+            resolved.append(resolve_reference(argument, request))
+        else:
+            resolved.append(REF_SPAN_RE.sub(
+                lambda match: resolve_reference(match.group(1), request), argument))
+    return tuple(resolved)
+
+
+def reference_tools(tools: Mapping[bytes, Callable[..., bytes]],
+                    request: bytes) -> dict[bytes, Callable[..., bytes]]:
+    """Wrap tool handlers so referenced arguments are resolved before the call.
+
+    This lives here rather than inside :class:`ReactLoop` on purpose: the loop
+    owns no policy, and the wrapping is independent of which tools are bound.
+    Resolution failures never raise into the loop -- they come back as an
+    ``ERROR:`` observation, which is exactly the input the refusal behaviour
+    was trained on.
+    """
+    wrapped: dict[bytes, Callable[..., bytes]] = {}
+    for name, handler in tools.items():
+        wrapped[name] = _make_resolver(handler, request)
+    return wrapped
+
+
+def _make_resolver(handler: Callable[..., bytes], request: bytes) -> Callable[..., bytes]:
+    def call(*args: bytes) -> bytes:
+        try:
+            resolved = resolve_arguments(args, request)
+        except UnresolvedReference as error:
+            return b"ERROR: unresolved reference: " + bytes(error.args[0])
+        return handler(*resolved)
+    return call
