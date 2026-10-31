@@ -22,12 +22,12 @@ from dataclasses import dataclass
 
 import torch
 
-from data.github_to_react import TOOLS, CorpusIndex
+from data.github_to_react import TOOLS, CorpusIndex, mark_entities
 from evaluation.github_eval import build_tools, grounding_facts
 from models.foundation import load_foundation
 from models.react import ReactLoop, reference_tools, strip_references
 
-DEFAULT_MODEL = "runs/phase17/foundation.pt"
+DEFAULT_MODEL = "runs/phase18/foundation.pt"
 DEFAULT_CORPUS = "data/github_raw/github_stories.jsonl"
 
 
@@ -48,8 +48,13 @@ class GitHubAgent:
         self.loop = ReactLoop(self.model, {}, max_rounds=2, max_new_bytes=200)
 
     def respond(self, request: bytes):
-        self.loop.tools = reference_tools(build_tools(self.index), request)
-        return self.loop.run(request)
+        # The model was trained on requests whose identifiers are already
+        # marked, so a raw request has to be marked before it is shown --
+        # otherwise the model correctly emits ``[REF]1[/REF]`` into a request
+        # that carries no span to resolve it against.
+        marked = mark_entities(bytes(request))
+        self.loop.tools = reference_tools(build_tools(self.index), marked)
+        return self.loop.run(marked)
 
 
 def render(run, *, show_grounding: bool = True) -> str:

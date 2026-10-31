@@ -8,17 +8,17 @@
     "d_ff": 256,
     "max_seq_len": 768,
     "dropout": 0.1,
-    "epochs": 8,
+    "epochs": 3,
     "batch_size": 64,
-    "lr": 0.003,
+    "lr": 0.0015,
     "weight_decay": 0.01,
-    "seed": 18018,
+    "seed": 18020,
     "warmup_epochs": 1,
     "device": "cpu",
     "preset": "github",
-    "complete": false,
+    "complete": true,
     "refusal_weight": 2.0,
-    "balance": "exec,file,chat,repair,memory:0.5;github:0.5"
+    "balance": null
   },
   "parameters": 282885,
   "dataset": {
@@ -40,10 +40,10 @@
         "github_refuse_issue": 205,
         "github_readme": 7
       },
-      "bytes": 4875591,
+      "bytes": 5134271,
       "min_length": 81,
-      "median_length": 317,
-      "max_length": 730,
+      "median_length": 354,
+      "max_length": 786,
       "with_memory_prefix": 1120,
       "with_tool_call": 14824
     },
@@ -64,10 +64,10 @@
         "chat": 40,
         "github_readme": 1
       },
-      "bytes": 374594,
+      "bytes": 406026,
       "min_length": 87,
-      "median_length": 381,
-      "max_length": 730,
+      "median_length": 403,
+      "max_length": 786,
       "with_memory_prefix": 50,
       "with_tool_call": 1015
     },
@@ -88,39 +88,75 @@
         "github_issue": 45,
         "github_readme": 2
       },
-      "bytes": 366864,
+      "bytes": 397296,
       "min_length": 87,
-      "median_length": 383,
-      "max_length": 700,
+      "median_length": 407,
+      "max_length": 756,
       "with_memory_prefix": 50,
       "with_tool_call": 995
     }
   },
-  "longest_trajectory_bytes": 714,
+  "longest_trajectory_bytes": 768,
   "epochs": [
     {
       "epoch": 1,
-      "learning_rate": 0.003,
-      "train_loss": 1.380066880900893,
-      "train_next_byte_accuracy": 0.6150509221184701,
-      "gradient_norm": 0.8154388070106506,
+      "learning_rate": 0.0015,
+      "train_loss": 0.6110824629187261,
+      "train_next_byte_accuracy": 0.8205468153073657,
+      "gradient_norm": 0.35798025131225586,
       "validation": {
-        "loss": 2.0770996388267067,
-        "next_byte_accuracy": 0.5217985120224274,
-        "tokens": 361699
+        "loss": 0.696022258085363,
+        "next_byte_accuracy": 0.7969572328675829,
+        "tokens": 393129
       },
-      "elapsed_s": 618.4
+      "elapsed_s": 637.2
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 0.0011250000000000001,
+      "train_loss": 0.5664088792041128,
+      "train_next_byte_accuracy": 0.8330010071053346,
+      "gradient_norm": 0.4689030945301056,
+      "validation": {
+        "loss": 0.6672430003390593,
+        "next_byte_accuracy": 0.8045374419083812,
+        "tokens": 393129
+      },
+      "elapsed_s": 1256.4
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 0.00037500000000000017,
+      "train_loss": 0.5337480804724849,
+      "train_next_byte_accuracy": 0.8417897484937104,
+      "gradient_norm": 0.35115450620651245,
+      "validation": {
+        "loss": 0.6394035325330847,
+        "next_byte_accuracy": 0.8119828351508029,
+        "tokens": 393129
+      },
+      "elapsed_s": 1891.2
     }
   ],
   "final_validation": {
-    "loss": 2.0770996388267067,
-    "next_byte_accuracy": 0.5217985120224274,
-    "tokens": 361699
+    "loss": 0.6394035325330847,
+    "next_byte_accuracy": 0.8119828351508029,
+    "tokens": 393129
   },
-  "final_test": null,
+  "final_test": {
+    "loss": 0.6492628244792714,
+    "next_byte_accuracy": 0.8098865937310741,
+    "tokens": 384723
+  },
   "checkpoint": {
-    "path": "runs/phase18/foundation.pt"
+    "path": "runs/phase18/foundation.pt",
+    "sha256": "1b977f0796f9034babe3097b0cc2ea3808e4090b0b55f3d8f9e31394f6995b1b",
+    "parameters": 282885
   },
-  "sample_generation": null,
+  "sample_generation": {
+    "prompt": "Request: Calculate 6 * 7.\nThought:",
+    "continuation": "Request: Calculate 6 * 7.\nThought: This needs a tool: multiply the two numbers.\nAction: exec_python(\"print(20 * 2)\")\nObservation: 20\nAnswer: The result is 160.",
+    "answer": "The result is 160."
+  },
   "selection": "fixed final epoch; no test-based checkpoint selection"
 }

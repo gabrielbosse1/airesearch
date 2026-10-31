@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 
 from data.phase18_corpus import build_refusals, mark_request
-from data.github_to_react import CorpusIndex
+from data.github_to_react import CorpusIndex, mark_entities
 from data.mixed_react_dataset import load_trajectories
 from models.foundation import (REF_END, REF_START, VOCAB_SIZE, FoundationConfig,
                                decode_ids, encode_bytes)
@@ -184,6 +184,34 @@ class Phase18CorpusTests(unittest.TestCase):
                     if row.kind.startswith("github_refuse"))
         self.assertGreater(count, 1000)
 
+    def test_the_corpus_matches_what_the_loop_will_emit(self):
+        """``ReactLoop`` appends ``Thought:`` after every observation.
+
+        Trajectories that go straight from ``Observation:`` to ``Answer:`` are
+        off-distribution exactly where the answer is produced -- this was
+        measured as 0/10 answers before the bridging line was added, and it is
+        the kind of thing that silently survives a rebuild.
+        """
+        require_phase18()
+        rows = [row for row in load_trajectories(P18 / "react_train.jsonl")
+                if row.kind.startswith("github_")]
+        checked = 0
+        for row in rows:
+            if b"Observation: " not in row.text or b"Answer: " not in row.text:
+                continue
+            between = row.text.split(b"Observation: ", 1)[1].split(b"Answer: ", 1)[0]
+            self.assertIn(b"Thought:", between,
+                          "no bridging Thought between Observation and Answer")
+            checked += 1
+        self.assertGreater(checked, 1000)
+
+    def test_almost_no_row_is_truncated_by_the_context_window(self):
+        require_phase18()
+        rows = load_trajectories(P18 / "react_train.jsonl")
+        over = sum(1 for row in rows if len(row.text) > 768)
+        self.assertLess(over / max(len(rows), 1), 0.001,
+                        f"{over} rows exceed max_seq_len 768 and would be cut mid-answer")
+
     def test_refusal_kinds_are_all_present(self):
         require_phase18()
         kinds = {row.kind for row in load_trajectories(P18 / "react_train.jsonl")
@@ -291,6 +319,38 @@ class BalancedBatchTests(unittest.TestCase):
         import random
         with self.assertRaises(ValueError):
             list(balanced_batches([[0]], [0.5, 0.5], sequences, 4, random.Random(0), 100))
+
+
+class RunTimeMarkingTest(unittest.TestCase):
+    """A raw request has to be marked before the model ever sees it."""
+
+    def test_a_commit_sha_is_marked(self):
+        marked = mark_entities(b"Explain commit 5c06b141f3b0: Fix the async close")
+        self.assertEqual(reference_spans(marked), [b"5c06b141f3b0"])
+
+    def test_a_pull_request_reference_is_marked_as_one_span(self):
+        """``owner/repo`` must not be marked inside ``owner/repo#123``."""
+        marked = mark_entities(b"Review pull request denoland/deno#36798")
+        self.assertEqual(reference_spans(marked), [b"denoland/deno#36798"])
+
+    def test_a_repository_name_does_not_swallow_the_full_stop(self):
+        marked = mark_entities(b"Summarize the project python/cpython.")
+        self.assertEqual(reference_spans(marked), [b"python/cpython"])
+
+    def test_the_issue_query_is_marked(self):
+        marked = mark_entities(b"Find issues similar to: Reusable workflow for CV")
+        self.assertEqual(reference_spans(marked), [b"Reusable workflow for CV"])
+
+    def test_an_english_word_of_hex_letters_is_not_a_sha(self):
+        """``decade`` is valid hex; marking it would shift the real indices."""
+        self.assertEqual(reference_spans(mark_entities(b"Tell me about the decade-long effort")), [])
+
+    def test_a_request_that_names_nothing_is_left_alone(self):
+        self.assertEqual(mark_entities(b"What is the weather?"), b"What is the weather?")
+
+    def test_marking_is_idempotent(self):
+        once = mark_entities(b"Review pull request denoland/deno#36798")
+        self.assertEqual(mark_entities(once), once)
 
 
 if __name__ == "__main__":

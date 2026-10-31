@@ -125,6 +125,74 @@ class CorpusIndex:
         return None
 
 
+# ------------------------------------------------- reference marking at run time
+# The corpus marks the request before the model ever sees it, so anything that
+# drives the model at run time -- the demo, an eval harness, a future server --
+# has to mark the request the same way or the model will emit references into a
+# request that carries no spans to resolve them against.
+_PR_REF = re.compile(rb"[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+#[0-9]+")
+_REPO_REF = re.compile(rb"(?<![A-Za-z0-9_.\-/])[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+(?![A-Za-z0-9_.\-/])")
+_SHA_REF = re.compile(rb"(?<![0-9A-Za-z])[0-9a-f]{7,40}(?![0-9A-Za-z])")
+_ISSUE_QUERY = re.compile(rb"similar to:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def _looks_like_sha(token: bytes) -> bool:
+    """Reject ordinary English words made only of hex letters.
+
+    ``decade``, ``faded`` and ``beaded`` are all valid ``[0-9a-f]+`` and all
+    appear in real commit subjects. A false positive here is not dangerous --
+    the resolver fails closed -- but it would shift the reference indices, so
+    it is worth rejecting the obvious ones. A real sha of at least twelve hex
+    characters is accepted on length alone; shorter ones must contain a digit,
+    which no all-letter English word does.
+    """
+    return len(token) >= 12 or any(0x30 <= byte <= 0x39 for byte in token)
+
+
+def mark_entities(request: bytes) -> bytes:
+    """Mark the identifiers in a raw request so the model can reference them.
+
+    This is the run-time counterpart of :func:`data.phase18_corpus.mark_request`:
+    the same four shapes the corpus marks, found in the same order, longest
+    first. A request that names nothing identifiable is returned unmarked, and
+    the model's references then fail closed with ``ERROR: unresolved reference``
+    rather than reaching a tool with an invented identifier.
+    """
+    from models.react import REF_CLOSE, REF_OPEN
+
+    text = bytes(request)
+    if REF_OPEN in text:          # already marked; marking twice would nest
+        return text
+
+    candidates = [(match.start(), match.end()) for match in _PR_REF.finditer(text)]
+    # A repo name at the end of a sentence is followed by punctuation the
+    # identifier does not own; leaving it in would corrupt the lookup.
+    for match in _REPO_REF.finditer(text):
+        end = match.end()
+        while end > match.start() and text[end - 1:end] in b".,;:!?)]}'\"":
+            end -= 1
+        if end > match.start():
+            candidates.append((match.start(), end))
+    candidates += [match.span() for match in _SHA_REF.finditer(text)
+                   if _looks_like_sha(match.group(0))]
+    candidates += [match.span(1) for match in _ISSUE_QUERY.finditer(text)]
+
+    # Longest span wins an overlap -- ``owner/repo`` must not be marked inside
+    # the ``owner/repo#123`` that has already been taken -- and replacements are
+    # applied back to front so no offset shifts under the next one.
+    chosen: list[tuple[int, int]] = []
+    for start, end in sorted(candidates, key=lambda span: (span[0], -(span[1] - span[0]))):
+        if any(start < taken_end and taken_start < end for taken_start, taken_end in chosen):
+            continue
+        chosen.append((start, end))
+
+    marked = text
+    for start, end in sorted(chosen, reverse=True):
+        entity = text[start:end]
+        marked = marked[:start] + REF_OPEN + entity + REF_CLOSE + marked[end:]
+    return marked
+
+
 # --------------------------------------------------------------------- tools
 def _first_line(text: str, limit: int = 100) -> str:
     line = (text or "").strip().split("\n", 1)[0].strip()

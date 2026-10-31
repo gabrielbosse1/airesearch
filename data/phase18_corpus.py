@@ -129,6 +129,7 @@ def refit_github(rows: list[Trajectory], index: CorpusIndex) -> list[Trajectory]
             _thought_for(name),
             b'Action: ' + name + b'("[REF]1[/REF]")',
             b"Observation: " + b" ".join(result.split()),
+            BRIDGE_OK,
             b"Answer: " + answer,
         ))
         text = render_trajectory(marked_request, body)
@@ -151,6 +152,15 @@ def _call_tool(name: bytes, identifier: bytes, index: CorpusIndex) -> bytes | No
     except Exception:
         return None
     return None
+
+
+#: ``ReactLoop.run`` appends ``Thought:`` after every observation before
+#: generating again. Trajectories that go straight from ``Observation:`` to
+#: ``Answer:`` are therefore off-distribution at exactly the point where the
+#: answer is produced -- measured as 0/10 answers after three epochs. The
+#: corpus has to carry the bridging line the loop will actually emit.
+BRIDGE_OK = b"Thought: The tool answered; I will report what it said."
+BRIDGE_FAILED = b"Thought: The tool found nothing; I should say so."
 
 
 def _thought_for(name: bytes) -> bytes:
@@ -262,6 +272,7 @@ def build_refusals(corpus: CorpusIndex, *, count: int = 1400,
             _thought_for(b"explain_commit"),
             b'Action: explain_commit("[REF]' + str(index).encode() + b'[/REF]")',
             b"Observation: " + result,
+            BRIDGE_FAILED,
             b"Answer: I could not resolve that reference, so I did not look anything up.",
         ))
         rows.append(Trajectory(request=request, memory=b"", body=body,
@@ -283,6 +294,7 @@ def _refusal(tool: bytes, identifier: bytes, corpus: CorpusIndex, *, kind: str,
         _thought_for(tool),
         b'Action: ' + tool + b'("[REF]1[/REF]")',
         b"Observation: " + b" ".join(observation.split()),
+        BRIDGE_FAILED,
         b"Answer: I could not find that " + noun + b" in the corpus.",
     ))
     return Trajectory(request=request, memory=b"", body=body, kind=kind,

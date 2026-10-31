@@ -18,10 +18,10 @@
         "github_refuse_issue": 205,
         "github_readme": 7
       },
-      "bytes": 4875591,
+      "bytes": 5134271,
       "min_length": 81,
-      "median_length": 317,
-      "max_length": 730,
+      "median_length": 354,
+      "max_length": 786,
       "with_memory_prefix": 1120,
       "with_tool_call": 14824
     },
@@ -33,10 +33,10 @@
         "github_issue": 402,
         "github_readme": 7
       },
-      "bytes": 1688823,
-      "min_length": 299,
-      "median_length": 458,
-      "max_length": 730,
+      "bytes": 1889303,
+      "min_length": 355,
+      "median_length": 514,
+      "max_length": 786,
       "with_memory_prefix": 0,
       "with_tool_call": 3580
     },
@@ -49,10 +49,10 @@
         "github_refuse_pr": 222,
         "github_refuse_issue": 205
       },
-      "bytes": 365808,
-      "min_length": 292,
-      "median_length": 304,
-      "max_length": 353,
+      "bytes": 424008,
+      "min_length": 342,
+      "median_length": 354,
+      "max_length": 403,
       "with_memory_prefix": 0,
       "with_tool_call": 1164
     },
@@ -91,10 +91,10 @@
         "chat": 40,
         "github_readme": 1
       },
-      "bytes": 374594,
+      "bytes": 406026,
       "min_length": 87,
-      "median_length": 381,
-      "max_length": 730,
+      "median_length": 403,
+      "max_length": 786,
       "with_memory_prefix": 50,
       "with_tool_call": 1015
     },
@@ -106,10 +106,10 @@
         "github_issue": 47,
         "github_readme": 1
       },
-      "bytes": 212801,
-      "min_length": 347,
-      "median_length": 468,
-      "max_length": 730,
+      "bytes": 237833,
+      "min_length": 403,
+      "median_length": 524,
+      "max_length": 786,
       "with_memory_prefix": 0,
       "with_tool_call": 447
     },
@@ -121,10 +121,10 @@
         "github_refuse_issue": 53,
         "github_refuse_commit": 23
       },
-      "bytes": 40018,
-      "min_length": 292,
-      "median_length": 304,
-      "max_length": 353,
+      "bytes": 46418,
+      "min_length": 342,
+      "median_length": 354,
+      "max_length": 403,
       "with_memory_prefix": 0,
       "with_tool_call": 128
     },
@@ -163,10 +163,10 @@
         "github_issue": 45,
         "github_readme": 2
       },
-      "bytes": 366864,
+      "bytes": 397296,
       "min_length": 87,
-      "median_length": 383,
-      "max_length": 700,
+      "median_length": 407,
+      "max_length": 756,
       "with_memory_prefix": 50,
       "with_tool_call": 995
     },
@@ -178,10 +178,10 @@
         "github_issue": 45,
         "github_readme": 2
       },
-      "bytes": 210661,
-      "min_length": 343,
-      "median_length": 460,
-      "max_length": 700,
+      "bytes": 235693,
+      "min_length": 399,
+      "median_length": 516,
+      "max_length": 756,
       "with_memory_prefix": 0,
       "with_tool_call": 447
     },
@@ -193,10 +193,10 @@
         "github_refuse_pr": 27,
         "github_refuse_reference": 27
       },
-      "bytes": 34548,
-      "min_length": 294,
-      "median_length": 315,
-      "max_length": 353,
+      "bytes": 39948,
+      "min_length": 344,
+      "median_length": 365,
+      "max_length": 403,
       "with_memory_prefix": 0,
       "with_tool_call": 108
     },

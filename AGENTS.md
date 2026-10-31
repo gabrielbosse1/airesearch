@@ -249,15 +249,33 @@ python -m demo.github_agent --once "Summarize the project python/cpython."
 
 - **References (`18.1`).** Two control ids are added to the foundation: `REF_START = 259`, `REF_END = 260` (vocabulary 259 -> 261). Entities in a request are wrapped as `[REF]00c3ce0a55e5[/REF]` and the action points at them by index -- `explain_commit("[REF]1[/REF]")`. `models.react.reference_tools` wraps tool handlers so the reference is resolved against the **request** before the tool is called; `ReactLoop` is untouched. **A reference that does not name an entity in the request fails closed** with `ERROR: unresolved reference`, so the model cannot pass a hallucinated identifier to a tool -- not by learning, but because no path exists. This is the official answer to the byte-copying capacity limit: byte-exactness becomes a lookup, not a generation problem.
 - **Grounded refusal (`18.2`).** `data/phase18_corpus.py` adds **1,164** refusal trajectories (five kinds: absent commit, absent pull request, no-match query, missing README, out-of-range reference). Every one is a real lookup that really fails -- the generator discards anything that resolves -- and each ends in an answer that says so. The `Answer:` bytes carry weight **2.0** whenever the observation reports a failure (`training/train_foundation.py --refusal-weight`; markers matched against the observation line only, so a subject containing "error" cannot trigger it).
-- **Anti-forgetting (`18.3`).** `--balance "exec,file,chat,repair,memory:0.5;github:0.5"` fixes the composition of **every batch** at 50% synthetic / 50% real. Groups are kept as separate sub-batches and their losses summed; concatenating them pads short synthetic rows out to the longest real row and cost roughly twice the compute per epoch.
-- **Results.** Reference resolution **n/a** (target 0.90, not measured); grounded refusal **n/a** (target 0.80, not measured); anti-forgetting **n/a** against a target of 35/60 (not measured), where Phase 16 scored 42/60 and Phase 17 scored 0/60. Regression **not run**; Phase 12 recall **10/10**.
+- **Anti-forgetting (`18.3`).** `--balance "exec,file,chat,repair,memory:0.5;github:0.5"` fixes the composition of **every batch** at 50% synthetic / 50% real; groups are kept as separate sub-batches and their losses summed, because concatenating them pads short synthetic rows out to the longest real row and cost roughly twice the compute per epoch. A **distribution bug had to be fixed first**: `ReactLoop.run` appends `Thought:` after every observation but the corpus went `Observation:` -> `Answer:` directly, so the model was off-distribution exactly where the answer is produced and scored `answered 0/10`. Bridging thoughts fixed it. Training then ran in two stages: eight balanced epochs, then three plain continuation epochs at lr 0.0015 from the stage-1 checkpoint.
+- **Run-time marking.** The model emits references unconditionally, so a request must be marked before it is shown: `data.github_to_react.mark_entities` (used by `demo/github_agent.py`). An unmarked request fails closed with `ERROR: unresolved reference` -- a wrong path, not a slow one.
+- **Results.** Reference resolution **50/50** (target 0.90, met); grounded refusal **50/50** (target 0.80, met); anti-forgetting **0/60** against a target of 35/60 (NOT met), where Phase 16 scored 42/60 and Phase 17 scored 0/60. Regression **320 passed, 1 warning, 39 subtests passed in 185.54s (0:03:05)**; Phase 12 recall **10/10**.
+- **Cost, measured.** On identical rows, teacher-forced literal copying got *worse*: synthetic digits
+  63.38% -> 49.39%, real digits 39.55% -> 22.63%. On the phase-18 held-out rows, where arguments are references, real-GitHub whole-argument exactness is
+  **438/447** at 99.48% per hex digit -- the task stopped requiring copying rather than the model getting better at it.
 - **Limits.** A reference can only name something already in the request -- it cannot express "the commit before this one". The corpus marks one entity per request, so choosing between several is untested. Refusal is detected by phrase and identifier shape, not by meaning. The refusal identifiers were generated to be absent and then verified absent; real not-found traffic (typos, deletions, permission errors) is not represented. Scale is unchanged at 282,885 parameters on two CPU cores.
 - **Reproduce:**
 
 ```bash
 python -m data.phase18_corpus --output-dir runs/phase18
+
+# stage 1: eight balanced epochs from scratch
 OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
     --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
-    --refusal-weight 2.0 --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+    --seed 18018 --refusal-weight 2.0 \
+    --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+
+# stage 2: three plain continuation epochs, favouring the synthetic task
+cp runs/phase18/foundation.pt runs/phase18/foundation_stage1.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 \
+    --init-from runs/phase18/foundation_stage1.pt \
+    --epochs 3 --lr 0.0015 --seed 18020 --refusal-weight 2.0
+
 python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
+python -m evaluation.copy_diagnostic --model runs/phase18/foundation.pt \
+    --rows runs/phase18/react_test.jsonl --output runs/phase18/copy_diagnostic.json
+python -m demo.github_agent --once "Explain commit 5c06b141f3b0: Fix the async close"
 ```

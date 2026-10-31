@@ -813,16 +813,43 @@ Two control ids (`REF_START = 259`, `REF_END = 260`) and a per-request wrapper, 
 
 | | Phase 17 | Phase 18 | target |
 | --- | --- | --- | --- |
-| reference resolved to the right identifier | 0/448 | **n/a** | 0.90 -- not measured |
-| grounded refusal (says so, invents nothing) | 182/324 answered anyway | **n/a** | 0.80 -- not measured |
-| Phase 16 synthetic argument byte-exact | 0/60 | **n/a** | 35/60 -- not measured |
+| reference resolved to the right identifier | 0/448 | **50/50** | 0.90 -- met |
+| grounded refusal (says so, invents nothing) | 182/324 answered anyway | **50/50** | 0.80 -- met |
+| Phase 16 synthetic argument byte-exact | 0/60 | **0/60** | 35/60 -- NOT met |
+| ...and the emitted program still executes | 2/60 | **60/60** | -- |
 
 ```bash
 python -m data.phase18_corpus --output-dir runs/phase18
+
+# stage 1: eight balanced epochs from scratch
 OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
     --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
-    --refusal-weight 2.0 --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+    --seed 18018 --refusal-weight 2.0 \
+    --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+
+# stage 2: three plain continuation epochs, favouring the synthetic task
+cp runs/phase18/foundation.pt runs/phase18/foundation_stage1.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 \
+    --init-from runs/phase18/foundation_stage1.pt \
+    --epochs 3 --lr 0.0015 --seed 18020 --refusal-weight 2.0
+
 python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
+python -m evaluation.copy_diagnostic --model runs/phase18/foundation.pt \
+    --rows runs/phase18/react_test.jsonl --output runs/phase18/copy_diagnostic.json
+python -m demo.github_agent --once "Explain commit 5c06b141f3b0: Fix the async close"
 ```
+
+**The measured cost.** On *identical* rows, teacher-forced literal copying got worse, not better:
+synthetic digits 63.38% -> 49.39%, real digits
+39.55% -> 22.63%. On the phase-18 held-out rows -- where arguments are
+references -- real-GitHub whole-argument exactness is **438/447** at
+99.48% per hex digit. The identifier stopped needing to be spelled; the model did not
+learn to spell it. A 282,885-parameter model did not have room for both behaviours, and the phase
+chose the structural one.
+
+**Requests must be marked at run time** -- `data.github_to_react.mark_entities`, used by `demo/github_agent.py`.
+The model emits references unconditionally, so an unmarked request fails closed with
+`ERROR: unresolved reference` rather than guessing an identifier.
 
 **Limits.** A reference only names what the request already contains; it cannot express "the commit before this one". One entity is marked per request, so choosing among several is untested. Refusal is judged by phrase and identifier shape, not meaning, and the refusal identifiers were generated to be absent rather than sampled from real failures. See `runs/phase18_report.md`.
