@@ -1,0 +1,28 @@
+{
+  "note": "Held-out (validation) families only. 'exact' is a byte-identical greedy argument; 'near' is >=80% of the target bytes aligned from the start. This measures copying, not understanding.",
+  "checkpoint": "runs/phase15/tool_policy.pt",
+  "sandbox_root": "/tmp/bytecore_sandbox_t4de9xaz",
+  "families": {
+    "run": {
+      "exact": 7,
+      "near": 6,
+      "total": 20,
+      "exact_rate": 0.35,
+      "near_rate": 0.3
+    },
+    "repair": {
+      "exact": 3,
+      "near": 2,
+      "total": 12,
+      "exact_rate": 0.25,
+      "near_rate": 0.1667
+    },
+    "wild": {
+      "exact": 18,
+      "near": 19,
+      "total": 60,
+      "exact_rate": 0.3,
+      "near_rate": 0.3167
+    }
+  }
+}

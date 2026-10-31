@@ -1,0 +1,220 @@
+{
+  "train": {
+    "all": {
+      "count": 15944,
+      "by_kind": {
+        "exec": 5040,
+        "file": 1680,
+        "memory": 1120,
+        "chat": 1120,
+        "github_pr": 1597,
+        "github_refuse_commit": 225,
+        "repair": 2240,
+        "github_refuse_readme": 280,
+        "github_commit": 1574,
+        "github_refuse_reference": 232,
+        "github_issue": 402,
+        "github_refuse_pr": 222,
+        "github_refuse_issue": 205,
+        "github_readme": 7
+      },
+      "bytes": 5134271,
+      "min_length": 81,
+      "median_length": 354,
+      "max_length": 786,
+      "with_memory_prefix": 1120,
+      "with_tool_call": 14824
+    },
+    "real": {
+      "count": 3580,
+      "by_kind": {
+        "github_pr": 1597,
+        "github_commit": 1574,
+        "github_issue": 402,
+        "github_readme": 7
+      },
+      "bytes": 1889303,
+      "min_length": 355,
+      "median_length": 514,
+      "max_length": 786,
+      "with_memory_prefix": 0,
+      "with_tool_call": 3580
+    },
+    "refusal": {
+      "count": 1164,
+      "by_kind": {
+        "github_refuse_commit": 225,
+        "github_refuse_readme": 280,
+        "github_refuse_reference": 232,
+        "github_refuse_pr": 222,
+        "github_refuse_issue": 205
+      },
+      "bytes": 424008,
+      "min_length": 342,
+      "median_length": 354,
+      "max_length": 403,
+      "with_memory_prefix": 0,
+      "with_tool_call": 1164
+    },
+    "synthetic": {
+      "count": 11200,
+      "by_kind": {
+        "exec": 5040,
+        "file": 1680,
+        "memory": 1120,
+        "chat": 1120,
+        "repair": 2240
+      },
+      "bytes": 2820960,
+      "min_length": 81,
+      "median_length": 193,
+      "max_length": 467,
+      "with_memory_prefix": 1120,
+      "with_tool_call": 10080
+    }
+  },
+  "validation": {
+    "all": {
+      "count": 1055,
+      "by_kind": {
+        "repair": 100,
+        "github_commit": 215,
+        "github_refuse_pr": 31,
+        "github_pr": 184,
+        "exec": 220,
+        "memory": 50,
+        "github_refuse_reference": 21,
+        "github_issue": 47,
+        "github_refuse_issue": 53,
+        "file": 70,
+        "github_refuse_commit": 23,
+        "chat": 40,
+        "github_readme": 1
+      },
+      "bytes": 406026,
+      "min_length": 87,
+      "median_length": 403,
+      "max_length": 786,
+      "with_memory_prefix": 50,
+      "with_tool_call": 1015
+    },
+    "real": {
+      "count": 447,
+      "by_kind": {
+        "github_commit": 215,
+        "github_pr": 184,
+        "github_issue": 47,
+        "github_readme": 1
+      },
+      "bytes": 237833,
+      "min_length": 403,
+      "median_length": 524,
+      "max_length": 786,
+      "with_memory_prefix": 0,
+      "with_tool_call": 447
+    },
+    "refusal": {
+      "count": 128,
+      "by_kind": {
+        "github_refuse_pr": 31,
+        "github_refuse_reference": 21,
+        "github_refuse_issue": 53,
+        "github_refuse_commit": 23
+      },
+      "bytes": 46418,
+      "min_length": 342,
+      "median_length": 354,
+      "max_length": 403,
+      "with_memory_prefix": 0,
+      "with_tool_call": 128
+    },
+    "synthetic": {
+      "count": 480,
+      "by_kind": {
+        "repair": 100,
+        "exec": 220,
+        "memory": 50,
+        "file": 70,
+        "chat": 40
+      },
+      "bytes": 121775,
+      "min_length": 87,
+      "median_length": 192,
+      "max_length": 454,
+      "with_memory_prefix": 50,
+      "with_tool_call": 440
+    }
+  },
+  "test": {
+    "all": {
+      "count": 1035,
+      "by_kind": {
+        "exec": 220,
+        "github_pr": 189,
+        "chat": 40,
+        "file": 70,
+        "repair": 100,
+        "memory": 50,
+        "github_refuse_issue": 22,
+        "github_refuse_commit": 32,
+        "github_commit": 211,
+        "github_refuse_pr": 27,
+        "github_refuse_reference": 27,
+        "github_issue": 45,
+        "github_readme": 2
+      },
+      "bytes": 397296,
+      "min_length": 87,
+      "median_length": 407,
+      "max_length": 756,
+      "with_memory_prefix": 50,
+      "with_tool_call": 995
+    },
+    "real": {
+      "count": 447,
+      "by_kind": {
+        "github_pr": 189,
+        "github_commit": 211,
+        "github_issue": 45,
+        "github_readme": 2
+      },
+      "bytes": 235693,
+      "min_length": 399,
+      "median_length": 516,
+      "max_length": 756,
+      "with_memory_prefix": 0,
+      "with_tool_call": 447
+    },
+    "refusal": {
+      "count": 108,
+      "by_kind": {
+        "github_refuse_issue": 22,
+        "github_refuse_commit": 32,
+        "github_refuse_pr": 27,
+        "github_refuse_reference": 27
+      },
+      "bytes": 39948,
+      "min_length": 344,
+      "median_length": 365,
+      "max_length": 403,
+      "with_memory_prefix": 0,
+      "with_tool_call": 108
+    },
+    "synthetic": {
+      "count": 480,
+      "by_kind": {
+        "exec": 220,
+        "chat": 40,
+        "file": 70,
+        "repair": 100,
+        "memory": 50
+      },
+      "bytes": 121655,
+      "min_length": 87,
+      "median_length": 190,
+      "max_length": 460,
+      "with_memory_prefix": 50,
+      "with_tool_call": 440
+    }
+  }
+}

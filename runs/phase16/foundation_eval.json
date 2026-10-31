@@ -1,0 +1,179 @@
+{
+  "checkpoint": "runs/phase16/foundation.pt",
+  "parameters": 266243,
+  "config": {
+    "vocab_size": 259,
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "max_seq_len": 512,
+    "dropout": 0.1
+  },
+  "test_rows": 480,
+  "next_byte_accuracy": {
+    "rows": 480,
+    "rows_truncated_to_context": 0,
+    "bytes": 122135,
+    "next_byte_accuracy": 0.9462889425635567,
+    "by_segment": {
+      "action": {
+        "accuracy": 0.9706161858060592,
+        "bytes": 26307
+      },
+      "answer": {
+        "accuracy": 0.9248051027639972,
+        "bytes": 14110
+      },
+      "observation": {
+        "accuracy": 0.9420873992363173,
+        "bytes": 18856
+      },
+      "preamble": {
+        "accuracy": 0.901620969132609,
+        "bytes": 34794
+      },
+      "thought": {
+        "accuracy": 0.9924825423970358,
+        "bytes": 28068
+      }
+    }
+  },
+  "next_byte_accuracy_short": {
+    "rows": 243,
+    "rows_truncated_to_context": 0,
+    "bytes": 38552,
+    "next_byte_accuracy": 0.9503008923013073,
+    "by_segment": {
+      "action": {
+        "accuracy": 0.9922009404748251,
+        "bytes": 8719
+      },
+      "answer": {
+        "accuracy": 0.945585874799358,
+        "bytes": 6230
+      },
+      "observation": {
+        "accuracy": 0.9137449581135588,
+        "bytes": 3223
+      },
+      "preamble": {
+        "accuracy": 0.8875816993464052,
+        "bytes": 9180
+      },
+      "thought": {
+        "accuracy": 0.9822321428571429,
+        "bytes": 11200
+      }
+    },
+    "target": ">0.85",
+    "met": true
+  },
+  "tool_interception": {
+    "checks": [
+      {
+        "name": "exec_python intercepted and executed",
+        "passed": true,
+        "detail": "observation=42"
+      },
+      {
+        "name": "Observation injected after the Action",
+        "passed": true,
+        "detail": "Request: Run this. | Thought: compute it | Action: exec_python(\"print(6 * 7)\") | Observation: 42 | Thought: compute it | Action: exec_python(\"print(6 * 7)\") | O"
+      },
+      {
+        "name": "two-argument action parses both arguments",
+        "passed": true,
+        "detail": "(b'eval_note.txt', b'hello sandbox')"
+      },
+      {
+        "name": "unknown tool fails closed",
+        "passed": true,
+        "detail": "ERROR: unknown tool: delete_everything"
+      },
+      {
+        "name": "unterminated action is not executed",
+        "passed": true,
+        "detail": "parse_action returned None"
+      },
+      {
+        "name": "prose mentioning Action is not a call",
+        "passed": true,
+        "detail": "parse_action returned None"
+      },
+      {
+        "name": "sandbox error surfaces as the observation",
+        "passed": true,
+        "detail": "NameError: name 'pritn' is not defined. Did you mean: 'print'?"
+      },
+      {
+        "name": "round budget stops the loop",
+        "passed": true,
+        "detail": "rounds=2 steps=2"
+      }
+    ],
+    "passed": 8,
+    "total": 8,
+    "met": true
+  },
+  "argument_fidelity": {
+    "rows": 60,
+    "argument_byte_exact": 42,
+    "runs_cleanly": 58,
+    "note": "free-running greedy generation; measures literal copying, which is what next-byte accuracy hides"
+  },
+  "action_byte_class_accuracy": {
+    "digits": {
+      "accuracy": 0.8970747562296858,
+      "bytes": 923
+    },
+    "letters": {
+      "accuracy": 0.9667670283474408,
+      "bytes": 17603
+    },
+    "punctuation": {
+      "accuracy": 0.9880478087649402,
+      "bytes": 7781
+    }
+  },
+  "memory": {
+    "command": "python -m evaluation.memory_eval",
+    "exit_code": 0,
+    "stdout_tail": [
+      "  \"cross_session\": true,",
+      "  \"output\": \"runs/phase16/memory_eval.json\"",
+      "}"
+    ],
+    "stderr_tail": [],
+    "short_context": true,
+    "long_context": true,
+    "cross_session": null,
+    "vector_only_fresh_cases": "10/10",
+    "target": "10/10",
+    "met": true,
+    "elapsed_s": 13.4,
+    "prefix_integration": {
+      "prefix": "[MEM] my:favorite_color = blue",
+      "contains_value": true,
+      "entries": 1
+    }
+  },
+  "regression": {
+    "exit_code": 0,
+    "summary": "Ran 258 tests in 164.051s",
+    "tail": [
+      "Ran 258 tests in 164.051s",
+      "",
+      "OK"
+    ],
+    "passed": true,
+    "elapsed_s": 165.8
+  },
+  "targets": {
+    "next_byte_accuracy_short > 0.85": true,
+    "tool_interception_all_passed": true,
+    "phase12_recall_10_of_10": true,
+    "regression_green": true
+  },
+  "caveats": "Synthetic ReAct trajectories from a fixed template pool; next-byte accuracy measures format learning on held-out content, not reasoning, and is dominated by format bytes -- argument_fidelity and action_byte_class_accuracy are the honest counterweight. The sandbox is hardening, not a security boundary. Retrieval is structured lookup, not semantic search."
+}

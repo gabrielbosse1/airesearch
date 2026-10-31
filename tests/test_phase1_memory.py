@@ -69,7 +69,8 @@ class HierarchicalMemoryTests(unittest.TestCase):
                                            retro_chunk_size=16, injection_mode=mode, dropout=0)
                 ids = torch.randint(0, 256, (2, 33))
                 logits = gen(ids, memory_model=memory)
-                F.cross_entropy(logits.reshape(-1, 264), torch.randint(0, 256, (66,))).backward()
+                # Vocabulary-size independent: Phase 15 grew the control vocabulary to 268 IDs.
+                F.cross_entropy(logits.reshape(-1, gen.VOCAB_SIZE), torch.randint(0, 256, (66,))).backward()
                 self.assertGreater(float(memory.query_encoder[0].weight.grad.norm()), 0.0)
                 self.assertGreater(float(memory.tier_router.weight.grad.norm()), 0.0)
                 self.assertGreater(float(memory.importance_scorer.raw_w_error.grad.abs()), 0.0)
@@ -85,7 +86,7 @@ class HierarchicalMemoryTests(unittest.TestCase):
         self.assertEqual(tuple(vectors.shape), (2, 4, 16))
         self.assertEqual(tuple(weights.shape), (2, 4))
         logits = g(ids, vectors, memory_mask=mask)
-        F.cross_entropy(logits.reshape(-1, 264), torch.randint(0, 256, (12,))).backward()
+        F.cross_entropy(logits.reshape(-1, g.VOCAB_SIZE), torch.randint(0, 256, (12,))).backward()
         parameters = [m.query_encoder[0].weight, m.tier_router.weight,
                       m.importance_scorer.raw_w_error,
                       g.memory_adapters["0"].cross_attn.q_proj.weight,

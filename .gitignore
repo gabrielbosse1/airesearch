@@ -10,3 +10,10 @@ runs/eval_out.txt
 runs/**/_eval_noise_*.jsonl
 # Local conversation memories may contain private user data.
 runs/user_memory/
+
+# Phase 15 sandbox working directories are disposable execution scratch space.
+runs/phase15/sandbox/
+runs/phase15/eval_sandbox/
+
+# Phase 16 sandbox working directories are disposable execution scratch space.
+runs/phase16/sandbox/

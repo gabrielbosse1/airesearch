@@ -681,3 +681,175 @@ The system parses a limited affirmative fact grammar and stores 1–40 UTF-8 val
 The capacity-1,000 guarded replay snapshot contains synthetic training examples only and is never populated automatically from user conversations. Intent training used 90 new and 38 old examples per batch; the new decoder objectives did not all use a 70/30 mix. Response diversity is trained with a differentiable loss over predicted byte distributions plus byte cross-entropy. Styles are synthetic and may be memorized.
 
 Measured on small synthetic tests: **10/10** vector-only structured fact recalls; the public blue answer changed when vectors were zeroed or swapped; retention passed after **500 actual filler messages** and after a fresh-process save/reload. Fresh intent was **62/70 (88.6%)**. The inspected old Phase 10 development set improved to **298/384** from Phase 11's **229/384**, but this does not guarantee no forgetting. Direct decoding on one protected prompt yielded **14 distinct/20** and no structural/template-proxy failures; the complete session misrouted that prompt and produced only **1 distinct/20**. An exploratory raw-byte probe decoded 256/256 individual byte values but failed some multi-byte binary sequences. The full suite passed **168/168**. See `runs/phase12_report.md` for all limitations, ablations and reproduction commands.
+
+## Phase 15: external tool use and sandbox execution
+
+The pivot away from internal semantic verification. **Verification is outsourced to the sandbox; the model's role is reliable tool routing and iterative editing.** A frozen Phase 12 generator plus a small trained policy emits a tool-call frame; the host executes it and feeds the result bytes back.
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_tool_use --epochs 60 --lr 0.002 --lr-step 20 --lr-decay 0.4 --output-dir runs/phase15
+python -m evaluation.tool_eval --with-regression
+python -m evaluation.copy_probe --output runs/phase15/copy_probe.json
+python -m demo.tool_agent --generator runs/phase12/generator.pt --policy runs/phase15/tool_policy.pt
+```
+
+*How a turn works*
+
+1. The user types one line. The policy encodes `[request] + [optional TOOL_RESULT bytes]` and predicts a route.
+2. If the route is a tool, the decoder emits `[TOOL_CALL] [tool] [TOOL_ARG_START] [argument bytes] [TOOL_ARG_END]`. Generation pauses.
+3. The host parses the frame **fail-closed** (unknown tool, missing terminator, over-long argument or an unparsable frame aborts the turn) and runs `ByteSandbox`.
+4. The host injects `[TOOL_RESULT] [result bytes]` and lets the model continue, so the next turn sees the execution output. The model itself never emits `TOOL_RESULT`.
+
+*Measurements (final-epoch checkpoint, fixed seeds)*
+
+| Check | Result | Target |
+| --- | --- | --- |
+| Tool routing (exact frame) | **17/20** | >18/20 |
+| Tool routing (correct tool only) | **20/20** | >18/20 |
+| Routing execution match | **17/20** | -- |
+| Iterative debugging | **2/5** | >=3/5 |
+| Phase 12 vector-only recall | **10/10** | 10/10 |
+| Unit tests | **209** | all passing |
+
+Full validation: route **85.3%**, frame **72.1%**, call-frame **72.6%** (481 rows), decline **100.0%** (371 rows). Decline behaviour: **18/40** conversational prompts and **48/60** across all Phase 10 intents produce no tool call.
+
+**Limits.** The sandbox is hardening, not a security boundary: child processes inherit the host filesystem and network. Routing and debugging prompts are synthetic single-line Python from a fixed template pool, so these numbers are not a generalisation claim. Argument bytes come from a copy head, not from parsing the program; the policy fails when an argument is long enough to exceed its copy fidelity, and `os.listdir` requests can fall into a degenerate free-running loop. See `runs/phase15_report.md` for the full analysis, ablations and reproduction commands.
+
+## Phase 16: the scalable foundation (ByteCore v2)
+
+The pivot from prototype hacks to a foundation that can be scaled. **The model is a standard causal byte-level Transformer; verification is outsourced to the sandbox; tool use is ReAct text intercepted by a regex; memory enters as a prefix.**
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_foundation --epochs 8 --batch-size 64 --lr 0.0012
+python -m evaluation.foundation_eval
+python -m demo.tool_agent --once "Calculate 6 * 7."
+```
+
+*What was removed from the active path*
+
+| Removed | Replaced by |
+| --- | --- |
+| Pointer-generator copy head (`copy_gate`, attention-as-pointer) | plain causal attention; copying emerges as next-byte prediction |
+| Rigid `[TOOL_CALL][ARG_START]...[TOOL_ARG_END]` frames | `Action: tool("arg")` text caught by one regex |
+| Learned internal verifier | the sandbox, whose output re-enters the stream as bytes |
+| Bespoke result channels | `[MEM] ...` prefix bytes for memory, `Observation: ...` for tools |
+
+*How a turn works*
+
+1. Optional retrieval renders `[MEM] topic = value` lines in front of the request.
+2. The model continues the stream: `Thought: ...`, then `Action: exec_python("...")`.
+3. The host parses that line, runs the sandbox, **truncates** anything the model emitted after the action, and appends the real `Observation: ...`.
+4. The model produces `Answer: ...`. It never fabricates an observation.
+
+*Measurements (final-epoch checkpoint, fixed seeds)*
+
+| Check | Result | Target |
+| --- | --- | --- |
+| Next-byte accuracy, short held-out sequences | **95.03%** | >85% |
+| Next-byte accuracy, all held-out sequences | **94.63%** | -- |
+| Argument byte-exact (free-running) | **42/60** | -- |
+| Generated code that runs cleanly | **58/60** | -- |
+| Tool interception checks | **8/8** | all pass |
+| Phase 12 vector-only recall | **10/10** | 10/10 |
+| Unit test suite | **258 tests in 164.051s** | all passing |
+
+Per-segment next-byte accuracy: action 97.1, answer 92.5, observation 94.2, preamble 90.2, thought 99.2. Data: **12,160** ReAct trajectories (chat 1120, exec 5040, file 1680, memory 1120, repair 2240), instance-disjoint splits, every observation produced by the real sandbox. Model: **266,243 parameters** at `d_model=64`, 4 layers, 4 heads.
+
+*Scale.* `configs/default.yaml` exposes `d_model`, `n_layers`, `n_heads`, `d_ff` and `max_seq_len`. The `production` preset is ~87M parameters and `d_model=1024` is ~150M -- the same class, different numbers.
+
+**Limits, stated plainly.** Trajectories are synthetic and templated, and the accuracy score is dominated by format bytes: inside `Action:` lines the model gets 98.8% of punctuation and 96.7% of letters right but only **89.7% of digits**, because digits are the bytes it must copy out of the request. It learned the ReAct protocol, not literal copying -- 42/60 held-out arguments are byte-exact even though 58/60 execute cleanly. Positional embeddings are learned and absolute, so context is capped at `max_seq_len`. The sandbox is hardening, not a security boundary. Phase 15's pointer/frame stack is frozen for reproducibility and is no longer imported by any Phase 16 module. See `runs/phase16_report.md`.
+
+## Phase 17: training on real GitHub data
+
+Phase 16's observations were real (produced by executing code) but its *requests* were invented. Phase 17 replaces the invented half: 4,476 records from ten public repositories, rendered into 4,475 ReAct trajectories whose observations are the return values of four real corpus tools.
+
+```bash
+export GITHUB_TOKEN="$(gh auth token)"
+python -m data.github_collector --max-items-per-kind 200 --output-dir data/github_raw
+python -m data.github_to_react --verify 60
+python -m data.mixed_react_dataset --output-dir runs/phase17
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.003
+# then continue twice more -- val loss was still falling after stage 2
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0012     --init-from runs/phase17/foundation.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0008     --init-from runs/phase17/foundation.pt
+python -m evaluation.github_eval --model runs/phase17/foundation.pt \
+    --baseline runs/phase16/foundation.pt
+python -m demo.github_agent --once "Summarize the project python/cpython."
+```
+
+| | Phase 16 checkpoint | Phase 17 checkpoint |
+| --- | --- | --- |
+| held-out requests | never trained on this data | trained on 3,580 real trajectories |
+| routed to the right tool | 0/448 | **399/448** |
+| argument byte-exact | 0/448 | **0/448** |
+| answer grounded in the observation | 0/448 | **0/448** |
+
+**Grounding is the hallucination test.** For each tool the evaluator extracts the fields the tool looked *up* -- a commit's author and date, a pull request's state and comment count, the repository a search hit came from, a README's character count -- keeps only those absent from the request, and checks whether the answer contains one. An answer that does cannot have been copied out of the request.
+
+**Did it forget the old task?** Scored on Phase 16's own 480 synthetic test rows with the same evaluator: next-byte **92.03%** vs Phase 16's 94.63%; digits inside `Action:` **32.3%** vs 89.7%; free-running argument byte-exact **0/60** vs 42/60.
+
+**Where it breaks.** Routing transfers (399/448 of held-out requests reach the right tool); copying does not (0/448 byte-exact). Given `Explain commit 00c3ce0a55e5: ...` the model calls `explain_commit("cfe5ccfc3a2")` -- right shape, wrong content. The tool replies `no commit cfe5ccfc3a2 in the corpus`, and the model then writes an invented result on a `Thought:` line and answers as if the lookup had worked (182/324 of 324 not-found rows). The loop guarantees that every `Observation:` line came from a tool; it does not govern what the model writes inside a thought, and that gap is now measured instead of assumed.
+
+**Limits.** Ten repositories, 7,666,483 characters: enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap. Observations are capped at 200 bytes, so long bodies truncate. Grounding is a substring test -- a floor on honesty, not a ceiling on correctness. Scrubbing is heuristic. Scale is unchanged: d_model 64, 4 layers, 282,627 parameters. See `runs/phase17_report.md`.
+
+## Phase 18: reference-based arguments and grounded refusal
+
+Phase 17 found the model could not copy a twelve-character sha (0/448), invented results when a lookup failed (182/324), and forgot the synthetic task. Phase 18 answers each with a mechanism.
+
+**The model no longer spells identifiers -- it points at them.**
+
+```
+Request: Explain commit [REF]00c3ce0a55e5[/REF]: Update coverage to 7.17.0
+Thought: The user quotes a commit; I should look up who made it and what it says.
+Action: explain_commit("[REF]1[/REF]")
+Observation: commit 00c3ce0a55e5 by renovate[bot] on 2026-10-30: Update coverage to 7.17.0
+Answer: [REF]1[/REF] is a commit by renovate[bot] on 2026-10-30: Update coverage to 7.17.0
+```
+
+Two control ids (`REF_START = 259`, `REF_END = 260`) and a per-request wrapper, `models.react.reference_tools`, that resolves `[REF]N[/REF]` against the request before the tool is called. **A reference that is not in the request fails closed** -- so a hallucinated identifier cannot reach a tool, structurally rather than by training.
+
+| | Phase 17 | Phase 18 | target |
+| --- | --- | --- | --- |
+| reference resolved to the right identifier | 0/448 | **50/50** | 0.90 -- met |
+| grounded refusal (says so, invents nothing) | 182/324 answered anyway | **50/50** | 0.80 -- met |
+| Phase 16 synthetic argument byte-exact | 0/60 | **0/60** | 35/60 -- NOT met |
+| ...and the emitted program still executes | 2/60 | **60/60** | -- |
+
+```bash
+python -m data.phase18_corpus --output-dir runs/phase18
+
+# stage 1: eight balanced epochs from scratch
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
+    --seed 18018 --refusal-weight 2.0 \
+    --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+
+# stage 2: three plain continuation epochs, favouring the synthetic task
+cp runs/phase18/foundation.pt runs/phase18/foundation_stage1.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 \
+    --init-from runs/phase18/foundation_stage1.pt \
+    --epochs 3 --lr 0.0015 --seed 18020 --refusal-weight 2.0
+
+python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
+python -m evaluation.copy_diagnostic --model runs/phase18/foundation.pt \
+    --rows runs/phase18/react_test.jsonl --output runs/phase18/copy_diagnostic.json
+python -m demo.github_agent --once "Explain commit 5c06b141f3b0: Fix the async close"
+```
+
+**The measured cost.** On *identical* rows, teacher-forced literal copying got worse, not better:
+synthetic digits 63.38% -> 49.39%, real digits
+39.55% -> 22.63%. On the phase-18 held-out rows -- where arguments are
+references -- real-GitHub whole-argument exactness is **438/447** at
+99.48% per hex digit. The identifier stopped needing to be spelled; the model did not
+learn to spell it. A 282,885-parameter model did not have room for both behaviours, and the phase
+chose the structural one.
+
+**Requests must be marked at run time** -- `data.github_to_react.mark_entities`, used by `demo/github_agent.py`.
+The model emits references unconditionally, so an unmarked request fails closed with
+`ERROR: unresolved reference` rather than guessing an identifier.
+
+**Limits.** A reference only names what the request already contains; it cannot express "the commit before this one". One entity is marked per request, so choosing among several is untested. Refusal is judged by phrase and identifier shape, not meaning, and the refusal identifiers were generated to be absent rather than sampled from real failures. See `runs/phase18_report.md`.

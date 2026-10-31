@@ -1,0 +1,89 @@
+{
+  "model": "runs/phase18/foundation.pt",
+  "parameters": 282885,
+  "resolver_unit_check": {
+    "requests": 50,
+    "resolved_exactly": 50,
+    "note": "host-side resolution only; no generation involved"
+  },
+  "reference_resolution": {
+    "requests": 50,
+    "reference_resolved_to_the_request_entity": "50/50",
+    "reference_resolution": 1.0,
+    "tool_executed_successfully": "50/50",
+    "answered": "50/50",
+    "grounded_in_observation": "9/50",
+    "target": 0.9,
+    "met": true,
+    "sample_failures": [
+      {
+        "request": "Explain commit [REF]00c3ce0a55e5[/REF]: Update coverage to 7.17.0 (#189522)",
+        "reason": "resolved but the answer did not use the observation",
+        "answer": "[REF]1[/REF] is a commit by Jouthan Bat on 2026-10-29: [hommiled [stor] Ad Ad on on on on thath 026 comment ontintinting an on 202026-10-29: [homenger] A"
+      },
+      {
+        "request": "Explain commit [REF]025fe552c462[/REF]: gh-84027: Add `whl` as an unpack format in `shutil` (#140385)",
+        "reason": "resolved but the answer did not use the observation",
+        "answer": "[REF]1[/REF] is a commit by Bathan Bat oust on on 2026-10-29: [hommilerged atint on thatan on 202026-10-29: [homent] Ad tomate tin ton the a ain thain st"
+      },
+      {
+        "request": "Explain commit [REF]05769e026b9b[/REF]: React Compiler: Make AbstractValue Copy to reduce heap allocation (#37",
+        "reason": "resolved but the answer did not use the observation",
+        "answer": "[REF]1[/REF] is a commit by Bathan Bat out on 2026-10-29: [hommerge: Tout tont atolon olon thin athin stain ain stain stain 202026-10)"
+      },
+      {
+        "request": "Explain commit [REF]08eadbbe2b2d[/REF]: chat: restore a scrolled-up transcript by the row at the top of the vi",
+        "reason": "resolved but the answer did not use the observation",
+        "answer": "[REF]1[/REF] is a commit by Batout on 2026-10-28: [homiledddddd [store] Ad ton ton ton the ath the fill re st at ait ith"
+      },
+      {
+        "request": "Explain commit [REF]0998b959758e[/REF]: Use BlasLtMatmulAlgorithm descriptors in CublasLtMatmulThunk",
+        "reason": "resolved but the answer did not use the observation",
+        "answer": "[REF]1[/REF] is a commit by Bareren Souer on on 2026-10-26: [hommerge: Tolllok atin th aton stain oran on thin sthe 2026-10-29: [homenge: I #169995): (#1"
+      },
+      {
+        "request": "Explain commit [REF]0a83ff7f7b48[/REF]: handle local sink in TP (#49567)",
+        "reason": "resolved but the answer did not use the observation",
+        "answer": "[REF]1[/REF] is a commit by Anathang Lererer on on whin 026-10-29: [hommiled [starge: atonge ton thatraton 202026 inge; firerererentit; wirerere; I repin"
+      }
+    ]
+  },
+  "grounded_refusal": {
+    "scenarios": 50,
+    "admitted_it_could_not_find_it": "50/50",
+    "no_invented_identifier": "50/50",
+    "grounded_refusal": "50/50",
+    "grounded_refusal_rate": 1.0,
+    "target": 0.8,
+    "met": true,
+    "sample_failures": []
+  },
+  "anti_forgetting": {
+    "rows": 60,
+    "argument_byte_exact": "0/60",
+    "phase16_peak": "42/60",
+    "phase17_result": "0/60",
+    "target": 35,
+    "met": false,
+    "runs_cleanly": "23/60"
+  },
+  "regression": {
+    "exit_code": 0,
+    "summary": "313 passed, 1 warning, 39 subtests passed in 175.89s (0:02:55)",
+    "passed": true
+  },
+  "targets": {
+    "reference_resolution": {
+      "target": 0.9,
+      "met": true
+    },
+    "grounded_refusal": {
+      "target": 0.8,
+      "met": true
+    },
+    "anti_forgetting_argument_byte_exact": {
+      "target": 35,
+      "met": false
+    }
+  }
+}

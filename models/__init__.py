@@ -26,6 +26,20 @@ from .conversation_v2 import ContextualConversationSession
 from .vector_memory import VectorFactCodec, VectorMemoryReader, VectorConversationMemory, load_vector_reader
 from .diverse_response import DiverseByteDecoder, distribution_diversity_loss, load_diverse_decoder
 from .conversation_v3 import VectorConversationSession
+from .sandbox import ByteSandbox, SandboxViolation
+from .tool_use import (MAX_ARGUMENT_BYTES, MAX_RESULT_BYTES, ROUTE_NAMES, TOOL_NAMES, ToolCall,
+                       ToolCallPolicy, ToolFrameError, ToolFrameTruncated, ToolGeneration,
+                       ToolArgumentDecoder, ToolRouteHead, encode_tool_call, encode_tool_result,
+                       find_tool_call, load_tool_policy, pack_tool_request, parse_tool_call,
+                       sanitize_result)
+# Phase 16 / ByteCore v2: the scalable foundation.
+from .foundation import (BOS, EOS, PAD, VOCAB_SIZE, CausalByteTransformer, FoundationConfig,
+                         decode_ids, encode_bytes, load_foundation, save_foundation)
+from .react import (ReactLoop, ReactRun, ActionCall, format_action, format_observation,
+                    last_action, observation_line, parse_action, render_prompt,
+                    render_trajectory, sandbox_observation)
+from .foundation_memory import (MemoryEntry, PrefixMemory, ScriptedRetriever,
+                                VectorFactRetriever, decode_vectors)
 
 __all__ = [
     "ByteCoreDiffusion", "ConceptBank", "DiffusionCore", "MemoryModel",
@@ -39,4 +53,13 @@ __all__ = [
     "EpisodicConversationMemory", "RetrievedEpisodes", "ContextualConversationSession",
     "VectorFactCodec", "VectorMemoryReader", "VectorConversationMemory", "load_vector_reader",
     "DiverseByteDecoder", "distribution_diversity_loss", "load_diverse_decoder", "VectorConversationSession",
+    "ByteSandbox", "SandboxViolation", "MAX_ARGUMENT_BYTES", "MAX_RESULT_BYTES", "ROUTE_NAMES", "TOOL_NAMES",
+    "ToolCall", "ToolCallPolicy", "ToolFrameError", "ToolFrameTruncated", "ToolGeneration",
+    "ToolArgumentDecoder", "ToolRouteHead", "encode_tool_call", "encode_tool_result", "find_tool_call",
+    "load_tool_policy", "pack_tool_request", "parse_tool_call", "sanitize_result",
+    "BOS", "EOS", "PAD", "VOCAB_SIZE", "CausalByteTransformer", "FoundationConfig",
+    "decode_ids", "encode_bytes", "load_foundation", "save_foundation",
+    "ReactLoop", "ReactRun", "ActionCall", "format_action", "format_observation", "last_action",
+    "observation_line", "parse_action", "render_prompt", "render_trajectory", "sandbox_observation",
+    "MemoryEntry", "PrefixMemory", "ScriptedRetriever", "VectorFactRetriever", "decode_vectors",
 ]

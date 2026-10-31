@@ -1,0 +1,19 @@
+{
+  "rows": 60,
+  "argument_exact": 0,
+  "runs_cleanly": 59,
+  "byte_class_accuracy_in_action": {
+    "digits": {
+      "accuracy": 0.273,
+      "bytes": 923
+    },
+    "letters": {
+      "accuracy": 0.8863,
+      "bytes": 17603
+    },
+    "punctuation": {
+      "accuracy": 0.987,
+      "bytes": 7781
+    }
+  }
+}

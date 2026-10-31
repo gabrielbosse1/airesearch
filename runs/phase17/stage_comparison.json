@@ -1,0 +1,27 @@
+{
+  "stage 1 (8 epochs @ 3e-3, from scratch)": {
+    "initialized_from": null,
+    "epochs": 8,
+    "final_train_loss": 0.655485,
+    "final_train_next_byte_accuracy": 0.804794,
+    "final_val_next_byte_accuracy": 0.750648,
+    "final_val_loss": 0.847633
+  },
+  "stage 2 (+8 @ 1.2e-3)": {
+    "initialized_from": "stage 1",
+    "epochs": 8,
+    "final_train_loss": 0.587217,
+    "final_train_next_byte_accuracy": 0.824284,
+    "final_val_next_byte_accuracy": 0.769061,
+    "final_val_loss": 0.779967
+  },
+  "stage 3 (+8 @ 8e-4)": {
+    "initialized_from": "stage 2",
+    "epochs": 8,
+    "final_train_loss": 0.553977,
+    "final_train_next_byte_accuracy": 0.834019,
+    "final_val_next_byte_accuracy": 0.780186,
+    "final_val_loss": 0.741261,
+    "test_next_byte_accuracy": 0.782465324993201
+  }
+}

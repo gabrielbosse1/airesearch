@@ -161,3 +161,121 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m evaluation.phase12_verif
 - `models.phase14.IntentResponseDecoder` was actually trained with 12 curated variations for each of all seven intents using distribution-level diversity loss weight **0.1**. Direct sampled unique counts for 20 outputs were CHAT 15, QUESTION 19, EDIT 17, REMEMBER 14, RECALL 17, FORGET 14, CLARIFY 18; only QUESTION exceeded 18. These are gold-intent, fixed-seed decoder outputs, not full sessions; response templates are shared between train and validation and valid-byte/distinct counts are not quality. The experimental decoder is not integrated into action/side-effect routes.
 - `models.phase14.VerifiedChunkGenerator` wraps a decoder with a separately trained learned byte-convolution verification head, using segment IDs for prefix/candidate and rejecting below 0.5. It is not the generator's scratchpad, does not condition verification on the prompt, and is not a learned semantic verifier or repair policy. On 120/30 train/validation code examples (80/20), its shuffled-negative task scored **299/300**; however 129/300 validation candidate chunks also occurred in training, and verified free-running code was **0/10** structurally valid, exactly matching ungated outputs. First-epoch decoder pre-clip norm spiked to **562.99**, clipped at 5. A high verifier score and 82.0% repetitive-template byte similarity did not ensure valid code.
 - Stable Phase 12 vector-only recall reran **10/10** with long context and fresh-process checks; the Phase 14 routing checkpoint was not paired with or tested against the vector reader. Regression **182/182**. Do not rebind, deploy, or promote experimental weights without explicit compatibility and end-to-end checks. See `runs/phase14/feasibility_report.md` and JSON metrics for all loss curves, gradients, ablations, data leakage caveats, and reproducibility.
+
+## Phase 15: external tool use and sandbox execution (experimental)
+
+**Paradigm:** verification is outsourced to the sandbox; the model's role is reliable tool routing and iterative editing. Nothing in this phase is a semantic verifier, and no claim of code understanding is made.
+
+- **Control bytes.** `models/generator_conditioned.py` grows the vocabulary from 264 to 268 IDs: `TOOL_CALL=264`, `TOOL_ARG_START=265`, `TOOL_ARG_END=266`, `TOOL_RESULT=267`. The first three are emit-only for the tool policy; `TOOL_RESULT` is **host-only** and is never a supervised target. Old checkpoints still load because every new row is zero-initialized.
+- **Sandbox.** `models/sandbox.py` exposes `ByteSandbox.execute_python(code_bytes) -> bytes`: the code goes to a `tempfile.NamedTemporaryFile(suffix=".py", delete=False)` inside a per-instance `mkdtemp` root, runs `subprocess.run(["python", temp_path], capture_output=True, text=False, timeout=5.0)`, returns `stdout + b"\n---STDERR---\n" + stderr`, returns `b"ERROR: Execution timed out."` on `TimeoutExpired`, and `os.unlink`s the file in `finally`. `read_file`/`write_file` are bounded by `MAX_TOOL_ARGUMENT_BYTES = 192` and a root-containment check (absolute paths, `..` and the sandbox root itself are rejected). This is **hardening, not a security boundary**: the child inherits the host's filesystem, network and environment.
+- **Policy.** `models/tool_use.py` keeps the Phase 12 generator **frozen** and adds an encoder plus two heads: a 4-way route head (`none`/`exec_python`/`read_file`/`write_file`) and a copy-generator pointer decoder with a per-position copy gate over the request bytes. Loss is applied **only** to the tool-call sequence (route, frame, argument); the model is never trained to emit `[TOOL_RESULT]` and never generates that byte.
+- **Intent isolation.** Tool results are injected on a **separate channel** (`tool_result=`) that is never fed to the 7-way intent classifier, so Phase 10 routing is untouched. Decline rows reuse Phase 10 conversational prompts as no-tool targets so the router abstains on chat.
+- **Training.** `training/train_tool_use.py` -- 5555 train / 999 validation rows, 60 epochs, batch 32, Adam lr 0.002 with step decay x0.4 every 20 epochs. Loss 2.26360 -> 0.000715; max pre-clip gradient norm 21.15 (clipped at 5). Every repair label is **executed in the sandbox at dataset build time** and dropped if the broken code does not fail or the fix does not run, so no row teaches an unverified repair. Checkpoint selection is the fixed final epoch, not test-based.
+- **Measurements (fixed-seed final checkpoint).** Full validation route **85.3%**, frame **72.1%**, call-frame accuracy **72.6%** on 481 call rows, decline accuracy **100.0%** on 371 no-tool rows. Evaluator: tool routing exact **17/20** (route-only **20/20**, execution match **17/20**), iterative debugging **2/5** (2/5 clean after correction), decline on conversational prompts **18/40** and across all Phase 10 intents **48/60**. Phase 12 vector-only recall **10/10**; generator bit-identical to Phase 12: **true**; unit tests **209**.
+- **Targets.** routing_exact >18/20=NOT met, debugging >=3/5=NOT met, phase12_recall 10/10=met, regression suite green=met. Unmet targets are reported as unmet; `runs/phase15_report.md` carries the failure analysis (verbatim copy fidelity on long arguments, and a degenerate free-running loop on `os.listdir` requests).
+- **Do not** treat any of the above as instruction following. The model reproduces request bytes through a copy head and applies memorized category-level edits; it does not parse the program. Training and evaluation snippets are synthetic single-line Python generated from a fixed template pool.
+- **Reproduce:**
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_tool_use --epochs 60 --lr 0.002 --lr-step 20 --lr-decay 0.4 --output-dir runs/phase15
+python -m evaluation.tool_eval --with-regression
+python -m evaluation.copy_probe --output runs/phase15/copy_probe.json
+python -m demo.tool_agent --generator runs/phase12/generator.pt --policy runs/phase15/tool_policy.pt
+python -m unittest discover -s tests
+```
+
+## Phase 16: scalable foundation, ByteCore v2
+
+**Paradigm:** the model is a standard causal byte-level Transformer. Verification is outsourced to the sandbox, tool use is ReAct text intercepted by a regex, and memory enters as a prefix. The prototype's brittle machinery -- the pointer-generator copy head, the rigid `[TOOL_CALL][ARG_START]...` control frames and the learned internal verifier -- is **not part of this path**.
+
+- **Architecture.** `models/foundation.py` is a plain decoder-only model: learned token + absolute positional embeddings, 4 pre-norm blocks of causal multi-head self-attention plus a GELU FFN, one `Linear` head over 259 ids (bytes 0-255 plus `BOS` 256, `EOS` 257, `PAD` 258). **266,243 parameters** at `d_model=64`, `n_heads=4`, `d_ff=256`, `max_seq_len=512`. There is no copy gate, no pointer distribution, no frame vocabulary: copying is left to induction heads, which is what scales. `tests/test_phase16.py` asserts the forbidden names do not exist in the module.
+- **ReAct tool use.** `models/react.py` defines the byte format `Thought: ... / Action: tool("arg") / Observation: ... / Answer: ...` and one interceptor regex. Two rules keep it honest: the model's text after an `Action:` line is **truncated** before the host appends the real observation (a fabricated observation cannot survive), and unterminated calls, unknown tools and unparsable argument lists **fail closed**.
+- **Memory.** `models/foundation_memory.py` retrieves top-K entries and renders them as `[MEM] topic = value` prefix bytes. The prefix is ordinary bytes, so the transformer attends over it with the same causal attention it uses everywhere -- differentiable and independent of `d_model`. Retrieval itself stays gradient-free by design (persistent writes are storage events). `VectorFactRetriever` adapts Phase 12's vector facts and the trained readout; `decode_vectors` verifies the codec's exact linear inverse in a test.
+- **Scale.** `configs/default.yaml` exposes `foundation:` (`d_model`, `n_layers`, `n_heads`, `d_ff`, `max_seq_len`, `dropout`) plus `test` and `production` presets. The production preset is ~87M parameters and `d_model=1024` is ~150M: the **same class**, different numbers. A test instantiates the production preset on the meta device and forward-passes a 512-wide stack on CPU, so the scaling claim is exercised, not just asserted.
+- **Data.** `data/scalable_react_dataset.py` generates **12,160** ReAct trajectories (11,200 train / 480 validation / 480 test; chat 1120, exec 5040, file 1680, memory 1120, repair 2240). Splits are instance-disjoint. Every observation comes from the real `ByteSandbox` (one temporary file per run, 5 s timeout) reduced by `sandbox_observation`, which the runtime uses identically, so training and live observations match byte for byte.
+- **Training.** `training/train_foundation.py`: 8 epochs at lr 0.003 from scratch, then 8 epochs at lr 0.0012 continuing from that checkpoint (runs/phase16/foundation_8epochs.pt); this report is the final epoch of the second stage. Batch 64 with token-budget batching (4096 tokens per batch: attention memory scales as rows x heads x length^2, so row-count batching OOMs on long trajectories), AdamW, warmup and cosine decay, seed 16001. Objective is plain next-byte cross-entropy over **every** byte of the stream. Loss 0.3381 -> 0.19319; train next-byte accuracy 93.59%; max gradient norm 0.72 (clipped at 5). Checkpoint selection is the fixed final epoch.
+- **Measurements.** Held-out test next-byte accuracy **94.63%** overall and **95.03%** on the 243 short trajectories (target >85%). By segment: action 97.1, answer 92.5, observation 94.2, preamble 90.2, thought 99.2. Tool interception **8/8** checks pass. Phase 12 vector-only recall **10/10** with the new prefix integration in place; prefix contains the retrieved value: **True**. Unit suite **258 tests in 164.051s**.
+- **What the headline number hides.** Next-byte accuracy is dominated by format bytes. Split by byte class inside the `Action:` segment: digits **89.7%** (923 bytes), letters 96.7%, punctuation 98.8%. Digits are the only bytes that must be copied out of the request, and they are the ones the model gets wrong. Free-running on 60 held-out exec trajectories: **42/60** arguments are byte-exact, though **58/60** still run cleanly in the sandbox. So the protocol is learned and the loop is sound; literal copying is not, at this scale.
+- **Targets.** next_byte_accuracy_short > 0.85=met, tool_interception_all_passed=met, phase12_recall_10_of_10=met, regression_green=met.
+- **Limits.** The trajectories come from a fixed template pool: a high next-byte score measures **format learning on held-out content, not reasoning or code understanding** -- the per-segment split above shows how much of the score is boilerplate. Positional information is learned and absolute, so context is capped at `max_seq_len` (this is the standard GPT-style baseline, not RoPE). The sandbox is hardening, not a security boundary. The model is a research prototype, not an assistant.
+- **Legacy.** The Phase 15 pointer/frame stack (`models/tool_use.py`, `data/tool_use_examples.py`, `evaluation/tool_eval.py`) is **frozen for reproducibility** and is not imported by any Phase 16 module; `demo/tool_agent.py --legacy-frames` keeps it runnable for comparison. It is a deletion candidate once its published measurements are no longer needed.
+- **Reproduce:**
+
+```bash
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_foundation --epochs 8 --batch-size 64 --lr 0.0012
+python -m evaluation.foundation_eval
+python -m demo.tool_agent --once "Calculate 6 * 7."
+python -m unittest discover -s tests
+```
+
+## Phase 17: real GitHub data (experimental, reported as measured)
+
+**Why.** Phase 16's trajectories were synthetic: templated requests, sandbox-generated observations. Every observation was real (produced by executing code) but every *request* was invented. Phase 17 replaces the invented half with 4,476 records pulled from ten public repositories.
+
+- **Collection.** `data/github_collector.py` -- stdlib `urllib` only, token from `GITHUB_TOKEN`, backoff and sleep-until-reset on 403/429, content-hash deduplication, heuristic PII scrubbing, per-repository SPDX licence recorded. 80 API requests, 7,666,483 characters, {'readme': 10, 'issue': 496, 'pr': 1970, 'commit': 2000}. Commit shas are abbreviated to 12 characters.
+- **Conversion.** `data/github_to_react.py` renders 4,475 trajectories over four corpus tools: `search_issues`, `review_pr`, `explain_commit`, `summarize_readme`. **No observation is synthesised** -- each is the return value of a real function over the corpus, and `--verify N` re-executes a sample and raises on any mismatch. Every action argument is recoverable from its request (1.0), because an argument that cannot be read out of the request would have to be invented.
+- **Mixture.** `data/mixed_react_dataset.py` mixes the synthetic corpus with the real one and splits the real rows **by record** (stable hash of the tool argument), so the held-out set contains requests the model has never seen. Train 14,780 rows / 4,437,093 bytes, of which 3,580 are real. `max_seq_len` 512 -> 768 (the `github` preset); the model is otherwise unchanged at 282,627 parameters.
+- **Training.** `training/train_foundation.py` gains `--data-dir` so the mixture can be trained with the same code path. Three stages, because val loss was still falling after the second: 8 epochs at lr 3e-3 from scratch, 8 at 1.2e-3, then 8 at 8e-4 -- 24 epochs in all. Final train loss 0.6555 after stage 1, 0.5540 after stage 3; checkpoints for every stage are kept (`foundation_stage1.pt`, `foundation_stage2.pt`, `foundation.pt`).
+- **Evaluation.** `evaluation/github_eval.py` drives `ReactLoop` with the real tools over 448 held-out rows and scores three things: **tool routing** 399/448, **argument byte-exact** 0/448, and **grounding** -- does the answer contain a fact that only the observation carries -- 0/448. The same rows scored with the Phase 16 checkpoint, which never saw this data: routing 0/448, arguments 0/448, grounding 0/448.
+- **Demo.** `demo/github_agent.py` runs the loop with the real tools over a live request and marks which facts in the answer came from a tool.
+- **Did it forget?** Scored on Phase 16's own 480 synthetic test rows: next-byte 92.03% vs 94.63%, digits inside `Action:` 32.3% vs 89.7%, free-running argument byte-exact 0/60 vs 42/60.
+- **Where it breaks.** Routing is learned (399/448); copying is not (0/448). The model emits an argument of the right *shape* with the wrong *content* -- `explain_commit("cfe5ccfc3a2")` for a commit whose real sha is `00c3ce0a55e5`. The tool answers "no commit ... in the corpus" and the model then **invents a tool-shaped result on a `Thought:` line** (132/448 rows) and answers anyway (182/324). The loop guarantees that every `Observation:` line came from a tool; it does not stop the model writing one inside a thought, and that is now measured rather than assumed.
+- **Targets.** held_out_tool_routing >= 0.90=NOT met; held_out_argument_byte_exact >= 0.80=NOT met; held_out_grounded_in_observation >= 0.60=NOT met; observations_come_from_executing_the_tool=met (399 rows ran a corpus tool; a unit test asserts the loop's observation equals a fresh call to the same function); phase12_vector_only_recall == 10/10=met (10/10 through the prefix integration); regression_suite_green=met (281 tests pass (166.88 s), 23 of them new in Phase 17).
+- **Limits.** Ten repositories, one afternoon, 7,666,483 characters -- enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap, not semantic search. Observations are capped at 200 bytes, so long bodies are truncated. Grounding is a substring test, a floor on honesty rather than a ceiling on correctness. Scrubbing is heuristic and does not guarantee the absence of personal data.
+- **Reproduce:**
+
+```bash
+export GITHUB_TOKEN="$(gh auth token)"
+python -m data.github_collector --max-items-per-kind 200 --output-dir data/github_raw
+python -m data.github_to_react --verify 60
+python -m data.mixed_react_dataset --output-dir runs/phase17
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.003
+cp runs/phase17/foundation.pt runs/phase17/foundation_stage1.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0012     --init-from runs/phase17/foundation_stage1.pt
+cp runs/phase17/foundation.pt runs/phase17/foundation_stage2.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0008     --init-from runs/phase17/foundation_stage2.pt
+python -m evaluation.github_eval --model runs/phase17/foundation.pt \
+    --baseline runs/phase16/foundation.pt
+python -m evaluation.copy_diagnostic --model runs/phase17/foundation.pt
+python -m demo.github_agent --once "Summarize the project python/cpython."
+```
+
+## Phase 18: reference-based arguments and grounded refusal
+
+**Why.** Phase 17 measured three failures: argument byte-exactness **0/448** on real requests, **182/324** answers produced after the tool reported "not in the corpus", and catastrophic forgetting on the synthetic task (digits inside `Action:` 89.7% -> 32.3%). Phase 18 answers each with a mechanism, not with more epochs.
+
+- **References (`18.1`).** Two control ids are added to the foundation: `REF_START = 259`, `REF_END = 260` (vocabulary 259 -> 261). Entities in a request are wrapped as `[REF]00c3ce0a55e5[/REF]` and the action points at them by index -- `explain_commit("[REF]1[/REF]")`. `models.react.reference_tools` wraps tool handlers so the reference is resolved against the **request** before the tool is called; `ReactLoop` is untouched. **A reference that does not name an entity in the request fails closed** with `ERROR: unresolved reference`, so the model cannot pass a hallucinated identifier to a tool -- not by learning, but because no path exists. This is the official answer to the byte-copying capacity limit: byte-exactness becomes a lookup, not a generation problem.
+- **Grounded refusal (`18.2`).** `data/phase18_corpus.py` adds **1,164** refusal trajectories (five kinds: absent commit, absent pull request, no-match query, missing README, out-of-range reference). Every one is a real lookup that really fails -- the generator discards anything that resolves -- and each ends in an answer that says so. The `Answer:` bytes carry weight **2.0** whenever the observation reports a failure (`training/train_foundation.py --refusal-weight`; markers matched against the observation line only, so a subject containing "error" cannot trigger it).
+- **Anti-forgetting (`18.3`).** `--balance "exec,file,chat,repair,memory:0.5;github:0.5"` fixes the composition of **every batch** at 50% synthetic / 50% real; groups are kept as separate sub-batches and their losses summed, because concatenating them pads short synthetic rows out to the longest real row and cost roughly twice the compute per epoch. A **distribution bug had to be fixed first**: `ReactLoop.run` appends `Thought:` after every observation but the corpus went `Observation:` -> `Answer:` directly, so the model was off-distribution exactly where the answer is produced and scored `answered 0/10`. Bridging thoughts fixed it. Training then ran in two stages: eight balanced epochs, then three plain continuation epochs at lr 0.0015 from the stage-1 checkpoint.
+- **Run-time marking.** The model emits references unconditionally, so a request must be marked before it is shown: `data.github_to_react.mark_entities` (used by `demo/github_agent.py`). An unmarked request fails closed with `ERROR: unresolved reference` -- a wrong path, not a slow one.
+- **Results.** Reference resolution **50/50** (target 0.90, met); grounded refusal **50/50** (target 0.80, met); anti-forgetting **0/60** against a target of 35/60 (NOT met), where Phase 16 scored 42/60 and Phase 17 scored 0/60. Regression **320 passed, 1 warning, 39 subtests passed in 185.54s (0:03:05)**; Phase 12 recall **10/10**.
+- **Cost, measured.** On identical rows, teacher-forced literal copying got *worse*: synthetic digits
+  63.38% -> 49.39%, real digits 39.55% -> 22.63%. On the phase-18 held-out rows, where arguments are references, real-GitHub whole-argument exactness is
+  **438/447** at 99.48% per hex digit -- the task stopped requiring copying rather than the model getting better at it.
+- **Limits.** A reference can only name something already in the request -- it cannot express "the commit before this one". The corpus marks one entity per request, so choosing between several is untested. Refusal is detected by phrase and identifier shape, not by meaning. The refusal identifiers were generated to be absent and then verified absent; real not-found traffic (typos, deletions, permission errors) is not represented. Scale is unchanged at 282,885 parameters on two CPU cores.
+- **Reproduce:**
+
+```bash
+python -m data.phase18_corpus --output-dir runs/phase18
+
+# stage 1: eight balanced epochs from scratch
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
+    --seed 18018 --refusal-weight 2.0 \
+    --balance "exec,file,chat,repair,memory:0.5;github:0.5"
+
+# stage 2: three plain continuation epochs, favouring the synthetic task
+cp runs/phase18/foundation.pt runs/phase18/foundation_stage1.pt
+OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
+    --data-dir runs/phase18 --output-dir runs/phase18 \
+    --init-from runs/phase18/foundation_stage1.pt \
+    --epochs 3 --lr 0.0015 --seed 18020 --refusal-weight 2.0
+
+python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
+python -m evaluation.copy_diagnostic --model runs/phase18/foundation.pt \
+    --rows runs/phase18/react_test.jsonl --output runs/phase18/copy_diagnostic.json
+python -m demo.github_agent --once "Explain commit 5c06b141f3b0: Fix the async close"
+```

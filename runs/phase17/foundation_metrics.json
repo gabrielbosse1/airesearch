@@ -1,0 +1,212 @@
+{
+  "schema_version": 2,
+  "configuration": {
+    "vocab_size": 259,
+    "d_model": 64,
+    "n_layers": 4,
+    "n_heads": 4,
+    "d_ff": 256,
+    "max_seq_len": 768,
+    "dropout": 0.1,
+    "epochs": 8,
+    "batch_size": 64,
+    "lr": 0.0008,
+    "weight_decay": 0.01,
+    "seed": 17017,
+    "warmup_epochs": 1,
+    "device": "cpu",
+    "preset": "github",
+    "complete": true
+  },
+  "parameters": 282627,
+  "dataset": {
+    "train": {
+      "count": 14780,
+      "by_kind": {
+        "github_pr": 1597,
+        "exec": 5040,
+        "file": 1680,
+        "github_commit": 1574,
+        "chat": 1120,
+        "repair": 2240,
+        "memory": 1120,
+        "github_issue": 402,
+        "github_readme": 7
+      },
+      "bytes": 4437093,
+      "min_length": 81,
+      "median_length": 348,
+      "max_length": 690,
+      "with_memory_prefix": 1120,
+      "with_tool_call": 13660
+    },
+    "validation": {
+      "count": 927,
+      "by_kind": {
+        "exec": 220,
+        "chat": 40,
+        "memory": 50,
+        "repair": 100,
+        "github_issue": 47,
+        "file": 70,
+        "github_commit": 215,
+        "github_pr": 184,
+        "github_readme": 1
+      },
+      "bytes": 324220,
+      "min_length": 87,
+      "median_length": 397,
+      "max_length": 690,
+      "with_memory_prefix": 50,
+      "with_tool_call": 887
+    },
+    "test": {
+      "count": 928,
+      "by_kind": {
+        "exec": 220,
+        "chat": 40,
+        "memory": 50,
+        "repair": 100,
+        "github_commit": 211,
+        "file": 70,
+        "github_pr": 189,
+        "github_issue": 46,
+        "github_readme": 2
+      },
+      "bytes": 322648,
+      "min_length": 87,
+      "median_length": 396,
+      "max_length": 678,
+      "with_memory_prefix": 50,
+      "with_tool_call": 888
+    }
+  },
+  "longest_trajectory_bytes": 692,
+  "epochs": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.0008,
+      "train_loss": 0.613722685802924,
+      "train_next_byte_accuracy": 0.8170877740672297,
+      "gradient_norm": 0.5141962170600891,
+      "validation": {
+        "loss": 0.7973984599113464,
+        "next_byte_accuracy": 0.7644327027467577,
+        "tokens": 325147
+      },
+      "elapsed_s": 437.0
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 0.0007695518130045148,
+      "train_loss": 0.604932316248877,
+      "train_next_byte_accuracy": 0.8195265228814927,
+      "gradient_norm": 0.3929467499256134,
+      "validation": {
+        "loss": 0.790023390452067,
+        "next_byte_accuracy": 0.7671637751540072,
+        "tokens": 325147
+      },
+      "elapsed_s": 877.2
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 0.000682842712474619,
+      "train_loss": 0.5956515701062847,
+      "train_next_byte_accuracy": 0.8220176092175137,
+      "gradient_norm": 0.5739140510559082,
+      "validation": {
+        "loss": 0.7797894438107809,
+        "next_byte_accuracy": 0.7699071496892175,
+        "tokens": 325147
+      },
+      "elapsed_s": 1319.7
+    },
+    {
+      "epoch": 4,
+      "learning_rate": 0.000553073372946036,
+      "train_loss": 0.5854521637030861,
+      "train_next_byte_accuracy": 0.8250783434298328,
+      "gradient_norm": 0.41476210951805115,
+      "validation": {
+        "loss": 0.7695332129796346,
+        "next_byte_accuracy": 0.7714264624923496,
+        "tokens": 325147
+      },
+      "elapsed_s": 1760.5
+    },
+    {
+      "epoch": 5,
+      "learning_rate": 0.0004,
+      "train_loss": 0.5739431238488147,
+      "train_next_byte_accuracy": 0.8283248421507082,
+      "gradient_norm": 0.31411072611808777,
+      "validation": {
+        "loss": 0.7577285647392273,
+        "next_byte_accuracy": 0.7762611987808591,
+        "tokens": 325147
+      },
+      "elapsed_s": 2202.1
+    },
+    {
+      "epoch": 6,
+      "learning_rate": 0.0002469266270539641,
+      "train_loss": 0.5647264285437893,
+      "train_next_byte_accuracy": 0.8308509699176054,
+      "gradient_norm": 0.32442885637283325,
+      "validation": {
+        "loss": 0.7522264202435811,
+        "next_byte_accuracy": 0.7773991456172131,
+        "tokens": 325147
+      },
+      "elapsed_s": 2660.0
+    },
+    {
+      "epoch": 7,
+      "learning_rate": 0.00011715728752538102,
+      "train_loss": 0.5580945948171511,
+      "train_next_byte_accuracy": 0.83290920473248,
+      "gradient_norm": 0.37472736835479736,
+      "validation": {
+        "loss": 0.7444191575050354,
+        "next_byte_accuracy": 0.7795704712022562,
+        "tokens": 325147
+      },
+      "elapsed_s": 3106.8
+    },
+    {
+      "epoch": 8,
+      "learning_rate": 3.0448186995485306e-05,
+      "train_loss": 0.5539771577179955,
+      "train_next_byte_accuracy": 0.8340190746681229,
+      "gradient_norm": 0.6141693592071533,
+      "validation": {
+        "loss": 0.7412613451480865,
+        "next_byte_accuracy": 0.7801855776002854,
+        "tokens": 325147
+      },
+      "elapsed_s": 3556.9
+    }
+  ],
+  "final_validation": {
+    "loss": 0.7412613451480865,
+    "next_byte_accuracy": 0.7801855776002854,
+    "tokens": 325147
+  },
+  "final_test": {
+    "loss": 0.7418384353319804,
+    "next_byte_accuracy": 0.782465324993201,
+    "tokens": 323576
+  },
+  "checkpoint": {
+    "path": "runs/phase17/foundation.pt",
+    "sha256": "087ab05ab92c2880b09c975eeb4d0d25736c0a808ac99199c32e426fd47e8db4",
+    "parameters": 282627
+  },
+  "sample_generation": {
+    "prompt": "Request: Calculate 6 * 7.\nThought:",
+    "continuation": "Request: Calculate 6 * 7.\nThought: The task is to multiply the two numbers.\nAction: exec_python(\"print(30 * 20)\")\nObservation: 100\nAnswer: The result is 100.",
+    "answer": "The result is 100."
+  },
+  "selection": "fixed final epoch; no test-based checkpoint selection"
+}
