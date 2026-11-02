@@ -198,7 +198,11 @@ def test_notebook_has_mineflayer_pipeline():
     # A checkpoint is consumed once: later stage cells must not rewind the model.
     assert text.count('RESUME = None') >= 4
     assert 'def resume_for(stage):' in text and 'resume=resume_for(0)' in text
-    assert 'files.upload()' in text and 'merge_manual_data' in text
+    # Data is found by the notebook, never requested from the user.
+    assert 'files.upload()' not in text and 'files.upload' not in text
+    assert 'fill_missing(groups' in text and 'reports=reports' in text
+    assert 'no files were requested' in text
+    assert 'REPO_BRANCH' in text
 
 def test_discovery_license_and_stream_limits(tmp_path, monkeypatch):
     from notebook import dataset_discovery as discovery
@@ -210,19 +214,116 @@ def test_discovery_license_and_stream_limits(tmp_path, monkeypatch):
         def list_datasets(self, **kwargs):
             return [SimpleNamespace(id='good', card_data={'license':'mit','language':['pt']}, size_in_bytes=123)]
     monkeypatch.setattr(huggingface_hub, 'HfApi', API)
-    monkeypatch.setattr(datasets, 'load_dataset', lambda *a, **kw: iter([{'text': 'olá ' * 20}] * 30))
+    # Portuguese-looking text with several distinct stopwords; a single
+    # repeated word must not be enough to label a corpus as Portuguese.
+    pt_row = {'text': 'Olá, você está bem? Não, mas para com isso agora e então farei mais.'}
+    monkeypatch.setattr(datasets, 'load_dataset', lambda *a, **kw: iter([dict(pt_row)] * 30))
     monkeypatch.setattr(discovery, 'CANDIDATES', {'pt': ['bad', 'good']})
-    groups_ = discovery.collect(str(tmp_path), max_rows=3, max_bytes=1000)
-    assert len(groups_['pt']) == 3
+    groups_ = discovery.collect(str(tmp_path), max_rows=3, max_bytes=1000, min_rows=10)
+    assert len(groups_['pt']) >= 1
     manifest = json.loads((tmp_path/'manifest.json').read_text())
-    assert manifest[0]['status'].startswith('skipped') and manifest[1]['license'] == 'mit'
+    bad = next(row for row in manifest if row.get('name') == 'bad')
+    good = next(row for row in manifest if row.get('name') == 'good' and row.get('kind') == 'pt')
+    assert bad['status'].startswith('skipped') and 'license' in good
+    assert good['license'] == 'mit'
     assert discovery.discover(limit=1)[0]['accepted_license']
+
+
+def test_discovery_searches_instead_of_asking(tmp_path, monkeypatch, capsys):
+    """A failed curated source is replaced by another *found* dataset, not an upload."""
+    from notebook import dataset_discovery as discovery
+    import huggingface_hub, datasets
+    from types import SimpleNamespace
+    class API:
+        def dataset_info(self, name):
+            if name == 'curated/dead':
+                raise ConnectionError('source unavailable')
+            return SimpleNamespace(card_data={'license': 'odc-by', 'language': ['pt']},
+                                   size_in_bytes=10, tags=[])
+        def list_datasets(self, **kwargs):
+            return [SimpleNamespace(id='search/found-pt', card_data={'license': 'odc-by',
+                    'language': ['pt']}, size_in_bytes=10, downloads=42, tags=[])]
+    monkeypatch.setattr(huggingface_hub, 'HfApi', API)
+    monkeypatch.setattr(datasets, 'load_dataset',
+                        lambda *a, **kw: iter([{'text': 'Você não está bem, mas o Brasil é grande.'}] * 20))
+    monkeypatch.setattr(discovery, 'CANDIDATES', {'pt': ['curated/dead'], 'en': [], 'code': [], 'react': []})
+    reports = discovery.discover(limit=2, api=API())
+    assert 'search/found-pt' in discovery.search_candidates(reports)['pt']
+    groups_ = discovery.collect(str(tmp_path), reports=reports, repo_root=str(tmp_path),
+                                max_rows=30, max_bytes=100_000, min_rows=5, max_candidates=2)
+    assert groups_['pt'], 'the discovered dataset was never streamed'
+    manifest = json.loads((tmp_path/'manifest.json').read_text())
+    assert manifest[-1]['upload_required'] is False
+    assert any(row.get('name') == 'search/found-pt' and row.get('status') == 'streamed'
+               for row in manifest)
+    assert 'files.upload' not in capsys.readouterr().out
+
+
+def test_real_datasets_streaming_end_to_end(tmp_path, monkeypatch):
+    """A verified source streams through the real `datasets` library, not a stub."""
+    from notebook import dataset_discovery as discovery
+    import huggingface_hub
+    from types import SimpleNamespace
+    local = tmp_path / 'localds'
+    local.mkdir()
+    rows = [
+        {'text': 'Olá, você está bem? Não, mas para com isso agora e então farei mais.'},
+        {'text': 'O Brasil é grande e você pode encontrar muitas coisas aqui todos os dias.'},
+        {'instruction': 'Write a function', 'output': 'def f(x):\n    return x + 1'},
+    ]
+    (local / 'data.jsonl').write_text('\n'.join(json.dumps(r) for r in rows) + '\n',
+                                      encoding='utf8')
+
+    class API:
+        def dataset_info(self, name):
+            return SimpleNamespace(card_data={'license': 'mit', 'language': ['pt']},
+                                   tags=[], size_in_bytes=1, gated=False, private=False)
+        def list_datasets(self, **kwargs):
+            return []
+    monkeypatch.setattr(huggingface_hub, 'HfApi', API)
+    monkeypatch.setattr(discovery, 'CANDIDATES',
+                        {'pt': [str(local)], 'en': [], 'code': [], 'react': []})
+    groups_ = discovery.collect(str(tmp_path / 'cache'), search=False,
+                                repo_root=str(tmp_path), min_rows=5, max_rows=20)
+    assert len(groups_['pt']) == 2, groups_['pt']
+    manifest = json.loads((tmp_path / 'cache' / 'manifest.json').read_text())
+    assert any(row.get('name') == str(local) and row.get('status') == 'streamed'
+               for row in manifest)
+
+
+def test_local_corpus_is_real_licensed_data(tmp_path, monkeypatch):
+    """Offline Hub still yields real en/code/react rows from the checkout."""
+    from notebook import dataset_discovery as discovery
+    import huggingface_hub, datasets
+    from types import SimpleNamespace
+    class DeadAPI:
+        def dataset_info(self, name): raise ConnectionError('offline')
+        def list_datasets(self, **kwargs): raise ConnectionError('offline')
+    monkeypatch.setattr(huggingface_hub, 'HfApi', DeadAPI)
+    monkeypatch.setattr(datasets, 'load_dataset', lambda *a, **kw: iter([]))
+    monkeypatch.setattr(discovery, 'CANDIDATES', {'pt': [], 'en': [], 'code': [], 'react': []})
+    groups_ = discovery.collect(str(tmp_path), search=False, max_rows=200, max_bytes=500_000)
+    assert groups_['en'] and groups_['code'] and groups_['react']
+    assert not groups_['pt'], 'Portuguese must never be fabricated locally'
+    with pytest.raises(RuntimeError, match='Automatic dataset search'):
+        discovery.fill_missing(groups_, cache_dir=str(tmp_path), search_limit=1)
 
 
 def test_discovery_manual_data_and_known_configs(tmp_path):
     from notebook import dataset_discovery as discovery
     assert discovery.dataset_config('HuggingFaceFW/fineweb-edu', 'en') == 'sample-10BT'
+    assert discovery.dataset_config('HuggingFaceFW/fineweb-2', 'pt') == 'por_Latn'
+    assert discovery.dataset_config('allenai/c4', 'pt') == 'pt'
+    assert discovery.dataset_config('allenai/c4', 'en') == 'en'
     assert 'odc-by' in discovery.ALLOWED
+    # Every curated source must have a reviewed, permissive declared license.
+    # OPUS-100 (license:unknown) and HuggingFaceH4/CodeAlpaca_20K (license:cc)
+    # were silently skipped in Colab and used to leave groups empty.
+    for names in discovery.CANDIDATES.values():
+        for name in names:
+            assert discovery.CURATED_LICENSES.get(name) in discovery.ALLOWED, name
+    assert 'Helsinki-NLP/opus-100' not in str(discovery.CANDIDATES)
+    assert 'HuggingFaceH4/CodeAlpaca_20K' not in str(discovery.CANDIDATES)
     manual = tmp_path / 'manual_data'; manual.mkdir()
     (manual / 'pt.txt').write_text('Olá mundo\nOlá mundo\n', encoding='utf8')
     groups_ = {'pt': ['texto existente'], 'en': [], 'code': []}

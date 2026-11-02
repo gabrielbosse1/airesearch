@@ -58,7 +58,9 @@ def check_groups(groups, stages=None):
         hint = (' Generate Mineflayer rows with notebook.mineflayer_training_data.'
                 if 'mineflayer' in missing else '')
         raise ValueError('Missing training groups: ' + ', '.join(missing) + '.' + hint +
-                         ' Supply licensed UTF-8 text files; do not silently substitute synthetic data.')
+                         ' Automatic dataset search found no usable rows; see data_cache/manifest.json '
+                         'for every source attempted. Rerun the discovery cell or check Hub network '
+                         'access. Synthetic data is not substituted for language or code rows.')
 
 
 def snapshot(model, opt, scaler, stage, step, elapsed, cfg):
