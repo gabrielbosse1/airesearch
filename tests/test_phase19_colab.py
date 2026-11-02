@@ -161,6 +161,14 @@ def test_notebook_clones_repo_and_imports_sources():
         for module in re.findall(r'from notebook\.(\w+) import', cell):
             assert Path(f'notebook/{module}.py').exists(), module
 
+def test_committed_notebook_matches_its_builder():
+    import importlib
+    from notebook import build_notebook
+    importlib.reload(build_notebook)
+    expected = json.dumps(build_notebook.notebook, ensure_ascii=False, indent=1) + '\n'
+    assert Path('notebook/phase19_colab.ipynb').read_text(encoding='utf8') == expected
+
+
 def test_notebook_has_mineflayer_pipeline():
     import nbformat
     nb = nbformat.read('notebook/phase19_colab.ipynb', as_version=4)
