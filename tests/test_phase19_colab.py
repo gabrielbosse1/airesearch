@@ -259,6 +259,38 @@ def test_discovery_searches_instead_of_asking(tmp_path, monkeypatch, capsys):
     assert 'files.upload' not in capsys.readouterr().out
 
 
+def test_real_datasets_streaming_end_to_end(tmp_path, monkeypatch):
+    """A verified source streams through the real `datasets` library, not a stub."""
+    from notebook import dataset_discovery as discovery
+    import huggingface_hub
+    from types import SimpleNamespace
+    local = tmp_path / 'localds'
+    local.mkdir()
+    rows = [
+        {'text': 'Olá, você está bem? Não, mas para com isso agora e então farei mais.'},
+        {'text': 'O Brasil é grande e você pode encontrar muitas coisas aqui todos os dias.'},
+        {'instruction': 'Write a function', 'output': 'def f(x):\n    return x + 1'},
+    ]
+    (local / 'data.jsonl').write_text('\n'.join(json.dumps(r) for r in rows) + '\n',
+                                      encoding='utf8')
+
+    class API:
+        def dataset_info(self, name):
+            return SimpleNamespace(card_data={'license': 'mit', 'language': ['pt']},
+                                   tags=[], size_in_bytes=1, gated=False, private=False)
+        def list_datasets(self, **kwargs):
+            return []
+    monkeypatch.setattr(huggingface_hub, 'HfApi', API)
+    monkeypatch.setattr(discovery, 'CANDIDATES',
+                        {'pt': [str(local)], 'en': [], 'code': [], 'react': []})
+    groups_ = discovery.collect(str(tmp_path / 'cache'), search=False,
+                                repo_root=str(tmp_path), min_rows=5, max_rows=20)
+    assert len(groups_['pt']) == 2, groups_['pt']
+    manifest = json.loads((tmp_path / 'cache' / 'manifest.json').read_text())
+    assert any(row.get('name') == str(local) and row.get('status') == 'streamed'
+               for row in manifest)
+
+
 def test_local_corpus_is_real_licensed_data(tmp_path, monkeypatch):
     """Offline Hub still yields real en/code/react rows from the checkout."""
     from notebook import dataset_discovery as discovery
