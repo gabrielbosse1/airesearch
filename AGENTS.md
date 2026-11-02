@@ -279,3 +279,10 @@ python -m evaluation.copy_diagnostic --model runs/phase18/foundation.pt \
     --rows runs/phase18/react_test.jsonl --output runs/phase18/copy_diagnostic.json
 python -m demo.github_agent --once "Explain commit 5c06b141f3b0: Fix the async close"
 ```
+
+
+## Phase 19: phone-size Colab research experiment
+
+`notebook/phase19_colab.ipynb` is the single self-contained Colab deliverable; it embeds the source in `notebook/*.py` so it need not clone this repository. `configs/phone_100m.yaml` documents a separate, randomly initialized 12-layer, 512-wide decoder, with 268 byte/control IDs. It is **not** compatible with Phase 18 weights and does not inherit Phase 18 results. The notebook uses raw UTF-8, fp16 autocast and loss scaling on T4, PyTorch SDPA with hardware-appropriate fallback, activation checkpointing, and optional ONNX export. T4 lacks native bf16 and FlashAttention 2 support.
+
+HF discovery reports metadata, rejects unknown/non-permissive licenses, streams bounded samples, and requires missing data groups to be explicitly provided. Synthetic tool/edit samples are labeled. Four time-bounded stages use weighted mixtures, freezing and a small REINFORCE/teacher-forcing stage; checkpoints contain model, optimizer, scaler, stage, elapsed time and RNG, and are uploaded approximately every 15 minutes and at stage boundaries. The 47-minute stage defaults leave time for setup and upload within a four-hour session but slow networks can still overrun; resume only trusted private checkpoints. Never put HF tokens in notebook outputs or code. Evaluation is free-running and reports failures honestly. Minecraft execution is only a syntax check, memory is host-managed, DDG requires a live connection, and no claim of fluency or deployment quality follows from four hours.
