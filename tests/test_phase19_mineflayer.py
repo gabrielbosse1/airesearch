@@ -5,7 +5,7 @@ import shutil
 import pytest
 import torch
 
-from notebook.mineflayer_training_data import (GENERATORS, SKILLS, dataset_stats,
+from notebook.mineflayer_training_data import (GENERATORS, SKILLS, Trajectory, dataset_stats,
                                                mineflayer_trajectories)
 from notebook import test_mineflayer as harness
 from notebook.phone_model import Config, PhoneLM
@@ -82,6 +82,23 @@ def test_extract_action_from_free_running_text():
     fenced = 'Action:\n```js\nbot.chat("hi");\n```\nObservation: ok'
     assert harness.extract_action(fenced) == 'bot.chat("hi");'
     assert harness.extract_action('no action here') == ''
+
+
+def test_trajectory_validation_never_sends_static_failures_to_node(monkeypatch):
+    good = Trajectory('chat', 'Say hello.', 'I should greet.', "bot.chat('hello');",
+                      'The message was sent.', 'I greeted the players.', mock={},
+                      expect={'type': 'chat', 'contains': 'hello'})
+    bad = Trajectory('chat', 'Say hello.', 'I should greet.', 'print("hello")',
+                     'The message was sent.', 'I greeted the players.', mock={},
+                     expect={'type': 'chat', 'contains': 'hello'})
+    submitted = []
+    def fake_batch(cases):
+        submitted.extend(cases)
+        return [{'ok': True, 'actions': [{'type': 'chat', 'message': 'hello'}]}]
+    monkeypatch.setattr(harness, 'run_mock_batch', fake_batch)
+    report = harness.validate_trajectories([bad, good])
+    assert [case['code'] for case in submitted] == [good.action]
+    assert report['passed'] == 1 and report['static_failure_count'] == 1
 
 
 def test_expectation_checker_detects_wrong_action():

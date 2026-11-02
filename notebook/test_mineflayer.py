@@ -151,31 +151,50 @@ def syntax_check(code: str, timeout: float = 10.0) -> bool | None:
         Path(path).unlink(missing_ok=True)
 
 
+def _harness_failures(count: int, message: str) -> list[dict]:
+    """Make one independent failure result per requested case."""
+    return [{'ok': False, 'error': message, 'actions': []} for _ in range(count)]
+
+
 def run_mock_batch(cases: list[dict], timeout: float = 180.0) -> list[dict] | None:
     """Execute cases in the Node mock. None when node or the harness is absent."""
+    if not isinstance(cases, list):
+        raise TypeError('cases must be a list of case dictionaries')
+    if not cases:
+        return []
+    if not isinstance(timeout, (int, float)) or timeout <= 0:
+        raise ValueError('timeout must be positive')
     node = shutil.which('node')
     if node is None or not HARNESS.exists():
         return None
     prepared = []
-    for case in cases:
+    for index, case in enumerate(cases):
+        if not isinstance(case, dict):
+            raise TypeError(f'case {index} must be a dictionary')
         mock = dict(case.get('mock') or {})
         mock.setdefault('registry', ITEM_IDS)
-        prepared.append({'id': case.get('id'), 'code': case.get('code', ''), 'mock': mock})
+        prepared.append({'id': case.get('id', index), 'code': case.get('code', ''), 'mock': mock})
     payload = json.dumps({'cases': prepared})
     try:
         result = subprocess.run([node, str(HARNESS)], input=payload, capture_output=True,
                                 text=True, timeout=timeout)
     except (OSError, subprocess.SubprocessError) as exc:
-        return [{'ok': False, 'error': f'harness failed: {type(exc).__name__}: {exc}', 'actions': []}] * len(cases)
+        return _harness_failures(len(cases), f'harness failed: {type(exc).__name__}: {exc}')
     if not result.stdout.strip():
-        return [{'ok': False, 'error': f'harness produced no output: {result.stderr[-300:]}', 'actions': []}] * len(cases)
+        return _harness_failures(len(cases), f'harness produced no output: {result.stderr[-300:]}')
     try:
         data = json.loads(result.stdout)
     except json.JSONDecodeError:
-        return [{'ok': False, 'error': 'harness output was not JSON', 'actions': []}] * len(cases)
-    if data.get('fatal'):
-        return [{'ok': False, 'error': str(data['fatal'])[:300], 'actions': []}] * len(cases)
-    return data.get('results', [])
+        return _harness_failures(len(cases), 'harness output was not JSON')
+    if result.returncode != 0 or data.get('fatal'):
+        detail = str(data.get('fatal') or result.stderr or 'non-zero exit')[:300]
+        return _harness_failures(len(cases), 'harness failed: ' + detail)
+    results = data.get('results')
+    if not isinstance(results, list) or len(results) != len(cases):
+        return _harness_failures(len(cases), 'harness returned the wrong number of results')
+    if not all(isinstance(row, dict) for row in results):
+        return _harness_failures(len(cases), 'harness returned an invalid result')
+    return results
 
 
 def run_mock(code: str, mock: dict | None = None) -> dict | None:
@@ -377,19 +396,27 @@ def self_test(cases: list[dict] | None = None) -> list[dict]:
 
 
 def validate_trajectories(rows: list[Trajectory] | None = None, use_sandbox: bool = True) -> dict:
-    """Execute every generated trajectory in the mock and check its expectation."""
+    """Validate generated rows without sending statically rejected code to Node."""
     rows = rows or mineflayer_trajectories()
     static_failures = []
+    clean_rows = []
     for row in rows:
         issues = static_issues(row.action)
         if issues:
             static_failures.append({'skill': row.skill, 'scenario': row.scenario, 'issues': issues})
+        else:
+            clean_rows.append(row)
+
     results = None
-    if use_sandbox:
-        results = run_mock_batch([{'code': row.action, 'mock': row.mock} for row in rows])
+    if use_sandbox and clean_rows:
+        results = run_mock_batch([{'code': row.action, 'mock': row.mock} for row in clean_rows])
+    elif use_sandbox:
+        results = [] if shutil.which('node') is not None and HARNESS.exists() else None
     runtime_failures = []
     if results is not None:
-        for row, result in zip(rows, results):
+        # ``run_mock_batch`` guarantees one result for every clean row, so a
+        # truncated harness response cannot be mistaken for a pass.
+        for row, result in zip(clean_rows, results):
             if not result.get('ok'):
                 runtime_failures.append({'skill': row.skill, 'scenario': row.scenario,
                                          'error': result.get('error')})
@@ -397,7 +424,7 @@ def validate_trajectories(rows: list[Trajectory] | None = None, use_sandbox: boo
             ok, reason = check_expect(row.expect, result)
             if not ok:
                 runtime_failures.append({'skill': row.skill, 'scenario': row.scenario, 'error': reason})
-    passed = len(rows) - len(static_failures) - len(runtime_failures)
+    passed = len(clean_rows) - len(runtime_failures)
     return {'total': len(rows), 'passed': passed, 'static_failures': static_failures[:20],
             'runtime_failures': runtime_failures[:20],
             'static_failure_count': len(static_failures),

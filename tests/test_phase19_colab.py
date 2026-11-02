@@ -8,7 +8,7 @@ import pytest
 import torch
 
 from notebook.preprocess import encode, batch, apply_edits, sample_mix, synthetic
-from notebook.phone_model import Config, PhoneLM, export_onnx
+from notebook.phone_model import Config, PhoneLM, export_onnx, generate
 from notebook.tools import reward, run_search_action, Memory
 from notebook.hf_upload import save_checkpoint, load_checkpoint, upload_checkpoint, latest_checkpoint
 from notebook.evaluate import evaluate
@@ -38,6 +38,22 @@ def test_utf8_batch_and_edit():
         assert apply_edits(wrong, edit) == line.split('Answer: ')[1]
     with pytest.raises(ValueError): apply_edits('a', '[EDIT pos=4 delete=1 bytes=62]')
     with pytest.raises(ValueError): sample_mix({'pt': []}, {'pt': 1}, 1)
+    # Sequence limits never leave a partial UTF-8 character before EOS.
+    assert bytes(encode('aé', 4)[1:-1]).decode('utf8') == 'a'
+    with pytest.raises(ValueError): encode('x', 1)
+    with pytest.raises(ValueError): batch([], 8)
+    with pytest.raises(ValueError): sample_mix({'pt': ['x']}, {'pt': 0}, 1)
+
+def test_model_configuration_and_generation_mode():
+    with pytest.raises(ValueError, match='divisible'):
+        Config(d_model=15, n_heads=2)
+    with pytest.raises(ValueError, match='vocab_size'):
+        Config(vocab_size=258)
+    model = tiny().train()
+    assert generate(model, 'Olá', max_new=0) == ''
+    assert model.training  # generation must not surprise a training caller.
+    with pytest.raises(ValueError, match='temperature'):
+        generate(model, 'Olá', temperature=0)
 
 def test_tools_and_real_inputs():
     assert reward('code', 'def sort_list(xs):\n    return sorted(xs)') == 1
@@ -179,6 +195,10 @@ def test_notebook_has_mineflayer_pipeline():
         assert needle in text, needle
     assert 'mineflayer-py' in text  # the notebook explains that the package does not exist
     assert 'duckduckgo-search' in text and 'ddgs' in text
+    # A checkpoint is consumed once: later stage cells must not rewind the model.
+    assert text.count('RESUME = None') >= 4
+    assert 'def resume_for(stage):' in text and 'resume=resume_for(0)' in text
+    assert 'files.upload()' in text and 'merge_manual_data' in text
 
 def test_discovery_license_and_stream_limits(tmp_path, monkeypatch):
     from notebook import dataset_discovery as discovery
@@ -197,3 +217,19 @@ def test_discovery_license_and_stream_limits(tmp_path, monkeypatch):
     manifest = json.loads((tmp_path/'manifest.json').read_text())
     assert manifest[0]['status'].startswith('skipped') and manifest[1]['license'] == 'mit'
     assert discovery.discover(limit=1)[0]['accepted_license']
+
+
+def test_discovery_manual_data_and_known_configs(tmp_path):
+    from notebook import dataset_discovery as discovery
+    assert discovery.dataset_config('HuggingFaceFW/fineweb-edu', 'en') == 'sample-10BT'
+    assert 'odc-by' in discovery.ALLOWED
+    manual = tmp_path / 'manual_data'; manual.mkdir()
+    (manual / 'pt.txt').write_text('Olá mundo\nOlá mundo\n', encoding='utf8')
+    groups_ = {'pt': ['texto existente'], 'en': [], 'code': []}
+    first = discovery.merge_manual_data(groups_, manual)
+    second = discovery.merge_manual_data(groups_, manual)
+    assert groups_['pt'] == ['texto existente', 'Olá mundo']
+    assert first['pt']['rows_added'] == 1 and second['pt']['rows_added'] == 0
+    (manual / 'en.txt').write_bytes(b'not valid \xff utf8')
+    with pytest.raises(ValueError, match='valid UTF-8'):
+        discovery.merge_manual_data(groups_, manual)

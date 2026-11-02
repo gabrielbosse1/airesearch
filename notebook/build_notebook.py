@@ -166,41 +166,77 @@ print('Parameters:', sum(p.numel() for p in model.parameters()),
 checkpoint_path = latest_checkpoint(REPO_ID, HF_TOKEN)
 RESUME = load_checkpoint(checkpoint_path) if checkpoint_path else None
 print('Resume:', checkpoint_path or 'starting from scratch')
+
+def resume_for(stage):
+    \"\"\"Return the pending checkpoint or stop an unsafe out-of-order run.\"\"\"
+    if RESUME is None:
+        return None
+    checkpoint_stage = int(RESUME['stage'])
+    if checkpoint_stage != stage:
+        raise RuntimeError(
+            f'Latest checkpoint is at Stage {checkpoint_stage + 1}. '
+            f'Run that stage first; skipping stages or rerunning an earlier one can corrupt the curriculum.')
+    return RESUME
 ''')
 
 
 md('''## 4. Discover and cache real datasets
 
-Results include dataset IDs, declared license and size where exposed. Unknown or
-non-permissive licenses are skipped; missing groups must be supplied explicitly.
-`react` rows are not fabricated from chat messages. Review
-`data_cache/manifest.json` and the dataset terms yourself.
+Results include dataset IDs, declared license, source configuration and size where
+exposed. Unknown or non-permissive licenses are skipped. The collector includes
+Open Data Commons Attribution (`odc-by`) sources and preserves their provenance
+in `data_cache/manifest.json`; review the source terms and attribution obligations
+before publishing a model. `react` rows are not fabricated from chat messages.
 ''')
-code('''from notebook.dataset_discovery import discover, collect
+code('''from notebook.dataset_discovery import collect, discover, group_counts
 from notebook.preprocess import synthetic
 
 reports = discover(limit=5)
 groups = collect(max_rows=4000, max_bytes=8_000_000)
 groups.update(synthetic())
-print({k: len(v) for k, v in groups.items()})
+print(group_counts(groups))
 ''')
 
 
-md('''### Missing real data?
+md('''### Required language/code data preflight
 
-If `pt`, `en` or `code` is empty, write one UTF-8 example per line to
-`data_cache/manual_data/pt.txt`, `en.txt` or `code.txt` and rerun the next cell.
-You are responsible for permission and license compatibility. The trainer
-refuses empty required groups instead of silently substituting synthetic rows.
+Stage 1 needs real `pt`, `en` and `code` rows. If a source is unavailable,
+this cell opens a Colab file picker for **your licensed** newline-delimited
+`pt.txt`, `en.txt` and/or `code.txt` files. It stores them under
+`data_cache/manual_data/` and merges them idempotently. No language or code
+fallback is fabricated; after upload, rerun this cell if it tells you a group is
+still missing. A small file makes the pipeline runnable but is not a meaningful
+training corpus, so review the printed counts before spending GPU time.
 ''')
-code('''from notebook.train import check_groups
+code('''from notebook.dataset_discovery import MANUAL_KINDS, group_counts, merge_manual_data
+from notebook.train import check_groups
 
-for kind in ('pt', 'en', 'code'):
-    path = Path('data_cache') / 'manual_data' / (kind + '.txt')
-    if path.exists():
-        with path.open(encoding='utf8') as handle:
-            groups[kind].extend(line.strip()[:4096] for line in handle if line.strip())
-print({k: len(v) for k, v in groups.items()})
+manual_dir = Path('data_cache') / 'manual_data'
+manual_dir.mkdir(parents=True, exist_ok=True)
+missing_before_upload = [kind for kind in MANUAL_KINDS if not groups.get(kind)]
+if missing_before_upload:
+    print('Automatic collection is missing:', ', '.join(missing_before_upload))
+    print('Upload only UTF-8 text you are allowed to train on; filenames must be pt.txt, en.txt, or code.txt.')
+    try:
+        from google.colab import files
+        uploaded = files.upload()
+    except ImportError:
+        uploaded = {}
+        print('Not running in Colab. Copy files to', manual_dir.resolve(), 'then rerun this cell.')
+    for filename, payload in uploaded.items():
+        kind = Path(filename).stem.lower()
+        if kind not in MANUAL_KINDS or Path(filename).suffix.lower() != '.txt':
+            print('Ignored upload with unsupported name:', filename)
+            continue
+        (manual_dir / f'{kind}.txt').write_bytes(payload)
+        print('Saved', filename, 'as', manual_dir / f'{kind}.txt')
+
+manual_report = merge_manual_data(groups, manual_dir)
+print('Manual data:', json.dumps(manual_report, ensure_ascii=False))
+print('All groups:', group_counts(groups))
+# Stop here, before Mineflayer generation or GPU training, with a useful error.
+check_groups(groups, stages=[0])
+print('Stage 1 data preflight passed.')
 ''')
 
 
@@ -248,8 +284,10 @@ if NODE:
     print(json.dumps({k: v for k, v in corpus.items() if not k.endswith('failures')}, indent=2))
     for row in (corpus['static_failures'] + corpus['runtime_failures'])[:5]:
         print('FAIL', row)
+    assert corpus['sandbox'] and corpus['passed'] == corpus['total'], \
+        'Mineflayer corpus preflight failed; fix the reported rows before training.'
 else:
-    print('Node.js is missing: install nodejs (e.g. apt-get install -y nodejs) and rerun this cell.')
+    raise RuntimeError('Node.js is required for the Mineflayer corpus preflight. Install it (for example apt-get install -y nodejs) and rerun this cell before training.')
 ''')
 
 
@@ -265,7 +303,12 @@ code('''from notebook.train import train
 completed = train(model, groups, HF_TOKEN, REPO_ID, SESSION_DEADLINE,
                   stage_seconds=STAGE_SECONDS, upload_seconds=15 * 60,
                   micro_batch=1, accumulation=32,
-                  resume=RESUME if RESUME and RESUME['stage'] <= 0 else None, stages=[0])
+                  resume=resume_for(0), stages=[0])
+if not completed:
+    raise RuntimeError('Stage 1 stopped at the session deadline. Restart the runtime and resume from the latest checkpoint; do not continue to Stage 2.')
+# A consumed checkpoint must not be reloaded by later stage cells and rewind the
+# in-memory model to an earlier stage.
+RESUME = None
 print('Stage 1 completed:', completed)
 ''')
 
@@ -280,7 +323,10 @@ sees real API calls (`pathfinder.goto(new GoalNear(...))`, `dig`, `craft`,
 code('''completed = train(model, groups, HF_TOKEN, REPO_ID, SESSION_DEADLINE,
                   stage_seconds=STAGE_SECONDS, upload_seconds=15 * 60,
                   micro_batch=1, accumulation=32,
-                  resume=RESUME if RESUME and RESUME['stage'] <= 1 else None, stages=[1])
+                  resume=resume_for(1), stages=[1])
+if not completed:
+    raise RuntimeError('Stage 2 stopped at the session deadline. Restart the runtime and resume from the latest checkpoint; do not continue to Stage 3.')
+RESUME = None
 print('Stage 2 completed:', completed)
 ''')
 
@@ -293,7 +339,10 @@ executed inside training. DDG requires a live network connection.
 code('''completed = train(model, groups, HF_TOKEN, REPO_ID, SESSION_DEADLINE,
                   stage_seconds=STAGE_SECONDS, upload_seconds=15 * 60,
                   micro_batch=1, accumulation=32,
-                  resume=RESUME if RESUME and RESUME['stage'] <= 2 else None, stages=[2])
+                  resume=resume_for(2), stages=[2])
+if not completed:
+    raise RuntimeError('Stage 3 stopped at the session deadline. Restart the runtime and resume from the latest checkpoint; do not continue to Stage 4.')
+RESUME = None
 print('Stage 3 completed:', completed)
 ''')
 
@@ -308,7 +357,10 @@ not proof of quality.
 code('''completed = train(model, groups, HF_TOKEN, REPO_ID, SESSION_DEADLINE,
                   stage_seconds=STAGE_SECONDS, upload_seconds=15 * 60,
                   micro_batch=1, accumulation=32,
-                  resume=RESUME if RESUME and RESUME['stage'] <= 3 else None, stages=[3])
+                  resume=resume_for(3), stages=[3])
+if not completed:
+    raise RuntimeError('Stage 4 stopped at the session deadline. Restart the runtime and resume from the latest checkpoint before evaluating or uploading a final model.')
+RESUME = None
 print('Stage 4 completed:', completed)
 ''')
 
@@ -339,12 +391,16 @@ print('Mineflayer probes passed:', sum(row['pass'] for row in mineflayer_rows), 
 
 md('''## 11. Upload the final model and an honest model card
 
-Uploads FP16 weights plus a card that records measured probe results and the
-limits of the mock harness. The token is used only in this runtime.
+Uploads FP16 weights, the model card, configuration, and the dataset-attempt
+manifest. The manifest records the declared licenses/configurations of sampled
+sources; it is needed for attribution review, especially for `odc-by` data. The
+token is used only in this runtime.
 ''')
-code('''from huggingface_hub import HfApi
+code('''from dataclasses import asdict
+from huggingface_hub import HfApi
 
 probe_summary = {row['case']: bool(row['pass']) for row in results + mineflayer_rows}
+manifest_path = Path('data_cache') / 'manifest.json'
 card = f"""---
 license: apache-2.0
 tags: [byte-level, mineflayer, minecraft, phase19]
@@ -360,27 +416,42 @@ session (not four full hours of compute). Not compatible with Phase 18 weights.
 * Stage 3: 40/30/30 ReAct/search/code
 * Stage 4: 50/20/15/15 edit/pt/code/Mineflayer
 
+## Data and attribution
+
+`provenance/dataset_manifest.json` records every automated source attempt,
+declared license, config and count. The owner supplied any files under
+`data_cache/manual_data/`; they are not uploaded, and the owner is responsible
+for their permissions and attribution. Review all source terms before making
+this model public. In particular, `odc-by` sources require attribution.
+
 Mineflayer ability was measured with a **mock** Node harness, not a real server:
 generated calls were parsed and replayed against a fake bot. A pass means the
 mock accepted the call sequence, not that the model can play Minecraft.
 
 Probe results in this run: {json.dumps(probe_summary)}
 
-Limitations: small decoder, weak reward proxies, synthetic fallback data, no
-held-out benchmark, and no evidence of generalisation. Use at your own risk.
+Limitations: small decoder, weak reward proxies, tiny synthetic tool/edit
+fixtures, no held-out benchmark, and no evidence of generalisation. Use at your
+own risk.
 """
 api = HfApi(token=HF_TOKEN)
 api.create_repo(REPO_ID, repo_type='model', private=True, exist_ok=True)
-torch.save({k: v.detach().cpu().half() for k, v in model.state_dict().items()}, 'final_model_fp16.pt')
-(Path('final_model') ).mkdir(exist_ok=True)
-(Path('final_model') / 'config.json').write_text(json.dumps(cfg.__dict__, indent=2))
-(Path('final_model') / 'README.md').write_text(card)
+torch.save({key: value.detach().cpu().half() for key, value in model.state_dict().items()},
+           'final_model_fp16.pt')
+Path('final_model').mkdir(exist_ok=True)
+(Path('final_model') / 'config.json').write_text(json.dumps(asdict(cfg), indent=2), encoding='utf8')
+(Path('final_model') / 'README.md').write_text(card, encoding='utf8')
 api.upload_file(path_or_fileobj='final_model_fp16.pt', path_in_repo='final/phase19_fp16.pt',
                 repo_id=REPO_ID, repo_type='model', token=HF_TOKEN)
 api.upload_file(path_or_fileobj='final_model/README.md', path_in_repo='README.md',
                 repo_id=REPO_ID, repo_type='model', token=HF_TOKEN)
 api.upload_file(path_or_fileobj='final_model/config.json', path_in_repo='final/config.json',
                 repo_id=REPO_ID, repo_type='model', token=HF_TOKEN)
+if manifest_path.exists():
+    api.upload_file(path_or_fileobj=str(manifest_path), path_in_repo='provenance/dataset_manifest.json',
+                    repo_id=REPO_ID, repo_type='model', token=HF_TOKEN)
+else:
+    print('WARNING: data manifest was not found; provenance was not uploaded.')
 print('Uploaded to https://huggingface.co/' + REPO_ID)
 ''')
 
