@@ -280,7 +280,18 @@ def test_local_corpus_is_real_licensed_data(tmp_path, monkeypatch):
 def test_discovery_manual_data_and_known_configs(tmp_path):
     from notebook import dataset_discovery as discovery
     assert discovery.dataset_config('HuggingFaceFW/fineweb-edu', 'en') == 'sample-10BT'
+    assert discovery.dataset_config('HuggingFaceFW/fineweb-2', 'pt') == 'por_Latn'
+    assert discovery.dataset_config('allenai/c4', 'pt') == 'pt'
+    assert discovery.dataset_config('allenai/c4', 'en') == 'en'
     assert 'odc-by' in discovery.ALLOWED
+    # Every curated source must have a reviewed, permissive declared license.
+    # OPUS-100 (license:unknown) and HuggingFaceH4/CodeAlpaca_20K (license:cc)
+    # were silently skipped in Colab and used to leave groups empty.
+    for names in discovery.CANDIDATES.values():
+        for name in names:
+            assert discovery.CURATED_LICENSES.get(name) in discovery.ALLOWED, name
+    assert 'Helsinki-NLP/opus-100' not in str(discovery.CANDIDATES)
+    assert 'HuggingFaceH4/CodeAlpaca_20K' not in str(discovery.CANDIDATES)
     manual = tmp_path / 'manual_data'; manual.mkdir()
     (manual / 'pt.txt').write_text('Olá mundo\nOlá mundo\n', encoding='utf8')
     groups_ = {'pt': ['texto existente'], 'en': [], 'code': []}

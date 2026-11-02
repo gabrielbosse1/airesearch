@@ -31,35 +31,56 @@ QUERIES = ['pt-br', 'portuguese', 'brazilian', 'code', 'programming', 'python',
 # collector ignored it, which is why a failed curated source ended in an upload
 # prompt instead of another dataset.
 KIND_QUERIES = {
-    'pt': ['portuguese text corpus', 'pt-br corpus', 'brazilian portuguese', 'opus-100 pt'],
+    'pt': ['portuguese text corpus', 'pt-br corpus', 'brazilian portuguese', 'portuguese web text'],
     'en': ['english text corpus', 'fineweb edu', 'openwebtext'],
     'code': ['code instruction dataset', 'code alpaca', 'python code dataset'],
     'react': ['tool use trajectories', 'react agent dataset'],
 }
 DEEP_QUERIES = [
     'portuguese', 'portugues', 'pt-br', 'brazilian portuguese text',
-    'portuguese wikipedia', 'portuguese books', 'opus portuguese',
+    'portuguese wikipedia', 'portuguese books', 'c4 portuguese',
     'english corpus', 'english web text', 'fineweb', 'wikipedia english',
     'code instruction', 'code alpaca', 'python functions', 'javascript code',
     'programming problems', 'source code',
 ]
 
-# Curated candidates.  These are starting points, not license or availability
-# guarantees: each is re-checked with ``dataset_info`` before a single row is
-# streamed.  FineWeb-Edu needs an explicit config because it has many.
+# Curated candidates, each with a *declared* permissive license on the Hub.
+# These are starting points, not availability guarantees: every one is
+# re-checked with ``dataset_info`` before a single row is streamed.  Sources
+# whose Hub card says ``license:unknown`` (Helsinki-NLP/opus-100) or an
+# ambiguous ``license:cc`` (HuggingFaceH4/CodeAlpaca_20K) are deliberately
+# absent -- they used to be skipped silently and leave a group empty.
 CANDIDATES = {
-    'pt': ['Helsinki-NLP/opus-100', 'Madras1/corpus-ptbr-v1', 'HuggingFaceFW/fineweb-2'],
-    'en': ['HuggingFaceFW/fineweb-edu', 'Helsinki-NLP/opus-100'],
-    'code': ['flwrlabs/code-alpaca-20k', 'HuggingFaceH4/CodeAlpaca_20K',
-             'm-a-p/CodeFeedback-Filtered-Instruction'],
+    'pt': ['allenai/c4', 'Madras1/corpus-ptbr-v1', 'HuggingFaceFW/fineweb-2'],
+    'en': ['HuggingFaceFW/fineweb-edu', 'allenai/c4'],
+    'code': ['flwrlabs/code-alpaca-20k', 'm-a-p/CodeFeedback-Filtered-Instruction',
+             'theblackcat102/evol-codealpaca-v1', 'google-research-datasets/mbpp'],
     'react': [],  # real ReAct rows come from data/github_raw/github_react.jsonl
 }
 DATASET_CONFIGS = {
+    ('allenai/c4', 'pt'): 'pt',
+    ('allenai/c4', 'en'): 'en',
+    ('HuggingFaceFW/fineweb-edu', 'en'): 'sample-10BT',
+    ('HuggingFaceFW/fineweb-2', 'pt'): 'por_Latn',
+    # Kept for older configs still referenced by downstream experiments.
     ('Helsinki-NLP/opus-100', 'pt'): 'en-pt',
     ('Helsinki-NLP/opus-100', 'en'): 'en-pt',
     ('uonlp/CulturaX', 'pt'): 'pt',
-    ('HuggingFaceFW/fineweb-edu', 'en'): 'sample-10BT',
-    ('HuggingFaceFW/fineweb-2', 'pt'): 'por_Latn',
+}
+
+# Licenses as declared on the Hub when these sources were reviewed
+# (2026-11-02).  ``dataset_info`` re-validates at run time; this table makes
+# the review auditable and stops an undeclared-license source from being
+# reintroduced as "curated" without a check.
+CURATED_LICENSES = {
+    'allenai/c4': 'odc-by',
+    'Madras1/corpus-ptbr-v1': 'odc-by',
+    'HuggingFaceFW/fineweb-2': 'odc-by',
+    'HuggingFaceFW/fineweb-edu': 'odc-by',
+    'flwrlabs/code-alpaca-20k': 'apache-2.0',
+    'm-a-p/CodeFeedback-Filtered-Instruction': 'apache-2.0',
+    'theblackcat102/evol-codealpaca-v1': 'apache-2.0',
+    'google-research-datasets/mbpp': 'cc-by-4.0',
 }
 
 # ODC-BY is attribution-only; its attribution requirement is retained in

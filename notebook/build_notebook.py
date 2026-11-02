@@ -203,7 +203,7 @@ md('''## 4. Search for and cache real datasets (no uploads)
 `discover()` searches the Hugging Face Hub for Portuguese, English, code and
 tool-trajectory corpora; those hits are **fed into `collect()`**, which verifies
 each declared license with `dataset_info`, skips gated/unknown/non-permissive
-sources, tries the right config (`en-pt`, `sample-10BT`, `por_Latn`, ...) and
+sources, tries the right config (C4 `pt`/`en`, `sample-10BT`, `por_Latn`, ...) and
 streams a bounded sample. It also mines the real corpora already checked into
 this repository: `data/github_raw/github_stories.jsonl` and `github_react.jsonl`
 (per-record SPDX licenses, `NOASSERTION` excluded), code blocks from those
