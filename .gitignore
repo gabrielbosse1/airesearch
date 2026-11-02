@@ -17,3 +17,11 @@ runs/phase15/eval_sandbox/
 
 # Phase 16 sandbox working directories are disposable execution scratch space.
 runs/phase16/sandbox/
+
+# Phase 19 Colab artifacts (the notebook writes these inside the checkout).
+data_cache/
+checkpoints/
+final_model/
+final_model_fp16.pt
+phone_model_fp16.zip
+phone_export/

@@ -853,3 +853,9 @@ The model emits references unconditionally, so an unmarked request fails closed 
 `ERROR: unresolved reference` rather than guessing an identifier.
 
 **Limits.** A reference only names what the request already contains; it cannot express "the commit before this one". One entity is marked per request, so choosing among several is untested. Refusal is judged by phrase and identifier shape, not meaning, and the refusal identifiers were generated to be absent rather than sampled from real failures. See `runs/phase18_report.md`.
+
+## Phase 19: clone-based Colab notebook
+
+The Phase 19 notebook no longer embeds source: it clones this repository, installs `requirements.txt`, then trains a phone-size byte model with a **Mineflayer player** stage (40% code, 40% Mineflayer JavaScript, 20% pt-br). 521 deterministic trajectories across navigation, mining, crafting, combat, building, inventory, chat and farming are validated by a Node mock of the Mineflayer API (`node --check` plus `node:vm` execution, no real server).
+
+Open `notebook/phase19_colab.ipynb` in Colab, or rebuild it with `python -m notebook.build_notebook`. Measured locally: 8/8 reference snippets and 521/521 trajectories pass the mock. This is a test double, not Minecraft, and the model starts from random weights.
