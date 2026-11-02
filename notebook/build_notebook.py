@@ -12,6 +12,13 @@ ROOT = Path(__file__).resolve().parent.parent
 REMOTE = subprocess.run(['git', '-C', str(ROOT), 'config', '--get', 'remote.origin.url'],
                         capture_output=True, text=True, check=False).stdout.strip()
 REPO_URL = REMOTE if REMOTE.startswith('http') else 'https://github.com/gabrielbosse1/airesearch.git'
+# A notebook built on a feature branch must clone that branch, or Colab would
+# silently run the old main-branch code (including its old upload prompt).  This
+# is a literal, not `git rev-parse HEAD`, so the generated notebook is
+# reproducible on any checkout (the builder/notebook consistency test relies on
+# that).  The clone cell falls back to the default branch if it ever disappears
+# (e.g. after this branch is merged and deleted); set it to '' for main.
+REPO_BRANCH = 'arena/e6c9092c-airesearch'
 
 cells = []
 
@@ -45,6 +52,11 @@ it does not embed a copy of the source. Run all cells in a fresh Colab runtime
 4. **A sandbox harness** validates generated JavaScript three ways: a static
    checker, `node --check` (parse only) and a Node mock of the Mineflayer API
    (`notebook/mineflayer_mock.js`) that records calls against a mock world.
+5. **No data uploads.** Cell 4 *searches* the Hugging Face Hub for permissively
+   licensed corpora, verifies each license, streams bounded samples, and also
+   mines the real corpora already checked into `data/github_raw/` plus this
+   repository's own source files. Discovery results feed collection directly;
+   a missing group triggers a deeper automatic search, never a file picker.
 
 **Reality check (read before trusting numbers).** The model starts from **random
 weights** and does not inherit the Phase 18 checkpoint. Four time-boxed stages on
@@ -71,7 +83,7 @@ from pathlib import Path
 
 SESSION_STARTED = time.time()
 REPO_URL = {REPO_URL!r}
-REPO_BRANCH = ''            # e.g. 'main'; empty means the default branch
+REPO_BRANCH = {REPO_BRANCH!r}   # '' means the default branch
 REPO_DIR = Path('/content/airesearch')
 
 if (REPO_DIR / '.git').exists():
@@ -81,7 +93,13 @@ else:
     command = ['git', 'clone', '--depth', '1']
     if REPO_BRANCH:
         command += ['--branch', REPO_BRANCH]
-    subprocess.run(command + [REPO_URL, str(REPO_DIR)], check=True)
+    attempt = subprocess.run(command + [REPO_URL, str(REPO_DIR)], check=False)
+    if attempt.returncode and REPO_BRANCH:
+        print('Branch clone failed; retrying the default branch.')
+        shutil.rmtree(REPO_DIR, ignore_errors=True)
+        subprocess.run(['git', 'clone', '--depth', '1', REPO_URL, str(REPO_DIR)], check=True)
+    elif attempt.returncode:
+        raise RuntimeError('git clone failed; check the repository URL and network access')
 
 %cd $REPO_DIR
 assert (REPO_DIR / 'notebook' / 'mineflayer_training_data.py').exists(), 'clone did not contain the Phase 19 sources'
@@ -180,63 +198,63 @@ def resume_for(stage):
 ''')
 
 
-md('''## 4. Discover and cache real datasets
+md('''## 4. Search for and cache real datasets (no uploads)
 
-Results include dataset IDs, declared license, source configuration and size where
-exposed. Unknown or non-permissive licenses are skipped. The collector includes
-Open Data Commons Attribution (`odc-by`) sources and preserves their provenance
-in `data_cache/manifest.json`; review the source terms and attribution obligations
-before publishing a model. `react` rows are not fabricated from chat messages.
+`discover()` searches the Hugging Face Hub for Portuguese, English, code and
+tool-trajectory corpora; those hits are **fed into `collect()`**, which verifies
+each declared license with `dataset_info`, skips gated/unknown/non-permissive
+sources, tries the right config (`en-pt`, `sample-10BT`, `por_Latn`, ...) and
+streams a bounded sample. It also mines the real corpora already checked into
+this repository: `data/github_raw/github_stories.jsonl` and `github_react.jsonl`
+(per-record SPDX licenses, `NOASSERTION` excluded), code blocks from those
+records, and this repository's own `*.py` sources for code bytes. Open Data
+Commons Attribution (`odc-by`) sources are accepted with their attribution
+retained in `data_cache/manifest.json`; review the terms before publishing a
+model. Chat messages are never relabelled as ReAct trajectories, and no
+language or code data is fabricated. **Nothing is uploaded to this notebook.**
 ''')
 code('''from notebook.dataset_discovery import collect, discover, group_counts
 from notebook.preprocess import synthetic
 
-reports = discover(limit=5)
-groups = collect(max_rows=4000, max_bytes=8_000_000)
-groups.update(synthetic())
+# Search results are the collector's candidate list, not just a printout.
+reports = discover(limit=8)
+groups = collect(max_rows=4000, max_bytes=8_000_000, min_rows=200,
+                 reports=reports, search_limit=8)
+# Small labelled task fixtures (search/edit/ReAct prompts) extend, never
+# overwrite, the real rows found above.
+for kind, rows in synthetic().items():
+    groups.setdefault(kind, [])
+    groups[kind] = list(dict.fromkeys(groups[kind] + rows))
 print(group_counts(groups))
 ''')
 
 
-md('''### Required language/code data preflight
+md('''### Required language/code data preflight (automatic retry)
 
-Stage 1 needs real `pt`, `en` and `code` rows. If a source is unavailable,
-this cell opens a Colab file picker for **your licensed** newline-delimited
-`pt.txt`, `en.txt` and/or `code.txt` files. It stores them under
-`data_cache/manual_data/` and merges them idempotently. No language or code
-fallback is fabricated; after upload, rerun this cell if it tells you a group is
-still missing. A small file makes the pipeline runnable but is not a meaningful
-training corpus, so review the printed counts before spending GPU time.
+Stage 1 needs real `pt`, `en` and `code` rows. If any are still empty,
+`fill_missing()` runs a **deeper Hub search plus another pass over the local
+repository corpora** and merges the results. It never opens a file picker and
+never asks you for data. Files that already exist under
+`data_cache/manual_data/` are merged silently and idempotently, but none are
+required. `data_cache/manifest.json` lists every source tried and exactly why it
+was skipped, so a failure here is a diagnosable search/network problem, not a
+request for an upload. No language or code fallback is fabricated; check the
+printed counts before spending GPU time.
 ''')
-code('''from notebook.dataset_discovery import MANUAL_KINDS, group_counts, merge_manual_data
+code('''from notebook.dataset_discovery import fill_missing, group_counts
 from notebook.train import check_groups
 
-manual_dir = Path('data_cache') / 'manual_data'
-manual_dir.mkdir(parents=True, exist_ok=True)
-missing_before_upload = [kind for kind in MANUAL_KINDS if not groups.get(kind)]
-if missing_before_upload:
-    print('Automatic collection is missing:', ', '.join(missing_before_upload))
-    print('Upload only UTF-8 text you are allowed to train on; filenames must be pt.txt, en.txt, or code.txt.')
-    try:
-        from google.colab import files
-        uploaded = files.upload()
-    except ImportError:
-        uploaded = {}
-        print('Not running in Colab. Copy files to', manual_dir.resolve(), 'then rerun this cell.')
-    for filename, payload in uploaded.items():
-        kind = Path(filename).stem.lower()
-        if kind not in MANUAL_KINDS or Path(filename).suffix.lower() != '.txt':
-            print('Ignored upload with unsupported name:', filename)
-            continue
-        (manual_dir / f'{kind}.txt').write_bytes(payload)
-        print('Saved', filename, 'as', manual_dir / f'{kind}.txt')
-
-manual_report = merge_manual_data(groups, manual_dir)
-print('Manual data:', json.dumps(manual_report, ensure_ascii=False))
+preflight = fill_missing(groups, cache_dir='data_cache')
+print('Preflight:', json.dumps(preflight, ensure_ascii=False))
+manifest = json.loads((Path('data_cache') / 'manifest.json').read_text(encoding='utf8'))
+summary = manifest[-1] if manifest else {}
+print('Search summary:', json.dumps({
+    key: summary.get(key) for key in
+    ('hub_attempts', 'group_counts', 'missing_groups', 'upload_required')}, ensure_ascii=False))
 print('All groups:', group_counts(groups))
 # Stop here, before Mineflayer generation or GPU training, with a useful error.
 check_groups(groups, stages=[0])
-print('Stage 1 data preflight passed.')
+print('Stage 1 data preflight passed; no files were requested.')
 ''')
 
 
@@ -419,10 +437,14 @@ session (not four full hours of compute). Not compatible with Phase 18 weights.
 ## Data and attribution
 
 `provenance/dataset_manifest.json` records every automated source attempt,
-declared license, config and count. The owner supplied any files under
-`data_cache/manual_data/`; they are not uploaded, and the owner is responsible
-for their permissions and attribution. Review all source terms before making
-this model public. In particular, `odc-by` sources require attribution.
+declared license, config and count. Data was found by the notebook itself: a
+Hub search plus the real corpora checked into this repository
+(`data/github_raw/*.jsonl`, per-record SPDX licenses) and first-party `*.py`
+sources for code bytes. No training files were uploaded by the user. Optional
+files already present under `data_cache/manual_data/` are merged silently; the
+owner is responsible for their permissions and attribution. Review all source
+terms before making this model public. In particular, `odc-by` sources require
+attribution, and first-party source files are labelled as such.
 
 Mineflayer ability was measured with a **mock** Node harness, not a real server:
 generated calls were parsed and replayed against a fake bot. A pass means the
