@@ -10,8 +10,13 @@ def search_ddg(query):
     return '\n'.join(f"{r.get('title', '')} | {r.get('href', '')} | {r.get('body', '')}" for r in results).encode('utf8')
 
 def minecraft_valid(text):
-    # Syntax check only, not execution against a real Minecraft server.
+    """Legacy Phase 19 command probe, kept only for the old reward test."""
     return bool(re.search(r'minecraft\.place_block\("[a-z_]+",\s*-?\d+,\s*-?\d+,\s*-?\d+\)', text))
+
+def mineflayer_valid(text):
+    """Static-check Mineflayer JavaScript. No parsing proof, no execution."""
+    from notebook.test_mineflayer import static_issues
+    return not static_issues(text)
 
 def grammar_score(text):
     # Toy heuristic, not a Portuguese grammar checker.
@@ -25,6 +30,7 @@ def reward(kind, text, draft=None, target=None):
             return float(any(isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) for n in ast.walk(tree)))
         except (SyntaxError, ValueError): return 0.0
     if kind == 'minecraft': return float(minecraft_valid(text))
+    if kind == 'mineflayer': return float(mineflayer_valid(text))
     if kind == 'pt': return .5 * grammar_score(text)
     if kind == 'edit' and draft is not None:
         match = re.search(r'\[EDIT pos=\d+ delete=\d+ bytes=[0-9a-f]*\]', text)

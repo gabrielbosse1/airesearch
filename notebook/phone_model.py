@@ -85,8 +85,10 @@ def generate(model, prompt, max_new=96, sample=False, temperature=1.0):
 def export_onnx(model, path):
     # ONNX uses the explicit mathematical causal attention path; no external weights
     # at this model size. Export CPU FP32 for compatibility; FP16 .pt is smaller.
+    # ``dynamo=False`` selects the TorchScript exporter, which honours opset 17 and
+    # dynamic_axes; the newer dynamo path emits ops that older onnxruntime rejects.
     model = model.to('cpu').float().eval()
     torch.onnx.export(model, (torch.tensor([[256, 79, 108, 195, 161]], dtype=torch.long),), path,
                       input_names=['input_ids'], output_names=['logits'],
                       dynamic_axes={'input_ids': {0:'batch', 1:'sequence'}, 'logits': {0:'batch', 1:'sequence'}},
-                      opset_version=17, do_constant_folding=True)
+                      opset_version=17, do_constant_folding=True, dynamo=False)
