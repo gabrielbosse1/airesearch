@@ -168,7 +168,7 @@ class SwiGLUFFN(nn.Module):
     """SwiGLU feed-forward: ``[SiLU(x W_value) (x) (x W_branch)] W_out``.
 
     All three projections are bias-free. Parameter names deliberately avoid
-    the word ``gate``: ``tests/test_phase16.py`` forbids legacy
+    the word ``gate``: ``tests/test_foundation.py`` forbids legacy
     copy/pointer/gate module names, and a SwiGLU branch is not that mechanism.
     With ``d_model=1024, d_ff=4096`` this is 3 * 1024 * 4096 = 12.58M
     parameters per layer instead of 2 * 1024 * 4096 for a GELU FFN.

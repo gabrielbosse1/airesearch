@@ -1,10 +1,14 @@
-torch>=2.5.1
+# ByteCore-DualMemory — Phase 22/23 runtime requirements.
+# CPU-only verification works with these pins; a Colab T4 run needs no extras.
+torch>=2.5.1            # enable_gqa / SDPA fused kernels, torch.amp.GradScaler
 numpy
-pyyaml
-Pillow
-matplotlib
-# Phase 22: real streaming HF datasets, Hub checkpoints, notebook validation
+pyyaml                  # configs/*.yaml
+
+# Real streaming Hugging Face datasets, Hub checkpoints, notebook validation.
 datasets>=3,<5
 huggingface_hub>=0.25,<2
 tqdm
 nbformat>=5
+
+# Regression suite.
+pytest

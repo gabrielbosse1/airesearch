@@ -2,7 +2,7 @@
   "schema": 1,
   "environment": {
     "python": "3.11.2",
-    "torch": "2.5.1+cu124",
+    "torch": "2.15.0+cu132",
     "platform": "Linux-6.1.158+-x86_64-with-glibc2.36",
     "cuda_available": false,
     "threads": 1
@@ -197,15 +197,15 @@
     "scaled_in_target_150_200m": true,
     "legacy_phase16_tiny": 42309,
     "ratio": 4345.0,
-    "meta_construction_seconds": 0.0388,
-    "full_cpu_build_seconds": 2.172
+    "meta_construction_seconds": 1.0515,
+    "full_cpu_build_seconds": 1.566
   },
   "cpu_forward": {
     "scaled_L64": {
       "batch": 1,
       "seq_len": 64,
       "repeats": 2,
-      "mean_forward_ms": 261.067,
+      "mean_forward_ms": 278.009,
       "logits_shape": [
         1,
         64,
@@ -216,7 +216,7 @@
       "batch": 1,
       "seq_len": 256,
       "repeats": 2,
-      "mean_forward_ms": 917.562,
+      "mean_forward_ms": 792.758,
       "logits_shape": [
         1,
         256,
@@ -227,15 +227,15 @@
       "batch": 2,
       "seq_len": 16,
       "repeats": 5,
-      "mean_forward_ms": 0.768,
+      "mean_forward_ms": 0.518,
       "logits_shape": [
         2,
         16,
         261
       ]
     },
-    "tiny_forward_backward_ms": 4.275,
-    "tiny_loss": 5.565217,
+    "tiny_forward_backward_ms": 2.762,
+    "tiny_loss": 5.590594,
     "note": "measured on CPU; T4 numbers require Colab"
   },
   "vram": {
@@ -409,24 +409,24 @@
   "pipeline_smoke": {
     "phase1": {
       "steps": 2,
-      "loss": 5.4849653244018555,
-      "checkpoint_bytes": 1386741,
+      "loss": 5.529086589813232,
+      "checkpoint_bytes": 1388380,
       "resumed": false,
       "precision": "float32",
-      "packer_carry_bytes": 2
+      "packer_carry_bytes": 109
     },
     "phase2": {
       "steps": 2,
-      "loss": 5.510031700134277,
-      "checkpoint_bytes": 1386741,
+      "loss": 5.511492729187012,
+      "checkpoint_bytes": 1388380,
       "resumed": false,
       "precision": "float32",
-      "packer_carry_bytes": 2
+      "packer_carry_bytes": 109
     },
     "phase3": {
       "steps": 2,
-      "loss": 11.305245399475098,
-      "checkpoint_bytes": 1385807,
+      "loss": 11.13818359375,
+      "checkpoint_bytes": 1386346,
       "resumed": false,
       "precision": "float32",
       "packer_carry_bytes": 0
@@ -434,7 +434,7 @@
     "resume": {
       "step": 2,
       "resumed": true,
-      "carry": 2
+      "carry": 109
     },
     "dominance": {
       "search_gt_guess": true,
