@@ -1,0 +1,457 @@
+{
+  "schema": 1,
+  "environment": {
+    "python": "3.11.2",
+    "torch": "2.5.1+cu124",
+    "platform": "Linux-6.1.158+-x86_64-with-glibc2.36",
+    "cuda_available": false,
+    "threads": 1
+  },
+  "scope": "OFFLINE CPU benchmark. No HF dataset downloaded, no GPU/VRAM measurement, no model-quality claim.",
+  "architecture": {
+    "components": {
+      "pre_norm_rmsnorm": true,
+      "swiglu_ffn": true,
+      "rope": true,
+      "gqa": {
+        "n_heads": 8,
+        "n_kv_heads": 2,
+        "cache_fraction": 0.25
+      },
+      "iterative_refinement": {
+        "steps": 2,
+        "rank": 256,
+        "weight_tied": true,
+        "alpha_init": 0.0
+      },
+      "gradient_checkpointing": true,
+      "learned_absolute_positions": false
+    },
+    "parameter_breakdown": {
+      "attention_per_layer": 2624000,
+      "swiglu_per_layer": 12582912,
+      "norms_per_layer": 2048,
+      "layers_total": 182507520,
+      "refinement_total": 787458,
+      "embedding_total": 267264,
+      "head_total": 267525,
+      "final_norm_total": 1024,
+      "sum": 183830791,
+      "meta_count": 183830791,
+      "exact_match": true
+    },
+    "max_seq_len": 2048,
+    "training_seq_len": 1024
+  },
+  "dataset_inventory": {
+    "phase1": [
+      {
+        "id": "bigcode/the-stack",
+        "config": "",
+        "data_dir": "data/python",
+        "license": "permissively-licensed source files; per-file licence in `licenses`",
+        "url": "https://huggingface.co/datasets/bigcode/the-stack",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "bigcode/the-stack",
+        "config": "",
+        "data_dir": "data/javascript",
+        "license": "permissively-licensed source files; per-file licence in `licenses`",
+        "url": "https://huggingface.co/datasets/bigcode/the-stack",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "meryyllebr543/stack-edu-huggingface",
+        "config": "python",
+        "data_dir": "",
+        "license": "mirror of HuggingFaceTB/stack-edu (mixed open licences)",
+        "url": "https://huggingface.co/datasets/meryyllebr543/stack-edu-huggingface",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "TucanoBR/GigaVerbo",
+        "config": "",
+        "data_dir": "",
+        "license": "concatenation of open PT corpora; review upstream licences",
+        "url": "https://huggingface.co/datasets/TucanoBR/GigaVerbo",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "HuggingFaceFW/fineweb-2",
+        "config": "por_Latn",
+        "data_dir": "",
+        "license": "ODC-BY / CommonCrawl terms",
+        "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-2",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "HuggingFaceFW/fineweb-edu",
+        "config": "sample-10BT",
+        "data_dir": "",
+        "license": "ODC-BY",
+        "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "mlfoundations/dclm-baseline-1.0",
+        "config": "",
+        "data_dir": "",
+        "license": "CC-BY-4.0",
+        "url": "https://huggingface.co/datasets/mlfoundations/dclm-baseline-1.0",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "open-web-math/open-web-math",
+        "config": "",
+        "data_dir": "",
+        "license": "mixed web content; see dataset card",
+        "url": "https://huggingface.co/datasets/open-web-math/open-web-math",
+        "downloaded_here": "false"
+      }
+    ],
+    "phase2": [
+      {
+        "id": "HuggingFaceH4/no_robots",
+        "config": "",
+        "data_dir": "",
+        "license": "CC BY-NC 4.0 -- NON-COMMERCIAL, attribute Hugging Face H4",
+        "url": "https://huggingface.co/datasets/HuggingFaceH4/no_robots",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "TucanoBR/Tucano-SFT",
+        "config": "",
+        "data_dir": "",
+        "license": "derived from GPT-4 translated data; review upstream terms",
+        "url": "https://huggingface.co/datasets/TucanoBR/Tucano-SFT",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "argilla/distilabel-sft-easy",
+        "config": "default",
+        "data_dir": "",
+        "license": "distilabel-generated synthetic SFT; review upstream model terms",
+        "url": "https://huggingface.co/datasets/argilla/distilabel-sft-easy",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "TESS-Computer/minecraft-vla-stage3",
+        "config": "",
+        "data_dir": "",
+        "license": "VLM-annotated gameplay; review dataset card",
+        "url": "https://huggingface.co/datasets/TESS-Computer/minecraft-vla-stage3",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "vanyacohen/MET-Bench-Minecraft",
+        "config": "",
+        "data_dir": "",
+        "license": "scripted trajectories; review dataset card",
+        "url": "https://huggingface.co/datasets/vanyacohen/MET-Bench-Minecraft",
+        "downloaded_here": "false"
+      },
+      {
+        "id": "m-a-p/CodeFeedback-Filtered-Instruction",
+        "config": "",
+        "data_dir": "",
+        "license": "Apache-2.0 (contains OpenAI-generated text)",
+        "url": "https://huggingface.co/datasets/m-a-p/CodeFeedback-Filtered-Instruction",
+        "downloaded_here": "false"
+      }
+    ],
+    "search_queries": [
+      "the-stack python javascript",
+      "fineweb-edu sample 10BT",
+      "dclm baseline 1.0",
+      "fineweb-2 por_Latn Portuguese",
+      "Tucano GigaVerbo Portuguese",
+      "open-web-math",
+      "no_robots",
+      "argilla distilabel sft easy",
+      "Tucano-SFT Portuguese chat",
+      "minecraft trajectories thought action observation",
+      "minecraft VLA stage3 instruction",
+      "MET-Bench-Minecraft",
+      "minecraft VPT actions"
+    ],
+    "rejected": [
+      {
+        "id": "bigcode/the-stack-v2",
+        "reason": "gated (terms + contact info)"
+      },
+      {
+        "id": "oscar-corpus/OSCAR-2301",
+        "reason": "manually gated / access suspended"
+      },
+      {
+        "id": "HuggingFaceTB/stack-edu",
+        "reason": "blob_id only; needs separate S3 fetch"
+      }
+    ],
+    "no_downloads_in_sandbox": true,
+    "reason": "huggingface.co is not on the sandbox network allowlist; Colab runs load_dataset"
+  },
+  "parameters": {
+    "scaled": 183830791,
+    "scaled_in_target_150_200m": true,
+    "legacy_phase16_tiny": 42309,
+    "ratio": 4345.0,
+    "meta_construction_seconds": 0.0388,
+    "full_cpu_build_seconds": 2.172
+  },
+  "cpu_forward": {
+    "scaled_L64": {
+      "batch": 1,
+      "seq_len": 64,
+      "repeats": 2,
+      "mean_forward_ms": 261.067,
+      "logits_shape": [
+        1,
+        64,
+        261
+      ]
+    },
+    "scaled_L256": {
+      "batch": 1,
+      "seq_len": 256,
+      "repeats": 2,
+      "mean_forward_ms": 917.562,
+      "logits_shape": [
+        1,
+        256,
+        261
+      ]
+    },
+    "tiny_gated_stack": {
+      "batch": 2,
+      "seq_len": 16,
+      "repeats": 5,
+      "mean_forward_ms": 0.768,
+      "logits_shape": [
+        2,
+        16,
+        261
+      ]
+    },
+    "tiny_forward_backward_ms": 4.275,
+    "tiny_loss": 5.565217,
+    "note": "measured on CPU; T4 numbers require Colab"
+  },
+  "vram": {
+    "analytic_estimates_gb": {
+      "B4-L1024-ckptTrue": 3.973,
+      "B4-L2048-ckptTrue": 4.389,
+      "B32-L2048-ckptTrue": 9.34,
+      "B4-L2048-ckptFalse": 9.272,
+      "B6-L2048-ckptFalse": 12.067
+    },
+    "default_B4_L1024_gb": 3.973,
+    "target_band_gb": [
+      10.0,
+      12.0
+    ],
+    "fill_ladder_measured": false,
+    "fill_ladder_target_met": false,
+    "candidates": [
+      {
+        "micro_batch_size": 4,
+        "seq_len": 1024,
+        "gradient_checkpointing": true,
+        "estimated_gb": 3.973,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 4,
+        "seq_len": 2048,
+        "gradient_checkpointing": true,
+        "estimated_gb": 4.389,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 8,
+        "seq_len": 2048,
+        "gradient_checkpointing": true,
+        "estimated_gb": 5.096,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 12,
+        "seq_len": 2048,
+        "gradient_checkpointing": true,
+        "estimated_gb": 5.803,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 16,
+        "seq_len": 2048,
+        "gradient_checkpointing": true,
+        "estimated_gb": 6.511,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 24,
+        "seq_len": 2048,
+        "gradient_checkpointing": true,
+        "estimated_gb": 7.925,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 32,
+        "seq_len": 2048,
+        "gradient_checkpointing": true,
+        "estimated_gb": 9.34,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 4,
+        "seq_len": 2048,
+        "gradient_checkpointing": false,
+        "estimated_gb": 9.272,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 6,
+        "seq_len": 2048,
+        "gradient_checkpointing": false,
+        "estimated_gb": 12.067,
+        "estimated_over_device": false,
+        "measured": false,
+        "peak_allocated_gb": null
+      },
+      {
+        "micro_batch_size": 8,
+        "seq_len": 2048,
+        "gradient_checkpointing": false,
+        "estimated_gb": 14.862,
+        "estimated_over_device": true,
+        "measured": false,
+        "peak_allocated_gb": null,
+        "skipped": "analytic estimate exceeds device memory; would OOM"
+      },
+      {
+        "micro_batch_size": 32,
+        "seq_len": 2048,
+        "gradient_checkpointing": false,
+        "estimated_gb": 48.402,
+        "estimated_over_device": true,
+        "measured": false,
+        "peak_allocated_gb": null,
+        "skipped": "analytic estimate exceeds device memory; would OOM"
+      }
+    ],
+    "measured_vram_gb": null,
+    "unmeasured_reason": "no CUDA device in the Arena sandbox"
+  },
+  "precision": {
+    "requested": "bfloat16",
+    "resolved": "float32",
+    "device": "cpu",
+    "capability": null,
+    "bf16_supported": false,
+    "autocast": false,
+    "scaler_required": false,
+    "fallback": true,
+    "reason": "CPU: float32 master weights; no autocast (Colab resolves precision on GPU)"
+  },
+  "reward": {
+    "all_orderings_satisfied": true,
+    "ordering": {
+      "search_gt_guess": true,
+      "search_gt_lucky_guess": true,
+      "efficient_edit_gt_thrashing": true,
+      "past_action_is_immutable": true
+    },
+    "example_totals": {
+      "search_and_use": 2.8,
+      "wrong_guess": -2.0,
+      "lucky_guess": 0.5,
+      "efficient_edit": 2.8,
+      "thrashing": -2.25,
+      "edit_in_past_block": 1.8
+    }
+  },
+  "final_eval": {
+    "oracle_mode": true,
+    "cases_passed": 4,
+    "cases_total": 4,
+    "decontamination": "unverified",
+    "note": "scripted oracle proves the scorer, NOT the model"
+  },
+  "sources": {
+    "react_labels_present": true,
+    "no_fabricated_observation": true,
+    "phase_coverage": {
+      "explore": 1,
+      "gather": 3,
+      "craft": 1,
+      "build": 1
+    },
+    "registry_sources": 2,
+    "search_queries": 13
+  },
+  "pipeline_smoke": {
+    "phase1": {
+      "steps": 2,
+      "loss": 5.4849653244018555,
+      "checkpoint_bytes": 1386741,
+      "resumed": false,
+      "precision": "float32",
+      "packer_carry_bytes": 2
+    },
+    "phase2": {
+      "steps": 2,
+      "loss": 5.510031700134277,
+      "checkpoint_bytes": 1386741,
+      "resumed": false,
+      "precision": "float32",
+      "packer_carry_bytes": 2
+    },
+    "phase3": {
+      "steps": 2,
+      "loss": 11.305245399475098,
+      "checkpoint_bytes": 1385807,
+      "resumed": false,
+      "precision": "float32",
+      "packer_carry_bytes": 0
+    },
+    "resume": {
+      "step": 2,
+      "resumed": true,
+      "carry": 2
+    },
+    "dominance": {
+      "search_gt_guess": true,
+      "search_gt_lucky_guess": true,
+      "efficient_edit_gt_thrashing": true,
+      "past_action_is_immutable": true
+    },
+    "measured_vram": false
+  },
+  "checkpoint_names": [
+    "checkpoint_phase1.pt",
+    "checkpoint_phase2.pt",
+    "final_model.pt"
+  ],
+  "notebooks": [
+    "01_setup_and_pretrain.ipynb",
+    "02_distill_and_align.ipynb",
+    "03_rl_and_agent.ipynb"
+  ]
+}

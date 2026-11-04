@@ -1,0 +1,402 @@
+{
+  "section": "21.6 layer-by-layer activation analysis",
+  "checkpoint": "/home/user/airesearch/runs/phase21/checkpoints/baseline_stage4.pt",
+  "model": {
+    "missing_keys": [],
+    "unexpected_keys": [],
+    "load_warning": null,
+    "parameters": 245088,
+    "config": {
+      "vocab_size": 268,
+      "d_model": 48,
+      "n_layers": 12,
+      "n_heads": 4,
+      "d_ff": 96,
+      "max_seq_len": 96,
+      "dropout": 0.0,
+      "gradient_checkpointing": false
+    }
+  },
+  "input": "Olá, como você",
+  "input_ids": [
+    256,
+    79,
+    108,
+    195,
+    161,
+    44,
+    32,
+    99,
+    111,
+    109,
+    111,
+    32,
+    118,
+    111,
+    99,
+    195,
+    170
+  ],
+  "layers": [
+    {
+      "layer": "block_01",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.057553,
+      "std": 1.892971,
+      "max_abs": 6.306652,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_02",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.079387,
+      "std": 2.041028,
+      "max_abs": 6.814827,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_03",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.092072,
+      "std": 2.137637,
+      "max_abs": 7.258292,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_04",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.09287,
+      "std": 2.208399,
+      "max_abs": 7.426204,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_05",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.095143,
+      "std": 2.278913,
+      "max_abs": 7.530763,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_06",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.091388,
+      "std": 2.334721,
+      "max_abs": 7.72535,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_07",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.09029,
+      "std": 2.236615,
+      "max_abs": 7.364764,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_08",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.091379,
+      "std": 2.227091,
+      "max_abs": 6.574203,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_09",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.093468,
+      "std": 2.011705,
+      "max_abs": 6.295686,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_10",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.116529,
+      "std": 1.999242,
+      "max_abs": 7.491989,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_11",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.099213,
+      "std": 2.128294,
+      "max_abs": 6.381766,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "block_12",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.094304,
+      "std": 2.651273,
+      "max_abs": 9.097075,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "embedding",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.002978,
+      "std": 0.154058,
+      "max_abs": 0.423196,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "final_norm",
+      "shape": [
+        1,
+        17,
+        48
+      ],
+      "mean": -0.015239,
+      "std": 1.640425,
+      "max_abs": 5.217826,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    },
+    {
+      "layer": "logits",
+      "shape": [
+        1,
+        17,
+        268
+      ],
+      "mean": -5.766261,
+      "std": 4.622903,
+      "max_abs": 11.744143,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.252634,
+      "nonfinite": 0
+    },
+    {
+      "layer": "positional",
+      "shape": [
+        17,
+        48
+      ],
+      "mean": -0.001799,
+      "std": 0.092517,
+      "max_abs": 0.353656,
+      "zero_fraction": 0.0,
+      "saturated_fraction": 0.0,
+      "nonfinite": 0
+    }
+  ],
+  "block_to_block_deltas": [
+    {
+      "layers": "block_01->block_02",
+      "relative_change": 0.38536,
+      "cosine": 0.92682
+    },
+    {
+      "layers": "block_02->block_03",
+      "relative_change": 0.54608,
+      "cosine": 0.86659
+    },
+    {
+      "layers": "block_03->block_04",
+      "relative_change": 0.24622,
+      "cosine": 0.97873
+    },
+    {
+      "layers": "block_04->block_05",
+      "relative_change": 0.18746,
+      "cosine": 0.99031
+    },
+    {
+      "layers": "block_05->block_06",
+      "relative_change": 0.14113,
+      "cosine": 0.99507
+    },
+    {
+      "layers": "block_06->block_07",
+      "relative_change": 0.71011,
+      "cosine": 0.87367
+    },
+    {
+      "layers": "block_07->block_08",
+      "relative_change": 0.43784,
+      "cosine": 0.94428
+    },
+    {
+      "layers": "block_08->block_09",
+      "relative_change": 0.23791,
+      "cosine": 0.97378
+    },
+    {
+      "layers": "block_09->block_10",
+      "relative_change": 0.20763,
+      "cosine": 0.97828
+    },
+    {
+      "layers": "block_10->block_11",
+      "relative_change": 0.41766,
+      "cosine": 0.92945
+    },
+    {
+      "layers": "block_11->block_12",
+      "relative_change": 0.617,
+      "cosine": 0.87251
+    }
+  ],
+  "final_distribution": {
+    "softmax_finite": true,
+    "softmax_sum": 1.0,
+    "valid_distribution": true,
+    "entropy_nats": 0.9516,
+    "max_entropy_nats": 5.591,
+    "uniformity": 0.1702,
+    "argmax_id": 32,
+    "argmax_label": "' '",
+    "top10": [
+      {
+        "id": 32,
+        "label": "' '",
+        "probability": 0.815451
+      },
+      {
+        "id": 44,
+        "label": "','",
+        "probability": 0.071425
+      },
+      {
+        "id": 195,
+        "label": "'Ã'",
+        "probability": 0.017102
+      },
+      {
+        "id": 46,
+        "label": "'.'",
+        "probability": 0.01431
+      },
+      {
+        "id": 63,
+        "label": "'?'",
+        "probability": 0.008973
+      },
+      {
+        "id": 117,
+        "label": "'u'",
+        "probability": 0.008889
+      },
+      {
+        "id": 115,
+        "label": "'s'",
+        "probability": 0.008659
+      },
+      {
+        "id": 109,
+        "label": "'m'",
+        "probability": 0.006545
+      },
+      {
+        "id": 114,
+        "label": "'r'",
+        "probability": 0.00504
+      },
+      {
+        "id": 97,
+        "label": "'a'",
+        "probability": 0.00442
+      }
+    ],
+    "probability_mass": {
+      "raw_bytes_0_255": 0.99972,
+      "BOS_256_untrained_target": 1e-05,
+      "EOS_257": 0.000268,
+      "PAD_and_reserved_258_267": 2e-06,
+      "ascii_letters": 0.061109,
+      "space": 0.815451,
+      "utf8_continuation_0x80_0xbf": 0.00054,
+      "ascii_control_0_31": 0.000175
+    }
+  },
+  "flags": {
+    "early_layers_produce_reasonable_vectors": true,
+    "middle_layers_transform_activations": true,
+    "final_distribution_valid": true,
+    "garbage_propagating": false,
+    "dead_layers": 0
+  },
+  "interpretation": "Activations are finite and transform across layers: the network is computationally healthy. The failure is in WHAT the output distribution encodes, not in garbage propagating through dead or exploding layers."
+}

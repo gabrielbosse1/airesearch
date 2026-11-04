@@ -3,3 +3,8 @@ numpy
 pyyaml
 Pillow
 matplotlib
+# Phase 22: real streaming HF datasets, Hub checkpoints, notebook validation
+datasets>=3,<5
+huggingface_hub>=0.25,<2
+tqdm
+nbformat>=5

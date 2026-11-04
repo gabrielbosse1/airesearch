@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "oracle_mode": true,
+  "checkpoint": null,
+  "note": "SCRIPTED ORACLE -- proves the scorer works, NOT model capability",
+  "cases_total": 4,
+  "cases_passed": 4,
+  "pass_rate": 1.0,
+  "all_passed": true,
+  "decontamination": {
+    "status": "unverified",
+    "shards_available": false,
+    "repo_training_corpora": {
+      "scanned_files": 3,
+      "scanned_bytes": 40351,
+      "matches": []
+    },
+    "training_shards": {
+      "scanned_files": 0,
+      "scanned_bytes": 0,
+      "matches": []
+    },
+    "legacy_replay": {
+      "scanned_files": 2,
+      "scanned_bytes": 35203,
+      "matches": []
+    },
+    "scanned_scope": "training corpora + shards only (evaluator/docs excluded)",
+    "cases": [
+      {
+        "name": "minecraft_novel_goal",
+        "sha256": "8feeb933395a7fff98db25ac6547758e75b164decc84cc89f974bb4ac0ccbe31"
+      },
+      {
+        "name": "search_required",
+        "sha256": "19dc197fa688fd074f052d60975deff055a4fb0ad0c6dfabaa9d2dc91428f724"
+      },
+      {
+        "name": "one_or_two_edits",
+        "sha256": "582b734300be19f6fcbc7e467c9b4ce2edf652c176bab7e171aa93469a81bb84"
+      },
+      {
+        "name": "memory_with_distractor",
+        "sha256": "8ec08219a2d5be3d04a71720f986aee1afcf05ddde4042d7987fcd7da8dff567"
+      }
+    ],
+    "note": "'unverified' means no Phase 22 shard was present locally to scan; the Colab run must re-run this with --shard-dir data_cache_phase22. Never report 'clean' on an assumption."
+  },
+  "reward_weights": {
+    "correct_final": 1.0,
+    "per_edit_token": -0.5,
+    "verified_edit_fix": 0.8,
+    "wrong_guess_without_search": -2.0,
+    "lucky_guess_without_search": -0.5,
+    "search_and_use": 1.5,
+    "search_used_but_wrong": 0.5,
+    "search_ignored": 0.1,
+    "illegal_edit": -1.0,
+    "thrashing_per_extra_edit": -0.75,
+    "max_efficient_edits": 2
+  },
+  "results": [
+    {
+      "name": "minecraft_novel_goal",
+      "passed": true,
+      "score": 1.0,
+      "checks": {
+        "answer_present": true,
+        "expected_answer": true,
+        "contains:lava": true,
+        "contains:agua": true,
+        "contains:pedregulho": true,
+        "excludes:obsidiana": true
+      },
+      "detail": {
+        "trajectory_bytes": 674,
+        "edits": 0,
+        "illegal_edits": 0,
+        "searches": 0,
+        "observations": 4,
+        "trajectory_preview": "Goal: Build a cobblestone generator\nYou have a Minecraft world, a bucket of water and a lava source.\nGive the exact sequence of actions.\n[PAST_ACTION: executed]\nAction: nenhuma acao executada\n[/PAST_ACTION]\nThought: explorar e localizar lava\nAction: explore lava source\nObservation: lava encontrada na caverna\nThought: reunir agua com balde\nAction: gather water bucket\nObservation: balde com agua no "
+      }
+    },
+    {
+      "name": "search_required",
+      "passed": true,
+      "score": 1.0,
+      "checks": {
+        "answer_present": true,
+        "expected_answer": true,
+        "contains:search_ddg": true,
+        "contains:Observation:": true,
+        "contains:downloads": true,
+        "excludes:sem busca": true,
+        "used_search_tool": true,
+        "used_observation": true,
+        "search_result_used": true
+      },
+      "detail": {
+        "trajectory_bytes": 376,
+        "edits": 0,
+        "illegal_edits": 0,
+        "searches": 1,
+        "observations": 1,
+        "trajectory_preview": "Question: Qual e o numero de downloads do dataset no_robots em 2026?\nThis value changes over time. Do not guess from memory.\n[PAST_ACTION: executed]\nAction: nenhuma acao executada\n[/PAST_ACTION]\nAction: search_ddg(\"no_robots downloads 2026\")\nObservation: no_robots downloads 2026 = consulte a busca: no_robots downloads 2026\nAnswer: consulte a busca: no_robots downloads 2026\n"
+      }
+    },
+    {
+      "name": "one_or_two_edits",
+      "passed": true,
+      "score": 1.0,
+      "checks": {
+        "answer_present": true,
+        "expected_answer": true,
+        "contains:pedregulho": true,
+        "contains:[EDIT": true,
+        "excludes:obsidiana": true,
+        "edit_count_in_range": true,
+        "edits_only_in_current_draft": true,
+        "temporal_markers_present": true,
+        "verified_edit_fix": true
+      },
+      "detail": {
+        "trajectory_bytes": 310,
+        "edits": 1,
+        "illegal_edits": 0,
+        "searches": 0,
+        "observations": 0,
+        "trajectory_preview": "Question: agua + lava produzem o que?\n[PAST_ACTION: executed]\nAction: nenhuma acao executada\n[/PAST_ACTION]\nInitial draft: agua + lava produzem obsidiana\nFix the draft with the minimum number of edits.\n[CURRENT_DRAFT: editable]\n[EDIT at=21 del=9 ins_b64=\"cGVkcmVndWxobw==\"]\n[/CURRENT_DRAFT]\nAnswer: pedregulho\n"
+      }
+    },
+    {
+      "name": "memory_with_distractor",
+      "passed": true,
+      "score": 1.0,
+      "checks": {
+        "answer_present": true,
+        "expected_answer": true,
+        "contains:7419": true,
+        "excludes:9082": true
+      },
+      "detail": {
+        "trajectory_bytes": 279,
+        "edits": 0,
+        "illegal_edits": 0,
+        "searches": 0,
+        "observations": 1,
+        "trajectory_preview": "Memory injection:\nO codigo do cofre e 7419\nO codigo da porta e 9082\n\nQuery: Qual e o codigo do cofre?\n[PAST_ACTION: executed]\nAction: nenhuma acao executada\n[/PAST_ACTION]\nThought: usar apenas o fato injetado\nAction: recall cofre\nObservation: codigo do cofre = 7419\nAnswer: 7419\n"
+      }
+    }
+  ]
+}

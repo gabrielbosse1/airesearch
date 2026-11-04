@@ -34,6 +34,8 @@ from .tool_use import (MAX_ARGUMENT_BYTES, MAX_RESULT_BYTES, ROUTE_NAMES, TOOL_N
                        sanitize_result)
 # Phase 16 / ByteCore v2: the scalable foundation.
 from .foundation import (BOS, EOS, PAD, VOCAB_SIZE, CausalByteTransformer, FoundationConfig,
+                         IterativeRefinement, RMSNorm, SwiGLUFFN, apply_rotary, make_norm,
+                         repeat_kv, rotary_tables, rotate_half,
                          decode_ids, encode_bytes, load_foundation, save_foundation)
 from .react import (ReactLoop, ReactRun, ActionCall, format_action, format_observation,
                     last_action, observation_line, parse_action, render_prompt,
@@ -58,6 +60,8 @@ __all__ = [
     "ToolArgumentDecoder", "ToolRouteHead", "encode_tool_call", "encode_tool_result", "find_tool_call",
     "load_tool_policy", "pack_tool_request", "parse_tool_call", "sanitize_result",
     "BOS", "EOS", "PAD", "VOCAB_SIZE", "CausalByteTransformer", "FoundationConfig",
+    "IterativeRefinement", "RMSNorm", "SwiGLUFFN", "apply_rotary", "make_norm",
+    "repeat_kv", "rotary_tables", "rotate_half",
     "decode_ids", "encode_bytes", "load_foundation", "save_foundation",
     "ReactLoop", "ReactRun", "ActionCall", "format_action", "format_observation", "last_action",
     "observation_line", "parse_action", "render_prompt", "render_trajectory", "sandbox_observation",

@@ -1,10 +1,12 @@
 """Wall-clock bounded four-stage training with recoverable HF snapshots."""
 from __future__ import annotations
 
+import json
 import math
 import random
 import time
 from dataclasses import asdict
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
@@ -45,10 +47,76 @@ def _stages(stages) -> tuple[int, ...]:
     return selected
 
 
-def draw(groups, weights, count):
-    """Sample a checked mixture. Delegates validation to the shared helper."""
-    return sample_mix(groups, weights, count, rng=random)
+# Phase 21 recovery fix. A group with only a handful of unique rows must not be
+# allowed to occupy 30-50% of a stage's gradient updates: at 32 sequences per
+# optimizer step, four unique ``edit`` rows are replayed thousands of times per
+# stage while the tied byte embedding/output matrix stays fully trainable.
+MIN_DIVERSE_ROWS = 64
+LANGUAGE_GROUPS = ('pt', 'en', 'code')
+# Stages 3 and 4 (indices 2, 3) reserve this share of their updates for a
+# rehearsal of the Stage 1 bilingual mixture. Without it, both stages train
+# almost exclusively on code / tool templates and rewrite the shared byte
+# embedding, which is what produced the reported language collapse.
+REPLAY_FRACTION = 0.4
 
+
+def balanced_weights(groups, weights, min_unique=MIN_DIVERSE_ROWS):
+    """Scale each mixture weight by its unique-row diversity, then renormalise.
+
+    ``diversity = min(1, unique_rows / min_unique)``. Stage 1 (large pt/en/code
+    groups) and Stage 2 (521 Mineflayer rows) are essentially unchanged; a
+    4-row ``edit`` group at 50% drops to ~6% (and ``stage_mixture`` reduces it
+    further in Stage 4) instead of being replayed thousands of times per stage. Redistribution is proportional to ``w * diversity`` over
+    ALL groups, so no single group can absorb the removed mass.
+    """
+    if not isinstance(weights, dict) or not weights:
+        raise ValueError('weights must be a non-empty mapping')
+    if not isinstance(min_unique, int) or min_unique <= 0:
+        raise ValueError('min_unique must be a positive integer')
+    required = [kind for kind, weight in weights.items()
+                if isinstance(weight, (int, float)) and weight > 0 and groups.get(kind)]
+    if not required:
+        raise ValueError('at least one positively weighted non-empty group is required')
+    diversity = {kind: min(1.0, len(set(groups[kind])) / min_unique) for kind in required}
+    scaled = {kind: weights[kind] * diversity[kind] for kind in required}
+    total = sum(scaled.values())
+    if total <= 0:
+        raise ValueError('all groups have zero diversity')
+    original = sum(weights[kind] for kind in required)
+    return {kind: (original * scaled.get(kind, 0.0) / total if kind in scaled else 0.0)
+            for kind in weights}
+
+
+def stage_mixture(groups, weights, stage=None):
+    """The Phase 21 recovery fix: diversity-capped weights + language rehearsal.
+
+    ``stage`` is 0-based; stages 3 and 4 keep 40% of their gradient updates on
+    the Stage 1 language groups so the tied byte embedding is not rewritten by a
+    handful of tool/edit templates. This is ONE curriculum fix, applied by
+    ``draw``; it needs no architecture change and no extra GPU time.
+    """
+    capped = balanced_weights(groups, weights)
+    if stage is None or stage < 2:
+        return capped
+    available = [kind for kind in LANGUAGE_GROUPS if groups.get(kind)]
+    if not available:
+        return capped
+    total = sum(capped.values())
+    result = {kind: value * (1.0 - REPLAY_FRACTION) for kind, value in capped.items()}
+    reserve = total * REPLAY_FRACTION / len(available)
+    for kind in available:
+        result[kind] = result.get(kind, 0.0) + reserve
+    return result
+
+
+def draw(groups, weights, count, balanced=True, stage=None):
+    """Sample a checked mixture. ``balanced=False`` reproduces the Phase 19 mix.
+
+    Delegates validation to the shared helper so neither path can silently
+    sample a missing or negatively weighted group.
+    """
+    active = stage_mixture(groups, weights, stage) if balanced else weights
+    return sample_mix(groups, active, count, rng=random)
 
 def check_groups(groups, stages=None):
     """Fail before training when a selected mixture has no usable rows."""
@@ -129,7 +197,7 @@ def policy_loss(model, device, max_new=48):
 
 def train(model, groups, token, repo_id, session_deadline, stage_seconds=47 * 60,
           upload_seconds=15 * 60, micro_batch=1, accumulation=32, resume=None, lr=3e-4,
-          stages=None):
+          stages=None, legacy_mix=False, metrics_path=None):
     """Train selected stages (default all four), resuming from an HF snapshot.
 
     ``stages=[k]`` lets the notebook keep one cell per stage while sharing the
@@ -137,6 +205,11 @@ def train(model, groups, token, repo_id, session_deadline, stage_seconds=47 * 60
     optimizer, elapsed time and RNG are restored only if the snapshot is for the
     same stage. The notebook clears its consumed resume handle after a successful
     stage, preventing later cells from accidentally rewinding completed work.
+
+    ``legacy_mix=True`` restores the unbalanced Phase 19 mixtures (forensics
+    only). ``metrics_path`` appends one JSON line per optimizer step: the Colab
+    run kept loss only inside a transient tqdm bar, which made the Phase 21 log
+    autopsy impossible after the runtime ended.
     """
     selected = _stages(stages)
     check_groups(groups, selected)
@@ -152,6 +225,14 @@ def train(model, groups, token, repo_id, session_deadline, stage_seconds=47 * 60
         raise ValueError('lr must be positive')
     if not isinstance(session_deadline, (int, float)):
         raise ValueError('session_deadline must be a Unix timestamp')
+    if not isinstance(legacy_mix, bool):
+        raise ValueError('legacy_mix must be a bool')
+    metrics_file = None
+    if metrics_path is not None:
+        metrics_file = Path(metrics_path)
+        metrics_file.parent.mkdir(parents=True, exist_ok=True)
+        if not metrics_file.exists():
+            metrics_file.write_text('', encoding='utf8')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -197,7 +278,9 @@ def train(model, groups, token, repo_id, session_deadline, stage_seconds=47 * 60
                 parameter_group['lr'] = lr * 0.5 * (1 + math.cos(math.pi * fraction))
             losses = []
             for _ in range(accumulation):
-                ids = batch(draw(groups, MIXES[stage], micro_batch), model.cfg.max_seq_len).to(device)
+                texts = draw(groups, MIXES[stage], micro_batch,
+                            balanced=not legacy_mix, stage=stage)
+                ids = batch(texts, model.cfg.max_seq_len).to(device)
                 with torch.autocast(device_type=device.type, dtype=torch.float16,
                                     enabled=device.type == 'cuda'):
                     loss = model.loss(ids) / accumulation
@@ -210,10 +293,24 @@ def train(model, groups, token, repo_id, session_deadline, stage_seconds=47 * 60
                 if rl_loss is not None:
                     scaler.scale(rl_loss * 0.1).backward()
             scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            grad_norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0))
             scaler.step(optimizer)
             scaler.update()
             step += 1
+
+            if metrics_file is not None:
+                mean_loss = sum(losses) / len(losses)
+                record = {
+                    'source': 'notebook.train', 'stage': stage + 1,
+                    'step': step, 'loss': mean_loss,
+                    'lr': float(optimizer.param_groups[0]['lr']),
+                    'grad_norm': grad_norm,
+                    'nan': not math.isfinite(mean_loss) or not math.isfinite(grad_norm),
+                    'mixture': 'legacy' if legacy_mix else 'balanced',
+                    'time': time.time(),
+                }
+                with metrics_file.open('a', encoding='utf8') as handle:
+                    handle.write(json.dumps(record) + '\n')
 
             now = time.monotonic()
             delta = now - tick

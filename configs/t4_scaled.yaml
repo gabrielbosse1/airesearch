@@ -1,0 +1,134 @@
+# Phase 22 -- scaled T4 pipeline ("raw bytes as literal knowledge matrices").
+#
+# Load with:  yaml.safe_load(open("configs/t4_scaled.yaml"))
+# Model with: FoundationConfig.from_mapping(cfg["model"])
+#
+# IMPORTANT -- precision on a Tesla T4 (Turing, sm_75): CUDA bf16 autocast is
+# NOT available. `torch.autocast("cuda", dtype=torch.bfloat16)` raises
+# "Current CUDA Device does not support bfloat16" on sm75. `requested_precision`
+# records the intent (bfloat16); `precision: auto` tells the trainer to resolve
+# it at runtime with torch.cuda.is_bf16_supported(): Ampere+ gets bfloat16,
+# T4/V100 get float16 + torch.amp.GradScaler. Both are 2-byte weights; the
+# fallback is required, not optional.
+#
+# Memory: 183,830,791 parameters. fp32 master weights + fp32 grads + AdamW
+# moments = ~16 B/param = 2.94 GB. Activations are checkpointed, so the
+# dominant term is B*L*d*2 bytes per layer boundary (4*1024*1024*2 = 8.4 MB)
+# plus one recomputed block and the B*L*261 logits (4*1024*261*2 = 2.1 MB).
+
+model:
+  vocab_size: 261                  # 256 raw bytes + BOS/EOS/PAD/REF_START/REF_END
+  d_model: 1024                   # WIDE, not deep
+  n_layers: 12                    # CONSTANT depth (same as configs/default.yaml)
+  n_heads: 8
+  n_kv_heads: 2                   # GQA: KV cache / K,V projections are 25% of MHA
+  d_ff: 4096                      # SwiGLU hidden width
+  max_seq_len: 2048               # RoPE needs no learned position table
+  dropout: 0.0
+  norm_type: rmsnorm              # pre-norm RMSNorm, bias-free
+  ffn_type: swiglu                # SiLU(xW_value) (*) (xW_branch), then W_out
+  position_type: rope             # rotary embeddings, no learned absolute table
+  refinement_steps: 2             # weight-tied low-rank iterative refinement
+  refinement_rank: 256
+  rope_theta: 10000.0
+  norm_eps: 0.000001
+  gradient_checkpointing: true
+
+training:
+  requested_precision: bfloat16
+  precision: auto                  # auto | bfloat16 | float16 | float32
+  grad_scaler: auto                # required on T4/fp16, unused for bf16
+  micro_batch_size: 4
+  grad_accum: 8                    # effective batch = 32 sequences
+  seq_len: 1024                    # 2048 is supported; 1024 is the T4-safe default
+  learning_rate: 0.0003
+  weight_decay: 0.1
+  warmup_steps: 500
+  max_grad_norm: 1.0
+  lr_schedule: cosine
+  adam_betas: [0.9, 0.95]
+  seed: 22
+  phase1_max_steps: 20000          # raw next-byte causal LM, no prompts / no ReAct
+  phase2_max_steps: 4000           # conversation + ReAct trajectory distillation
+  phase3_max_steps: 1500           # sandbox RL (REINFORCE with running baseline)
+  log_every: 10
+  checkpoint_every: 500
+  save_precision: float32          # master weights for bit-exact resume;
+                                 # save_deploy_copy() writes the fp16 inference copy
+
+vram:
+  device_total_gb: 14.0            # Colab/Kaggle T4 (often reported as 15 GB)
+  target_min_gb: 10.0
+  target_max_gb: 12.0
+  safety_headroom_gb: 1.0
+  probe_before_training: true      # measure a real forward+backward before step 0
+  autotune_micro_batch: true       # shrink 4->2->1 if probe exceeds target_max
+  autotune_seq_len: true           # shrink 1024->768->512 if still over budget
+  fill_to_target: true             # grow tokens per step until MEASURED peak is in band
+  max_seq_len: 2048
+  allow_batch_growth: true
+  max_micro_batch: 32
+  allow_disable_checkpointing: true  # probe-only relaxation; model default stays true
+  abort_below_target: false        # warn, do not crash: correctness over utilisation
+  monitor_every: 25
+  empty_cache_between_phases: true
+
+data:
+  cache_dir: data_cache_phase22
+  streaming: true                  # never download 780 GB into a Colab disk
+  shard_bytes: 67108864            # 64 MiB raw-byte shards
+  license_manifest: runs/phase22/dataset_manifest.json
+  # Sources are resolved in order; the first one that loads wins. See
+  # data/phase22_sources.py for IDs, configs, licenses and provenance.
+  phase1:
+    - group: code
+      weight: 0.30
+      sources:
+        - {id: "bigcode/the-stack", data_dir: "data/python", text_field: "content"}
+        - {id: "bigcode/the-stack", data_dir: "data/javascript", text_field: "content"}
+        - {id: "meryyllebr543/stack-edu-huggingface", name: "python", text_field: "text"}
+    - group: pt_br
+      weight: 0.25
+      sources:
+        - {id: "TucanoBR/GigaVerbo", text_field: "text"}
+        - {id: "HuggingFaceFW/fineweb-2", name: "por_Latn", text_field: "text"}
+    - group: english
+      weight: 0.30
+      sources:
+        - {id: "HuggingFaceFW/fineweb-edu", name: "sample-10BT", text_field: "text"}
+        - {id: "mlfoundations/dclm-baseline-1.0", text_field: "text"}
+    - group: logic
+      weight: 0.15
+      sources:
+        - {id: "open-web-math/open-web-math", text_field: "text"}
+  phase2:
+    - group: conversation
+      weight: 0.45
+      sources:
+        - {id: "HuggingFaceH4/no_robots", text_field: "messages"}
+        - {id: "TucanoBR/Tucano-SFT", text_field: "conversations"}
+        - {id: "argilla/distilabel-sft-easy", name: "default", text_field: "messages"}
+    - group: minecraft
+      weight: 0.40
+      sources:
+        - {id: "TESS-Computer/minecraft-vla-stage3", text_field: "output"}
+        - {id: "vanyacohen/MET-Bench-Minecraft", text_field: "action"}
+    - group: code_feedback
+      weight: 0.15
+      sources:
+        - {id: "m-a-p/CodeFeedback-Filtered-Instruction", text_field: "query"}
+
+checkpoints:
+  local_dir: runs/phase22/checkpoints
+  phase1_name: checkpoint_phase1.pt
+  phase2_name: checkpoint_phase2.pt
+  phase3_name: final_model.pt
+  hf_repo: null                    # set in the notebook, e.g. "user/airesearch-phase22"
+  hf_path_in_repo: phase22
+  resume_from_hf: true
+  atomic_write: true
+
+output:
+  report_dir: runs/phase22
+  metrics_jsonl: runs/phase22/metrics.jsonl
+  vram_jsonl: runs/phase22/vram.jsonl
