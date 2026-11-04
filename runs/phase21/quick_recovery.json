@@ -1,0 +1,223 @@
+{
+  "section": "21.9 quick recovery test",
+  "fix": "stage_mixture(): diversity-capped group weights + 40% Stage-1 language rehearsal in Stages 3/4 (notebook/train.py, default on)",
+  "experiment": {
+    "steps_per_stage": 300,
+    "lr": 0.003,
+    "accumulation": 6,
+    "seed": 19,
+    "variants": [
+      "baseline (legacy_mix=True)",
+      "fixed (default)"
+    ],
+    "total_wall_seconds": 222.58,
+    "note": "Deterministic CPU replay, seed fixed, same RNG stream for both variants: only the mixture weights differ. NOT the 4-hour T4 run."
+  },
+  "baseline": {
+    "final_training_loss": 0.8859,
+    "final_heldout_pt_loss": 2.50072,
+    "worst_heldout_pt_loss": 4.50746,
+    "best_heldout_pt_loss": 2.50072,
+    "forgetting_ratio": 1.802,
+    "final_coherence": 0.5517,
+    "final_gibberish": false,
+    "final_valid_utf8": true,
+    "final_pt_word_hits": 1,
+    "final_probes_passed": 1,
+    "final_probes": [
+      [
+        "pt-br",
+        false
+      ],
+      [
+        "code",
+        false
+      ],
+      [
+        "search",
+        false
+      ],
+      [
+        "edit",
+        true
+      ],
+      [
+        "memory",
+        false
+      ]
+    ],
+    "final_text": " tá á co co co co vo vo bo vo vo vo vo vo vo vo vo vo ve vese ve são s ves ve vo ",
+    "per_stage": [
+      {
+        "stage": 1,
+        "coherence": 0.3796,
+        "gibberish": true,
+        "heldout_pt_loss": 2.94543,
+        "probes_passed": 0
+      },
+      {
+        "stage": 2,
+        "coherence": 0.4194,
+        "gibberish": true,
+        "heldout_pt_loss": 2.71273,
+        "probes_passed": 0
+      },
+      {
+        "stage": 3,
+        "coherence": 0.5702,
+        "gibberish": true,
+        "heldout_pt_loss": 4.50746,
+        "probes_passed": 1
+      },
+      {
+        "stage": 4,
+        "coherence": 0.5517,
+        "gibberish": false,
+        "heldout_pt_loss": 2.50072,
+        "probes_passed": 1
+      }
+    ],
+    "stage3_4_weights": [
+      {
+        "react": 40,
+        "search": 30,
+        "code": 30
+      },
+      {
+        "edit": 50,
+        "pt": 20,
+        "code": 15,
+        "mineflayer": 15
+      }
+    ],
+    "elapsed_seconds": 112.02
+  },
+  "fixed": {
+    "final_training_loss": 2.18337,
+    "final_heldout_pt_loss": 2.21858,
+    "worst_heldout_pt_loss": 2.7361,
+    "best_heldout_pt_loss": 2.21858,
+    "forgetting_ratio": 1.233,
+    "final_coherence": 0.5997,
+    "final_gibberish": false,
+    "final_valid_utf8": true,
+    "final_pt_word_hits": 7,
+    "final_probes_passed": 0,
+    "final_probes": [
+      [
+        "pt-br",
+        false
+      ],
+      [
+        "code",
+        false
+      ],
+      [
+        "search",
+        false
+      ],
+      [
+        "edit",
+        false
+      ],
+      [
+        "memory",
+        false
+      ]
+    ],
+    "final_text": " co co com com como com como com com ar ada a a a a a a a a a a a a a a ta a te te t",
+    "per_stage": [
+      {
+        "stage": 1,
+        "coherence": 0.3713,
+        "gibberish": true,
+        "heldout_pt_loss": 2.7361,
+        "probes_passed": 0
+      },
+      {
+        "stage": 2,
+        "coherence": 0.3975,
+        "gibberish": true,
+        "heldout_pt_loss": 2.48041,
+        "probes_passed": 0
+      },
+      {
+        "stage": 3,
+        "coherence": 0.456,
+        "gibberish": true,
+        "heldout_pt_loss": 2.4231,
+        "probes_passed": 0
+      },
+      {
+        "stage": 4,
+        "coherence": 0.5997,
+        "gibberish": false,
+        "heldout_pt_loss": 2.21858,
+        "probes_passed": 0
+      }
+    ],
+    "stage3_4_weights": [
+      {
+        "react": 34.054054054054056,
+        "search": 1.6216216216216215,
+        "code": 37.65765765765766,
+        "pt": 13.333333333333334,
+        "en": 13.333333333333334
+      },
+      {
+        "edit": 3.592814371257485,
+        "pt": 36.327345309381236,
+        "code": 29.500998003992017,
+        "mineflayer": 17.245508982035926,
+        "en": 13.333333333333334
+      }
+    ],
+    "elapsed_seconds": 110.56
+  },
+  "improvements": {
+    "final_heldout_pt_loss": {
+      "baseline": 2.50072,
+      "fixed": 2.21858,
+      "delta": -0.28214,
+      "relative": -0.1128,
+      "better": true
+    },
+    "worst_heldout_pt_loss": {
+      "baseline": 4.50746,
+      "fixed": 2.7361,
+      "delta": -1.77136,
+      "relative": -0.393,
+      "better": true
+    },
+    "forgetting_ratio": {
+      "baseline": 1.802,
+      "fixed": 1.233,
+      "delta": -0.569,
+      "relative": -0.3158,
+      "better": true
+    },
+    "final_coherence": {
+      "baseline": 0.5517,
+      "fixed": 0.5997,
+      "delta": 0.048,
+      "relative": 0.087,
+      "better": true
+    },
+    "final_training_loss": {
+      "baseline": 0.8859,
+      "fixed": 2.18337,
+      "delta": 1.29747,
+      "relative": 1.4646,
+      "better": false
+    }
+  },
+  "improved": true,
+  "gibberish_cleared": false,
+  "caveats": [
+    "The single \"probes passed\" count drops because that one pass was a memorised, eval-identical [EDIT] template; it is not a capability loss and is not a valid success metric (see 21.7).",
+    "Fixed final TRAINING loss is higher: the fixed model is no longer over-fitting to four repeated rows. Held-out Portuguese loss and byte coherence are the meaningful metrics.",
+    "The strict gibberish heuristic may remain True for the tiny fixed surrogate even when all held-out metrics improve; that flag rewards Portuguese word hits, which a 245k-parameter model rarely produces. The claim is prevention of forgetting/invalid bytes, not fluency.",
+    "This is a small-scale mechanistic demonstration. Restoring the real Phase 19 model still requires a full retrain (or fine-tuning from the Stage 2 checkpoint) with the corrected mixture and a clean eval set.",
+    "The tiny surrogate still does not produce fluent Portuguese; the claim is that forgetting and byte-salad collapse are prevented, not that language quality is solved."
+  ]
+}

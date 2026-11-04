@@ -1,0 +1,35 @@
+{
+  "components": {
+    "pre_norm_rmsnorm": true,
+    "swiglu_ffn": true,
+    "rope": true,
+    "gqa": {
+      "n_heads": 8,
+      "n_kv_heads": 2,
+      "cache_fraction": 0.25
+    },
+    "iterative_refinement": {
+      "steps": 2,
+      "rank": 256,
+      "weight_tied": true,
+      "alpha_init": 0.0
+    },
+    "gradient_checkpointing": true,
+    "learned_absolute_positions": false
+  },
+  "parameter_breakdown": {
+    "attention_per_layer": 2624000,
+    "swiglu_per_layer": 12582912,
+    "norms_per_layer": 2048,
+    "layers_total": 182507520,
+    "refinement_total": 787458,
+    "embedding_total": 267264,
+    "head_total": 267525,
+    "final_norm_total": 1024,
+    "sum": 183830791,
+    "meta_count": 183830791,
+    "exact_match": true
+  },
+  "max_seq_len": 2048,
+  "training_seq_len": 1024
+}

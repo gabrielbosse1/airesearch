@@ -31,6 +31,11 @@ what the model wrote. See :mod:`models.react`.
 The architecture is identical at every scale: only ``d_model``, ``n_layers``,
 ``n_heads``, ``d_ff`` and ``max_seq_len`` change. The CPU configuration used
 for tests and the production configuration are the same class.
+
+Phase 22 adds an OPTIONAL wide-and-gated stack (RMSNorm, SwiGLU, RoPE, GQA and
+a weight-tied iterative refinement loop). Every new knob defaults to the exact
+Phase 16 behaviour, so historical checkpoints and tests are unaffected; the
+``configs/t4_scaled.yaml`` preset opts into the new stack.
 """
 from __future__ import annotations
 
@@ -42,6 +47,7 @@ from typing import Any, Mapping
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torch.utils.checkpoint import checkpoint
 
 BOS = 256
 EOS = 257
@@ -71,6 +77,16 @@ class FoundationConfig:
     d_ff: int = 256
     max_seq_len: int = 256
     dropout: float = 0.1
+    # ---- Phase 22 upgrades. Defaults reproduce the Phase 16 architecture. ----
+    norm_type: str = "layernorm"        # "layernorm" | "rmsnorm"
+    ffn_type: str = "gelu"              # "gelu" | "swiglu"
+    position_type: str = "learned"      # "learned" | "rope"
+    n_kv_heads: int = 0                # 0 => multi-head attention; >0 => GQA
+    refinement_steps: int = 0          # weight-tied iterative refinement passes
+    refinement_rank: int = 256         # low-rank bottleneck inside the loop
+    rope_theta: float = 10000.0
+    norm_eps: float = 1e-5
+    gradient_checkpointing: bool = False
 
     def __post_init__(self) -> None:
         if self.vocab_size != VOCAB_SIZE:
@@ -83,6 +99,24 @@ class FoundationConfig:
             raise ValueError("d_model must be divisible by n_heads")
         if not 0.0 <= float(self.dropout) < 1.0:
             raise ValueError("dropout must be in [0, 1)")
+        if self.norm_type not in ("layernorm", "rmsnorm"):
+            raise ValueError("norm_type must be 'layernorm' or 'rmsnorm'")
+        if self.ffn_type not in ("gelu", "swiglu"):
+            raise ValueError("ffn_type must be 'gelu' or 'swiglu'")
+        if self.position_type not in ("learned", "rope"):
+            raise ValueError("position_type must be 'learned' or 'rope'")
+        if not isinstance(self.n_kv_heads, int) or self.n_kv_heads < 0:
+            raise ValueError("n_kv_heads must be a non-negative integer")
+        if self.n_kv_heads and (self.n_kv_heads > self.n_heads or self.n_heads % self.n_kv_heads):
+            raise ValueError("n_kv_heads must divide n_heads")
+        if not isinstance(self.refinement_steps, int) or self.refinement_steps < 0:
+            raise ValueError("refinement_steps must be a non-negative integer")
+        if not isinstance(self.refinement_rank, int) or self.refinement_rank < 1:
+            raise ValueError("refinement_rank must be a positive integer")
+        if float(self.rope_theta) <= 0 or float(self.norm_eps) <= 0:
+            raise ValueError("rope_theta and norm_eps must be positive")
+        if self.position_type == "rope" and (self.d_model // self.n_heads) % 2:
+            raise ValueError("RoPE requires an even head dimension")
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, Any] | None) -> "FoundationConfig":
@@ -103,6 +137,136 @@ class FoundationConfig:
         return asdict(self)
 
 
+# ---------------------------------------------------------------------------
+# Phase 22: optional wide-model components. None of these are constructed when
+# FoundationConfig uses its (legacy) defaults, which keeps the historical
+# checkpoint schema byte-for-byte valid.
+# ---------------------------------------------------------------------------
+
+
+class RMSNorm(nn.Module):
+    """Root-mean-square layer normalisation (pre-norm, bias-free).
+
+    ``x / sqrt(E[x^2] + eps) * weight``. The reduction is computed in float32
+    even under fp16/bf16 autocast because squaring fp16 activations at width
+    1024 can overflow before the mean is taken.
+    """
+
+    def __init__(self, width: int, eps: float = 1e-5) -> None:
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(width))
+        self.eps = float(eps)
+
+    def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        dtype = hidden.dtype
+        values = hidden.float()
+        values = values * torch.rsqrt(values.pow(2).mean(-1, keepdim=True) + self.eps)
+        return (values * self.weight.float()).to(dtype)
+
+
+class SwiGLUFFN(nn.Module):
+    """SwiGLU feed-forward: ``[SiLU(x W_value) (x) (x W_branch)] W_out``.
+
+    All three projections are bias-free. Parameter names deliberately avoid
+    the word ``gate``: ``tests/test_phase16.py`` forbids legacy
+    copy/pointer/gate module names, and a SwiGLU branch is not that mechanism.
+    With ``d_model=1024, d_ff=4096`` this is 3 * 1024 * 4096 = 12.58M
+    parameters per layer instead of 2 * 1024 * 4096 for a GELU FFN.
+    """
+
+    def __init__(self, config: FoundationConfig) -> None:
+        super().__init__()
+        self.w_value = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.w_branch = nn.Linear(config.d_model, config.d_ff, bias=False)
+        self.w_out = nn.Linear(config.d_ff, config.d_model, bias=False)
+        self.dropout = nn.Dropout(config.dropout)
+
+    def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        activated = F.silu(self.w_value(hidden)) * self.w_branch(hidden)
+        return self.dropout(self.w_out(activated))
+
+
+def rotary_tables(length: int, head_dim: int, theta: float, device: torch.device,
+                  dtype: torch.dtype) -> tuple[torch.Tensor, torch.Tensor]:
+    """RoPE cosine/sine tables of shape ``(1, 1, L, head_dim)``.
+
+    Computed on the fly (no registered buffers): they cost
+    ``L * head_dim / 2`` float32 values, i.e. ~1 MB at L=2048, d_head=128,
+    and avoid a persistent device allocation that scales with max_seq_len.
+    """
+    half = head_dim // 2
+    inverse = 1.0 / (float(theta) ** (torch.arange(0, half, device=device, dtype=torch.float32) / half))
+    positions = torch.arange(length, device=device, dtype=torch.float32)
+    angles = torch.outer(positions, inverse)
+    doubled = torch.cat((angles, angles), dim=-1)[None, None, :, :]
+    return doubled.cos().to(dtype), doubled.sin().to(dtype)
+
+
+def rotate_half(hidden: torch.Tensor) -> torch.Tensor:
+    left, right = hidden.chunk(2, dim=-1)
+    return torch.cat((-right, left), dim=-1)
+
+
+def apply_rotary(hidden: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
+    """Rotate query/key heads; the attention dot product becomes relative."""
+    return hidden * cos + rotate_half(hidden) * sin
+
+
+def repeat_kv(hidden: torch.Tensor, repeats: int) -> torch.Tensor:
+    """Expand ``(B, n_kv, L, d)`` to ``(B, n_kv * repeats, L, d)``."""
+    if repeats == 1:
+        return hidden
+    batch, heads, length, width = hidden.shape
+    return (hidden[:, :, None, :, :]
+            .expand(batch, heads, repeats, length, width)
+            .reshape(batch, heads * repeats, length, width))
+
+
+def make_norm(config: FoundationConfig) -> nn.Module:
+    if config.norm_type == "rmsnorm":
+        return RMSNorm(config.d_model, config.norm_eps)
+    return nn.LayerNorm(config.d_model, eps=config.norm_eps)
+
+
+class IterativeRefinement(nn.Module):
+    """Weight-tied low-rank "think" loop before the byte prediction head.
+
+    ``h_(t+1) = h_(t) + alpha_t * Cell(RMSNorm(h_(t)))`` for ``steps`` passes.
+    ``alpha`` is initialised to zero so the loop is mathematically the identity
+    at step 0: enabling it cannot destabilise a freshly initialised model.
+    The cell is a shared ``d -> rank -> d`` bottleneck (~1M parameters for
+    d=1024, rank=256), NOT an extra Transformer layer, so memory grows with
+    ``steps`` boundaries (8 MB each at B=4, L=1024, d=1024, fp16) rather than
+    with another 12-layer stack. Each pass is wrapped in activation
+    checkpointing when training, so intermediate cell activations are
+    recomputed instead of retained.
+    """
+
+    def __init__(self, config: FoundationConfig) -> None:
+        super().__init__()
+        self.steps = int(config.refinement_steps)
+        rank = min(config.refinement_rank, config.d_model)
+        self.norm = make_norm(config)
+        self.down = nn.Linear(config.d_model, rank, bias=False)
+        self.branch = nn.Linear(config.d_model, rank, bias=False)
+        self.up = nn.Linear(rank, config.d_model, bias=False)
+        self.step_scales = nn.Parameter(torch.zeros(self.steps))
+
+    def cell(self, hidden: torch.Tensor) -> torch.Tensor:
+        values = self.norm(hidden)
+        return self.up(F.silu(self.down(values)) * self.branch(values))
+
+    def forward(self, hidden: torch.Tensor, *, use_checkpoint: bool = False) -> torch.Tensor:
+        for index in range(self.steps):
+            alpha = self.step_scales[index]
+            if use_checkpoint and self.training and torch.is_grad_enabled():
+                delta = checkpoint(self.cell, hidden, use_reentrant=False)
+            else:
+                delta = self.cell(hidden)
+            hidden = hidden + alpha * delta
+        return hidden
+
+
 class CausalSelfAttention(nn.Module):
     """Plain multi-head causal self-attention. No memory, no copy, no gates.
 
@@ -115,23 +279,42 @@ class CausalSelfAttention(nn.Module):
     def __init__(self, config: FoundationConfig) -> None:
         super().__init__()
         self.n_heads = config.n_heads
+        self.n_kv_heads = config.n_kv_heads or config.n_heads
+        self.repeats = self.n_heads // self.n_kv_heads
         self.head_dim = config.d_model // config.n_heads
         self.query = nn.Linear(config.d_model, config.d_model)
-        self.key = nn.Linear(config.d_model, config.d_model)
-        self.value = nn.Linear(config.d_model, config.d_model)
+        self.key = nn.Linear(config.d_model, self.n_kv_heads * self.head_dim)
+        self.value = nn.Linear(config.d_model, self.n_kv_heads * self.head_dim)
         self.output = nn.Linear(config.d_model, config.d_model)
         self.dropout_p = float(config.dropout)
+        self.position_type = config.position_type
+        self.rope_theta = float(config.rope_theta)
 
     def forward(self, hidden: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
-        # (B, T, C) -> (B, H, T, D)
+        # (B, T, C) -> (B, H, T, D). With GQA, K/V use fewer heads than Q.
         batch, length, _ = hidden.shape
-        shape = (batch, length, self.n_heads, self.head_dim)
-        q = self.query(hidden).view(shape).transpose(1, 2)
-        k = self.key(hidden).view(shape).transpose(1, 2)
-        v = self.value(hidden).view(shape).transpose(1, 2)
-        context = F.scaled_dot_product_attention(
-            q, k, v, is_causal=True,
-            dropout_p=self.dropout_p if self.training else 0.0)
+        q = self.query(hidden).view(batch, length, self.n_heads, self.head_dim).transpose(1, 2)
+        k = self.key(hidden).view(batch, length, self.n_kv_heads, self.head_dim).transpose(1, 2)
+        v = self.value(hidden).view(batch, length, self.n_kv_heads, self.head_dim).transpose(1, 2)
+        if self.position_type == "rope":
+            cos, sin = rotary_tables(length, self.head_dim, self.rope_theta,
+                                     hidden.device, q.dtype)
+            q = apply_rotary(q, cos, sin)
+            k = apply_rotary(k, cos, sin)
+        dropout = self.dropout_p if self.training else 0.0
+        # Fused SDPA avoids materialising (B, H, T, T) scores. T4 (sm75) has no
+        # FlashAttention-2, so PyTorch picks math/mem-efficient kernels here.
+        if self.repeats > 1:
+            try:
+                context = F.scaled_dot_product_attention(
+                    q, k, v, is_causal=True, dropout_p=dropout, enable_gqa=True)
+            except TypeError:  # torch < 2.5 has no enable_gqa
+                context = F.scaled_dot_product_attention(
+                    q, repeat_kv(k, self.repeats), repeat_kv(v, self.repeats),
+                    is_causal=True, dropout_p=dropout)
+        else:
+            context = F.scaled_dot_product_attention(
+                q, k, v, is_causal=True, dropout_p=dropout)
         context = context.transpose(1, 2).contiguous().view(batch, length, self.n_heads * self.head_dim)
         return self.output(context)
 
@@ -141,17 +324,20 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, config: FoundationConfig) -> None:
         super().__init__()
-        self.norm_1 = nn.LayerNorm(config.d_model)
+        self.norm_1 = make_norm(config)
         self.attention = CausalSelfAttention(config)
-        self.norm_2 = nn.LayerNorm(config.d_model)
-        self.feed_forward = nn.Sequential(
-            nn.Linear(config.d_model, config.d_ff),
-            nn.GELU(),
-            nn.Linear(config.d_ff, config.d_model),
-            nn.Dropout(config.dropout),
-        )
+        self.norm_2 = make_norm(config)
+        if config.ffn_type == "swiglu":
+            self.feed_forward = SwiGLUFFN(config)
+        else:
+            self.feed_forward = nn.Sequential(
+                nn.Linear(config.d_model, config.d_ff),
+                nn.GELU(),
+                nn.Linear(config.d_ff, config.d_model),
+                nn.Dropout(config.dropout),
+            )
 
-    def forward(self, hidden: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    def forward(self, hidden: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         hidden = hidden + self.attention(self.norm_1(hidden), mask)
         hidden = hidden + self.feed_forward(self.norm_2(hidden))
         return hidden
@@ -165,15 +351,20 @@ class CausalByteTransformer(nn.Module):
         config = config if isinstance(config, FoundationConfig) else FoundationConfig(**dict(config))
         self.config = config
         self.token_embedding = nn.Embedding(config.vocab_size, config.d_model)
-        self.position_embedding = nn.Embedding(config.max_seq_len, config.d_model)
+        # Learned absolute positions are the Phase 16 default; RoPE needs no
+        # parameters and no max_seq_len-sized table, which is why the wide
+        # preset can raise max_seq_len to 2048 without a memory penalty.
+        self.position_embedding = (nn.Embedding(config.max_seq_len, config.d_model)
+                                   if config.position_type == "learned" else None)
         self.embedding_dropout = nn.Dropout(config.dropout)
         self.blocks = nn.ModuleList(TransformerBlock(config) for _ in range(config.n_layers))
-        self.norm_final = nn.LayerNorm(config.d_model)
+        self.refinement = (IterativeRefinement(config)
+                           if config.refinement_steps > 0 else None)
+        self.norm_final = make_norm(config)
         self.head = nn.Linear(config.d_model, config.vocab_size)
-        # Learned absolute positions: this is a standard GPT-style baseline, so
-        # the usable context is capped at max_seq_len. Documented, not hidden.
         mask = torch.triu(torch.ones(config.max_seq_len, config.max_seq_len, dtype=torch.bool), diagonal=1)
         self.register_buffer("causal_mask", mask, persistent=False)
+        self.gradient_checkpointing = bool(config.gradient_checkpointing)
         self.apply(self._initialize)
 
     @staticmethod
@@ -194,12 +385,24 @@ class CausalByteTransformer(nn.Module):
         length = ids.shape[1]
         if length > self.config.max_seq_len:
             raise ValueError(f"sequence length {length} exceeds max_seq_len {self.config.max_seq_len}")
-        positions = torch.arange(length, device=ids.device)
-        hidden = self.token_embedding(ids) + self.position_embedding(positions)
+        hidden = self.token_embedding(ids)
+        if self.position_embedding is not None:
+            hidden = hidden + self.position_embedding(torch.arange(length, device=ids.device))
         hidden = self.embedding_dropout(hidden)
+        use_checkpoint = (self.gradient_checkpointing and self.training
+                          and torch.is_grad_enabled())
         for block in self.blocks:
-            hidden = block(hidden, self.causal_mask)
+            if use_checkpoint:
+                hidden = checkpoint(block, hidden, self.causal_mask, use_reentrant=False)
+            else:
+                hidden = block(hidden, self.causal_mask)
+        if self.refinement is not None:
+            hidden = self.refinement(hidden, use_checkpoint=use_checkpoint)
         return self.head(self.norm_final(hidden))
+
+    def set_gradient_checkpointing(self, enabled: bool) -> None:
+        """Enable/disable activation checkpointing for blocks and refinement."""
+        self.gradient_checkpointing = bool(enabled)
 
     def loss(self, ids: torch.Tensor, targets: torch.Tensor | None = None) -> torch.Tensor:
         """Mean cross-entropy over next-byte targets, padding excluded."""

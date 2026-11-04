@@ -1,0 +1,95 @@
+{
+  "section": "21.7 edit success investigation",
+  "static_evidence": {
+    "eval_prompt": "Request: Corrija: voce\nDraft: voce\n",
+    "stage4_mix": {
+      "edit": 50,
+      "pt": 20,
+      "code": 15,
+      "mineflayer": 15
+    },
+    "stage4_freeze_blocks": 8,
+    "edit_rows": [
+      "Request: Corrija: ola\nDraft: ola\n[EDIT pos=2 delete=1 bytes=c3a1]\nAnswer: olá",
+      "Request: Corrija: voce\nDraft: voce\n[EDIT pos=3 delete=1 bytes=c3aa]\nAnswer: você",
+      "Request: Corrija: bom diaa\nDraft: bom diaa\n[EDIT pos=7 delete=1 bytes=]\nAnswer: bom dia",
+      "Request: Corrija: casaa\nDraft: casaa\n[EDIT pos=4 delete=1 bytes=]\nAnswer: casa"
+    ],
+    "edit_unique_rows": 4,
+    "edit_rows_total_bytes": 324,
+    "rl_edit_cases": [
+      {
+        "kind": "edit",
+        "prompt": "Request: Corrija: voce\nDraft: voce\n",
+        "draft": "voce",
+        "target": "você"
+      }
+    ],
+    "eval_prompt_equals_rl_prompt": true,
+    "eval_prompt_is_prefix_of_training_row": [
+      {
+        "row_index": 0,
+        "lcp_chars": 18,
+        "is_prefix": false
+      },
+      {
+        "row_index": 1,
+        "lcp_chars": 35,
+        "is_prefix": true
+      },
+      {
+        "row_index": 2,
+        "lcp_chars": 18,
+        "is_prefix": false
+      },
+      {
+        "row_index": 3,
+        "lcp_chars": 18,
+        "is_prefix": false
+      }
+    ],
+    "eval_and_rl_use_same_reward": true,
+    "stage4_edit_fraction": 0.5,
+    "reward_definition": "tools.reward(\"edit\") returns 0.5 only if an [EDIT ...] command transforms draft=\"voce\" into target=\"você\"",
+    "hypothesis_overtrained_on_edit": true,
+    "hypothesis_edit_skill_learned": false
+  },
+  "generation": {
+    "available": true,
+    "checkpoint": "/home/user/airesearch/runs/phase21/checkpoints/baseline_stage4.pt",
+    "model": {
+      "missing_keys": [],
+      "unexpected_keys": [],
+      "load_warning": null,
+      "parameters": 245088,
+      "config": {
+        "vocab_size": 268,
+        "d_model": 48,
+        "n_layers": 12,
+        "n_heads": 4,
+        "d_ff": 96,
+        "max_seq_len": 96,
+        "dropout": 0.0,
+        "gradient_checkpointing": false
+      }
+    },
+    "training_prompt_output": "[EDIT pos=3 delete=1 bytes=c3aa]\nAnswer: você",
+    "training_prompt_pass": true,
+    "longest_common_prefix_with_training_suffix": 45,
+    "exact_training_suffix_reproduced": true,
+    "lcp_details": [
+      {
+        "row_index": 1,
+        "lcp_chars": 45,
+        "training_suffix": "[EDIT pos=3 delete=1 bytes=c3aa]\nAnswer: você",
+        "suffix_length": 45
+      }
+    ],
+    "held_out_prompt": "Request: Corrija: obrigadoo\nDraft: obrigadoo\n",
+    "held_out_output": "DIT DIT poca=]\nAn de bocas  boce  de ve vocaaaa.\n",
+    "held_out_pass": false,
+    "held_out_coherence": 0.8077
+  },
+  "hypothesis_edit_skill_learned": false,
+  "verdict": "The edit probe passed because Stage 4 spent 50% of its supervised updates on FOUR unique [EDIT] templates and the Stage 4 REINFORCE case uses the byte-identical evaluation prompt and reward. The model reproduces the memorised [EDIT] continuation (verbatim), yet fails a held-out typo (FAIL). This is memorisation of one test item, not an edit capability."
+}

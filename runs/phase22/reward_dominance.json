@@ -1,0 +1,142 @@
+{
+  "ordering": {
+    "search_gt_guess": true,
+    "search_gt_lucky_guess": true,
+    "efficient_edit_gt_thrashing": true,
+    "past_action_is_immutable": true
+  },
+  "all_satisfied": true,
+  "weights": {
+    "correct_final": 1.0,
+    "per_edit_token": -0.5,
+    "verified_edit_fix": 0.8,
+    "wrong_guess_without_search": -2.0,
+    "lucky_guess_without_search": -0.5,
+    "search_and_use": 1.5,
+    "search_used_but_wrong": 0.5,
+    "search_ignored": 0.1,
+    "illegal_edit": -1.0,
+    "thrashing_per_extra_edit": -0.75,
+    "max_efficient_edits": 2
+  },
+  "rewards": {
+    "search_and_use": {
+      "total": 2.8,
+      "components": {
+        "correct_final": 1.0,
+        "search_and_use": 1.5,
+        "per_edit_token": -0.5,
+        "verified_edit_fix": 0.8
+      },
+      "flags": {
+        "correct_final": true,
+        "used_search": true,
+        "used_search_result": true,
+        "guessed_without_search": false,
+        "efficient_edit": true,
+        "thrashing": false,
+        "temporal_violation": false
+      },
+      "edits": 1,
+      "verified_fix": true
+    },
+    "wrong_guess": {
+      "total": -2.0,
+      "components": {
+        "wrong_guess_without_search": -2.0,
+        "per_edit_token": -0.0
+      },
+      "flags": {
+        "correct_final": false,
+        "used_search": false,
+        "used_search_result": false,
+        "guessed_without_search": true,
+        "efficient_edit": false,
+        "thrashing": false,
+        "temporal_violation": false
+      },
+      "edits": 0,
+      "verified_fix": false
+    },
+    "lucky_guess": {
+      "total": 0.5,
+      "components": {
+        "correct_final": 1.0,
+        "lucky_guess_without_search": -0.5,
+        "per_edit_token": -0.0
+      },
+      "flags": {
+        "correct_final": true,
+        "used_search": false,
+        "used_search_result": false,
+        "guessed_without_search": true,
+        "efficient_edit": false,
+        "thrashing": false,
+        "temporal_violation": false
+      },
+      "edits": 0,
+      "verified_fix": false
+    },
+    "efficient_edit": {
+      "total": 2.8,
+      "components": {
+        "correct_final": 1.0,
+        "search_and_use": 1.5,
+        "per_edit_token": -0.5,
+        "verified_edit_fix": 0.8
+      },
+      "flags": {
+        "correct_final": true,
+        "used_search": true,
+        "used_search_result": true,
+        "guessed_without_search": false,
+        "efficient_edit": true,
+        "thrashing": false,
+        "temporal_violation": false
+      },
+      "edits": 1,
+      "verified_fix": true
+    },
+    "thrashing": {
+      "total": -2.25,
+      "components": {
+        "correct_final": 1.0,
+        "search_and_use": 1.5,
+        "per_edit_token": -2.5,
+        "thrashing": -2.25
+      },
+      "flags": {
+        "correct_final": true,
+        "used_search": true,
+        "used_search_result": true,
+        "guessed_without_search": false,
+        "efficient_edit": false,
+        "thrashing": true,
+        "temporal_violation": false
+      },
+      "edits": 5,
+      "verified_fix": false
+    },
+    "edit_in_past_block": {
+      "total": 1.8,
+      "components": {
+        "correct_final": 1.0,
+        "search_and_use": 1.5,
+        "per_edit_token": -0.5,
+        "verified_edit_fix": 0.8,
+        "illegal_edit": -1.0
+      },
+      "flags": {
+        "correct_final": true,
+        "used_search": true,
+        "used_search_result": true,
+        "guessed_without_search": false,
+        "efficient_edit": true,
+        "thrashing": false,
+        "temporal_violation": true
+      },
+      "edits": 1,
+      "verified_fix": true
+    }
+  }
+}
