@@ -1,4 +1,8 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.1 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.2 code as it exists
+
+**Status: Ready for 4-Hour Colab Run.** Phase 25.2 coherence pre-flight passed
+(500 steps, strict PT-BR/code assertions). The repository is merged-ready and
+the notebook/trainer remain the production path.
 
 **Scope.** Bottom-up description of the code in this checkout, from a scalar
 multiply to the training loop. Every formula is transcribed from the
@@ -8,7 +12,7 @@ environment has no GPU).
 
 **Files audited.** `models/foundation.py`, `models/memory_model.py`,
 `models/encoders.py`, `training/train.py`, `data/sources.py`,
-`configs/t4_scaled.yaml`, `pretrain_4h.ipynb`.
+`configs/t4_scaled.yaml`, `pretrain_4h.ipynb`, `coherence_preflight.py`.
 
 **Notation.**
 
@@ -465,7 +469,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **193 passed in ~7 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **199 passed in ~11 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -489,7 +493,47 @@ rejection, end-to-end offline quota)**, **latent thought matrix (shape,
 slot recurrence, lm-head isolation, frontier-only causality, zero-init
 legacy equivalence, combined-state confidence, gate bootstrap against the
 double-zero deadlock)**, the coherence smoke script, notebook validity
-(audit + Zero-Disk cell precede the run), and the cleanup contract itself.
+(audit + Zero-Disk cell precede the run), the Phase 25.2 pre-flight assertion
+contract, and the cleanup contract itself.
+
+
+### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)
+
+`python coherence_preflight.py` ran **exactly 500 optimizer steps** on a
+deterministic offline **1000-example PT-BR/code slice** (the sandbox cannot
+stream from the Hub). It used the Phase 25.1 architecture path:
+`attention_type=sliding_window`, `window_size=1024`, memory cross-attention in
+all 8 layers, refinement/thought loop, delayed-commit trainer. Sandbox width was
+CPU-feasible (`d_model=128`, 2,725,025 parameters); the production preset remains
+`configs/t4_scaled.yaml`.
+
+| Snapshot | Fixed probe loss | PT-BR continuation | Code continuation |
+|---|---:|---|---|
+| step 0 | 5.4663 | control-byte gibberish | invalid byte gibberish |
+| step 250 | 0.3235 | recognizable PT-BR sentence | valid Fibonacci body |
+| step 500 | 0.0593 | recognizable PT-BR sentence | valid Fibonacci body |
+
+Step-500 PT-BR continuation:
+
+```text
+ posso ajudar com texto, código e raciocínio passo a passo. A coerência vem de padrões aprendido
+```
+
+Step-500 code continuation (prompt + continuation compiles as Python):
+
+```python
+def fibonacci(n):
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+```
+
+Assertions passed: `loss_step_500 < loss_step_0`, PT-BR marker words present,
+printable ratio 1.0, `def` present, Python markers present, `compile()` succeeds,
+and step 0 was gibberish. Memory cross-attention was active (32 seeded bank
+slots; all 8 `cross_scale` gates moved from zero). Elapsed: ~419 s CPU. This is
+a learning/coherence proof at sandbox scale, **not** a claim of production
+fluency before the 4-hour T4 run.
 
 **Known limits.** 4 h ≈ order 10⁸ tokens: a pre-training start, not a
 finished model. The mix is a document quota, so the *byte* share of PT-BR is
@@ -499,6 +543,7 @@ the mix; there is no fifth bucket. The codec is lossy (p99 ≈ 0.074 on unit-nor
 Single-slot views give the key projector zero gradient until distractors
 exist (the trainer merges the bank). Real `ddgs` search needs a networked
 runtime; training uses the deterministic mock. GPU throughput/VRAM remain
-analytic until the notebook runs. Self-attention is local; the memory hub is the
+analytic until the notebook runs; the Phase 25.2 pre-flight proves the
+architecture learns coherent byte patterns at sandbox scale. Self-attention is local; the memory hub is the
 long-range path. T4 uses memory-efficient SDPA, not Flash/cuDNN. The 13.5 GB
 ceiling is enforced by the real probe, not by the simulator alone.

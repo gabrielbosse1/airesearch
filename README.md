@@ -10,6 +10,13 @@ ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
+**Status: Ready for 4-Hour Colab Run (Phase 25.2).** The 500-step coherence
+pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
+gibberish, and step-500 continuations were recognizable PT-BR plus Python that
+compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
+cross-attention path at CPU-feasible scale; production fluency still requires
+the 4-hour T4 run.
+
 **Portuguese (Brazil) is the primary language** (Phase 24.1): 50% of every
 training window is PT-BR text, with code, multimodal and English as support
 skills. The quota is enforced per 100-draw window and audited in the notebook
@@ -81,9 +88,10 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 193 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene |
+| `tests/` | 199 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
+| `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
 
 ## Quickstart
 
@@ -99,6 +107,10 @@ python -m training.train --smoke
 # Smoke + coherence probe: also prints the latent thought-buffer activation
 # norms (proof the scratchpad is used) and a greedy byte continuation.
 python smoke_test_coherence.py --steps 4
+
+# Phase 25.2 coherence pre-flight: exactly 500 steps, PT-BR + code, strict
+# assertions (loss decrease, recognizable PT-BR, valid Python syntax).
+python coherence_preflight.py
 
 # Analytic T4 VRAM preflight (SIMULATION, not a CUDA measurement).
 python -m training.train --simulate-t4 --config configs/t4_scaled.yaml
@@ -215,3 +227,9 @@ to end, and the guarantee is tested, not assumed:
   SDPA require sm_80+; the probe verifies the efficient backend (self, chunk-local mask, cross mask) before measuring.
 - **Long-range hand-off:** self-attention is local. Information older than the
   window must be retrieved from committed memory through the adapter hub.
+- **Coherence pre-flight is measured, but sandbox-scale:** `coherence_preflight.py`
+  ran 500 optimizer steps on a deterministic offline 1000-example PT-BR/code
+  slice using the Phase 25.1 sliding-window + memory cross-attention path
+  (`window_size=1024`, 8 layers, CPU-feasible width). It proved learning and
+  coherent continuations, not finished production fluency. The 4-hour Colab run
+  is still the production-scale training event.

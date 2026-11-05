@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.1)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.2)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -37,6 +37,12 @@ and `README.md` (how to run it).
   the combined context+thought state. `max_thought_steps: 0` reproduces the
   legacy architecture exactly. Checkpoint schemas: foundation v6, trainer v7,
   memory v2.
+- **Coherence pre-flight gates readiness (Phase 25.2).** `coherence_preflight.py`
+  runs exactly 500 optimizer steps on PT-BR/code, snapshots loss/generation at
+  0/250/500, and asserts loss decrease, recognizable PT-BR, and valid Python
+  syntax. The sandbox run is CPU-feasible scale of the same sliding-window +
+  memory cross-attention path; never present it as production-scale fluency.
+  The 4-hour Colab run remains the production training event.
 - **Sliding-window attention is the T4 path (Phase 25.1).** Production
   `attention_type: sliding_window`, `max_seq_len: 16384`, `window_size: 1024`,
   `sliding_chunk_size: 512`. Allowed edges are exactly `i - W ≤ j ≤ i`
@@ -135,10 +141,11 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   193-test regression suite (CPU, ~7 s, fully offline)
+tests/                   199-test regression suite (CPU, ~11 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
                          mix audit + Zero-Disk verification before training)
 smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)
+coherence_preflight.py   Phase 25.2 500-step PT-BR/code coherence pre-flight
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
 requirements.txt  .gitignore  package __init__.py files
 ```
