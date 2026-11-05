@@ -1,7 +1,8 @@
 # ByteCore-DualMemory
 
 A byte-level causal Transformer (**366,316,833 parameters** in its production
-preset) with a **16,384-byte causal BigBird window**, an **8192-dim unified
+preset) with a **16,384-byte packed row** and **causal sliding-window attention
+(self + up to 1024 previous bytes)**, an **8192-dim unified
 skill/memory space** read through a **Gated Skill Adapter + context-to-memory
 cross-attention in every layer**, a confidence-headed **latent thought matrix**,
 learnable per-slot **decay/Forever eviction**, and frozen-encoder multimodal
@@ -31,11 +32,11 @@ cross-entropy. The authoritative math is in
 
 ## Core ideas
 
-1. **Causal BigBird at 16k.** Each byte attends to a local W=256 window,
-   R=32 seeded random past keys per head, and G=16 prefix globals, always
-   intersected with `j ≤ i`. A shared `(1,1,L,L)` boolean base plus lazy
-   per-head overlays is passed to SDPA. This prunes connectivity, **not**
-   asymptotic FLOPs; it is not a block-sparse kernel or infinite context.
+1. **Causal sliding window at 16k rows.** Each byte attends to itself plus up
+   to `window_size=1024` previous bytes (`i-1024 ≤ j ≤ i`). Exact chunk-local
+   SDPA calls use small masks and never allocate an `(L,L)` tensor. On T4 the
+   forced backend is memory-efficient attention; PyTorch Flash/cuDNN SDPA
+   require sm_80+. The 16k row is not a 16k dense self-attention window.
 2. **Gated Skill Adapter + teleportation hub (1024 ↔ 8192).** The 1024-dim hidden state queries
    1024-dim memory keys (high-fidelity matching), retrieves the 8192-dim skill
    value, and compresses it with a **GLU, not a linear blend**:
@@ -43,8 +44,9 @@ cross-entropy. The authoritative math is in
    The sigmoid gate is a sharp bouncer: channels are passed or vetoed, not
    averaged into mush. In parallel, every layer runs context-to-memory
    cross-attention (Q=1024 hidden, K=1024 bank keys, V=8192 bank values,
-   zero-init ReZero gate) to bridge gaps beyond the 16k window. Injected
-   residually in **all 8 layers**.
+   zero-init ReZero gate). With random/global edges removed, this committed
+   memory hub is the explicit long-range path beyond the 1024-byte local
+   window. Injected residually in **all 8 layers**.
 3. **Multimodal matrices.** Frozen encoders (ViT/ResNet for images/video,
    Wav2Vec2 for audio) feed trainable `Linear(encoder_dim, 8192)` projectors.
    The core model only ever sees the 8192-dim vector — swap the encoder, keep
@@ -73,13 +75,13 @@ cross-entropy. The authoritative math is in
 
 | Path | Contents |
 |---|---|
-| `models/foundation.py` | Byte Transformer, causal BigBird mask, GatedSkillAdapter + memory cross-attention, confidence loop, LatentThoughtBuffer, token-id tools, checkpoint I/O |
+| `models/foundation.py` | Byte Transformer, chunk-local causal sliding-window SDPA, GatedSkillAdapter + memory cross-attention, confidence loop, LatentThoughtBuffer, token-id tools, checkpoint I/O |
 | `models/memory_model.py` | Unified DualMemory alias: one 1024-key/8192-value bank, learnable decay/importance, Forever guard, detached delayed writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
-| `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 BigBird context, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 191 tests (fully offline): BigBird causality/mask math, cross-attention, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene |
+| `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
+| `tests/` | 193 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 
@@ -206,7 +208,10 @@ to end, and the guarantee is tested, not assumed:
   that is the matrix approach: the model predicts representations.
 - VRAM figures in the audit are **analytic** unless explicitly marked
   measured; this repository's CI environment has no GPU. The production
-  simulator estimates 13.073 GB / 13.5 GB; the real CUDA probe enforces the
-  ceiling and fails closed if batch/R/G autotune cannot fit.
-- **BigBird masks are connectivity-sparse, not FLOP-sparse.** SDPA still faces
-  an L² score problem; lowering R/G may not shrink dense mask allocation.
+  simulator estimates 9.822 GB (<10 GB design target) / 13.5 GB hard ceiling;
+  the real CUDA probe enforces the ceiling and fails closed if batch autotune
+  cannot fit. The window is not silently shrunk.
+- **T4 kernel reality:** sm_75 uses memory-efficient SDPA. PyTorch Flash/cuDNN
+  SDPA require sm_80+; the probe verifies the efficient backend (self, chunk-local mask, cross mask) before measuring.
+- **Long-range hand-off:** self-attention is local. Information older than the
+  window must be retrieved from committed memory through the adapter hub.

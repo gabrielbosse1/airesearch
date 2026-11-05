@@ -1,22 +1,21 @@
-"""BigBird causality, memory teleportation, decay policy, and T4 preflight.
+"""Sliding-window causality, memory teleportation, decay policy, T4 preflight.
 
-Offline contract: no CUDA device is assumed. The production-size mask is
-checked on CPU in chunks; T4 VRAM is exercised through the explicitly labelled
-simulator and mocked autotune decisions, never presented as a measurement.
+Offline contract: no CUDA device is assumed. Exact SWA is checked against a
+dense reference on small tensors; T4 VRAM is exercised through the explicitly
+labelled simulator and mocked autotune decisions, never a fake measurement.
 """
 from __future__ import annotations
 
-import gc
 import math
-import weakref
 
 import pytest
 import torch
+import torch.nn.functional as F
 import yaml
 
-from models.foundation import (BigBirdSparseMask, CausalByteTransformer,
-                               FoundationConfig, GatedSkillAdapter,
-                               TransformerBlock, save_foundation, load_foundation)
+from models.foundation import (CausalByteTransformer, FoundationConfig,
+                               GatedSkillAdapter, TransformerBlock,
+                               sliding_window_attention, sliding_window_chunk_mask)
 from models.memory_model import (DualMemory, EvictionEvent, MEMORY_SCHEMA,
                                  ProceduralSkillBank, SkillBankView)
 from data.sources import BytePacker
@@ -32,131 +31,98 @@ def _softplus_inv(x: float) -> float:
     return math.log(math.expm1(x))
 
 
-def _small_bigbird_config(**overrides) -> FoundationConfig:
+def _small_swa_config(**overrides) -> FoundationConfig:
     base = dict(d_model=32, n_layers=2, n_heads=4, n_kv_heads=2, d_ff=64,
-                max_seq_len=64, dropout=0.0, attention_type="bigbird",
-                bigbird_window=8, bigbird_random_tokens=3, bigbird_global_tokens=2,
+                max_seq_len=64, dropout=0.0, attention_type="sliding_window",
+                window_size=8, sliding_chunk_size=4,
                 memory_dim=64, refinement_steps=2, refinement_rank=16,
                 gradient_checkpointing=True)
     base.update(overrides)
     return FoundationConfig(**base)
 
 
-def test_production_preset_is_16k_bigbird_with_checkpointing():
+def test_production_preset_is_16k_sliding_window_with_checkpointing():
     with open("configs/t4_scaled.yaml", "r", encoding="utf8") as handle:
         config = yaml.safe_load(handle)
     cfg = FoundationConfig.from_mapping(config["model"])
-    assert cfg.max_seq_len == 16384 and cfg.attention_type == "bigbird"
-    assert (cfg.bigbird_window, cfg.bigbird_random_tokens, cfg.bigbird_global_tokens) == (256, 32, 16)
+    assert cfg.max_seq_len == 16384 and cfg.attention_type == "sliding_window"
+    assert cfg.window_size == 1024 and cfg.sliding_chunk_size == 512
     assert cfg.gradient_checkpointing and cfg.memory_cross_attention
     assert config["training"]["seq_len"] == 16384
     assert config["training"]["micro_batch_size"] == 1
     assert config["training"]["grad_accum"] == 32
     assert config["vram"]["target_max_gb"] == 13.5
+    assert config["vram"]["frozen_encoder_dtype"] == "float16"
+    assert config["encoders"]["video"] is None  # no dead video backbone on T4
 
 
-def test_bigbird_mask_matches_causal_local_random_global_reference():
-    length, window, random_tokens, global_tokens, heads = 40, 5, 3, 2, 2
-    mask = BigBirdSparseMask(length, heads, window=window, random_tokens=random_tokens,
-                             global_tokens=global_tokens, seed=7)
-    assert mask.base.shape == (1, 1, length, length) and mask.base.dtype == torch.bool
-    for i in range(length):
-        for j in range(length):
-            local = i - window + 1 <= j <= i
-            glob = (j < global_tokens or i < global_tokens) and j <= i
-            assert bool(mask.base[0, 0, i, j]) == bool(j <= i and (local or glob))
-    overlays = []
-    for head in range(heads):
-        overlay = mask.head_mask(head)
-        assert overlay.shape == (1, 1, length, length)
-        assert bool((overlay | mask.base == overlay).all())  # base subset
-        keys = mask.random_keys[head]
-        eligible = torch.tensor([max(0, i - window - global_tokens + 1) for i in range(length)])
-        counts = (keys >= 0).sum(-1)
-        assert torch.equal(counts, torch.minimum(eligible, torch.full_like(eligible, random_tokens)))
-        for i in range(length):
-            picks = keys[i][keys[i] >= 0]
-            assert picks.numel() == len(set(picks.tolist()))  # without replacement
-            assert bool((picks <= i).all())
-            assert bool((picks >= global_tokens).all())
-            assert bool((picks < i - window + 1).all())       # nonlocal, nonglobal
-            assert bool(overlay[0, 0, i, picks].all())
-        overlays.append(overlay)
-    assert not torch.equal(overlays[0], overlays[1])          # per-head random sets
+def test_sliding_chunk_mask_is_exact_and_strictly_causal():
+    window = 5
+    for start in range(0, 20, 4):
+        stop = min(start + 4, 20)
+        key_start = max(0, start - window)
+        mask = sliding_window_chunk_mask(start, stop - start, key_start,
+                                         stop - key_start, window)
+        assert mask.dtype == torch.bool
+        assert mask.numel() <= 4 * (window + 4)
+        for r, i in enumerate(range(start, stop)):
+            for c, j in enumerate(range(key_start, stop)):
+                assert bool(mask[r, c]) == bool(i - window <= j <= i)
 
 
-def test_production_16384_mask_is_causal_and_exact_density():
-    length, heads = 16384, 8
-    mask = BigBirdSparseMask(length, heads, window=256, random_tokens=32,
-                             global_tokens=16, seed=24)
-    assert mask.base.shape == (1, 1, length, length)
-    assert mask.base.numel() == 16384 * 16384
-    # Chunked audit avoids a second full-size temporary.
-    for start in range(0, length, 1024):
-        chunk = mask.base[0, 0, start:start + 1024]
-        rows = torch.arange(start, min(start + 1024, length))[:, None]
-        cols = torch.arange(length)[None, :]
-        assert not bool((chunk & (cols > rows)).any())
-    overlay = mask.head_mask(3, length)
-    row = 10000
-    assert int(mask.base[0, 0, row].sum()) == 256 + 16
-    assert int(overlay[0, 0, row].sum()) == 256 + 16 + 32
-    assert bool(overlay[0, 0, row, :16].all())
-    assert bool(overlay[0, 0, row, row - 255:row + 1].all())
-    assert not bool(overlay[0, 0, row, row + 1:].any())
-    keys = mask.random_keys[:, row]
-    assert keys.shape == (heads, 32)
-    for head in range(heads):
-        picks = keys[head]
-        assert len(set(picks.tolist())) == 32
-        assert bool((picks <= row).all())
-        assert not bool(mask.base[0, 0, row, picks].any())
-    # Early prefixes cannot supply 32 eligible nonlocal/nonglobal past keys.
-    assert int((mask.random_keys[0, 100] >= 0).sum()) == 0
-    assert int((mask.random_keys[0, 272] >= 0).sum()) == 1
-
-
-def test_lazy_head_overlay_is_not_cached_or_retained():
-    mask = BigBirdSparseMask(32, 2, window=4, random_tokens=2, global_tokens=2)
-    overlay = mask.head_mask(0)
-    ref = weakref.ref(overlay)
-    del overlay
-    gc.collect()
-    assert ref() is None
-    assert not hasattr(mask, "_head_cache")
-
-
-def test_bigbird_sdpa_receives_shared_shape_per_head_and_matches_manual_attention():
+def test_sliding_window_attention_matches_dense_reference_and_gqa():
     torch.manual_seed(0)
-    length, heads, head_dim = 24, 3, 8
-    mask = BigBirdSparseMask(length, heads, window=5, random_tokens=2, global_tokens=2)
-    q, k, v = (torch.randn(1, heads, length, head_dim) for _ in range(3))
+    length, heads, kv_heads, width, window, chunk = 24, 4, 2, 8, 5, 7
+    q = torch.randn(1, heads, length, width)
+    k = torch.randn(1, kv_heads, length, width)
+    v = torch.randn(1, kv_heads, length, width)
+    out = sliding_window_attention(q, k, v, window_size=window,
+                                   chunk_size=chunk, repeats=heads // kv_heads)
+    rows = torch.arange(length)[:, None]
+    cols = torch.arange(length)[None, :]
+    reference_mask = (cols <= rows) & (cols >= rows - window)
+    kr = k.repeat_interleave(heads // kv_heads, dim=1)
+    vr = v.repeat_interleave(heads // kv_heads, dim=1)
+    reference = F.scaled_dot_product_attention(q, kr, vr, attn_mask=reference_mask[None, None])
+    assert torch.allclose(out, reference, atol=1e-5, rtol=1e-5)
+    # A key/value outside the local window cannot change a late query row.
+    changed_k, changed_v = k.clone(), v.clone()
+    changed_k[:, :, 0] += 100.0
+    changed_v[:, :, 0] += 100.0
+    far = sliding_window_attention(q, changed_k, changed_v, window_size=window,
+                                   chunk_size=chunk, repeats=heads // kv_heads)
+    assert torch.equal(out[:, :, window + 2:], far[:, :, window + 2:])
+
+
+def test_production_model_allocates_no_full_length_mask(monkeypatch):
+    with open("configs/t4_scaled.yaml", "r", encoding="utf8") as handle:
+        cfg = FoundationConfig.from_mapping(yaml.safe_load(handle)["model"])
+    with torch.device("meta"):
+        model = CausalByteTransformer(cfg)
+    assert model.attention_mask is None and model.causal_mask is None
+    assert not any(name.endswith("causal_mask") for name, _ in model.named_buffers())
+    # Runtime chunk masks stay local even at L=16384.
+    import models.foundation as foundation
     seen = []
-    original = torch.nn.functional.scaled_dot_product_attention
+    original = foundation.sliding_window_chunk_mask
 
-    def record(qq, kk, vv, *args, **kwargs):
-        seen.append(kwargs.get("attn_mask"))
-        return original(qq, kk, vv, *args, **kwargs)
+    def record(*args, **kwargs):
+        mask = original(*args, **kwargs)
+        seen.append(mask.numel())
+        return mask
 
-    torch.nn.functional.scaled_dot_product_attention = record
-    try:
-        outs = []
-        for head in range(heads):
-            attn_mask = mask.head_mask(head)
-            outs.append(torch.nn.functional.scaled_dot_product_attention(
-                q[:, head:head + 1], k[:, head:head + 1], v[:, head:head + 1],
-                attn_mask=attn_mask, is_causal=False))
-            scores = (q[:, head:head + 1] @ k[:, head:head + 1].transpose(-1, -2)) / math.sqrt(head_dim)
-            scores = scores.masked_fill(~attn_mask, torch.finfo(scores.dtype).min)
-            manual = torch.softmax(scores, dim=-1) @ v[:, head:head + 1]
-            assert torch.allclose(outs[-1], manual, atol=1e-5)
-    finally:
-        torch.nn.functional.scaled_dot_product_attention = original
-    assert all(m.shape == (1, 1, length, length) and m.dtype == torch.bool for m in seen)
+    monkeypatch.setattr(foundation, "sliding_window_chunk_mask", record)
+    q = torch.randn(1, 1, 16384, 8)
+    k = torch.randn(1, 1, 16384, 8)
+    v = torch.randn(1, 1, 16384, 8)
+    with torch.no_grad():
+        sliding_window_attention(q, k, v, window_size=1024, chunk_size=512)
+    assert seen and max(seen) <= 512 * (1024 + 512)
+    assert max(seen) < 16384 * 16384 // 100
 
 
-def test_bigbird_model_blocks_future_gradients_and_checkpoints_all_blocks(monkeypatch):
-    cfg = _small_bigbird_config(n_layers=8, max_seq_len=32)
+def test_swa_model_blocks_future_gradients_and_checkpoints_all_blocks(monkeypatch):
+    cfg = _small_swa_config(n_layers=8, max_seq_len=32)
     model = CausalByteTransformer(cfg)
     calls = []
     import models.foundation as foundation
@@ -175,9 +141,41 @@ def test_bigbird_model_blocks_future_gradients_and_checkpoints_all_blocks(monkey
     emb = model.embed(ids).detach().requires_grad_()
     hidden = emb
     for block in model.blocks:
-        hidden = block(hidden, model.attention_mask, None)
+        hidden = block(hidden, None, None)
     hidden[0, 4].sum().backward()
     assert emb.grad is not None and float(emb.grad[0, 5:].abs().max()) == 0.0
+
+
+def test_memory_cross_attention_is_the_long_range_handoff():
+    # Self-attention is strictly local: changing a far past byte cannot affect
+    # a late row. The adapter cross-attention CAN read that far past when it is
+    # committed to the memory bank, and it is enabled in every production layer.
+    torch.manual_seed(0)
+    window = 4
+    q = torch.randn(1, 2, 12, 8)
+    k = torch.randn(1, 2, 12, 8)
+    v = torch.randn(1, 2, 12, 8)
+    base = sliding_window_attention(q, k, v, window_size=window, chunk_size=3)
+    k2, v2 = k.clone(), v.clone()
+    k2[:, :, 0] += 50.0
+    v2[:, :, 0] += 50.0
+    local = sliding_window_attention(q, k2, v2, window_size=window, chunk_size=3)
+    assert torch.equal(base[:, :, 8:], local[:, :, 8:])
+    adapter = GatedSkillAdapter(16, 32, n_heads=2)
+    adapter.cross_scale.data.fill_(1.0)
+    hidden = torch.randn(1, 12, 16)
+    keys = torch.randn(1, 16)
+    values = torch.randn(1, 32)
+    first = adapter.cross_delta(hidden, SkillBankView(keys, values, torch.ones(1, dtype=torch.bool)))
+    values2 = values + 10.0
+    second = adapter.cross_delta(hidden, SkillBankView(keys, values2, torch.ones(1, dtype=torch.bool)))
+    assert not torch.allclose(first, second)
+    with open("configs/t4_scaled.yaml", "r", encoding="utf8") as handle:
+        cfg = FoundationConfig.from_mapping(yaml.safe_load(handle)["model"])
+    assert cfg.memory_cross_attention
+    with torch.device("meta"):
+        model = CausalByteTransformer(cfg)
+    assert all(block.skill_adapter.cross_attention_enabled for block in model.blocks)
 
 
 def test_cross_attention_shapes_gates_gradients_and_empty_rows():
@@ -204,7 +202,7 @@ def test_cross_attention_shapes_gates_gradients_and_empty_rows():
 
 
 def test_cross_attention_is_wired_in_every_layer():
-    cfg = _small_bigbird_config(attention_type="dense", max_seq_len=32, n_layers=3)
+    cfg = _small_swa_config(attention_type="dense", max_seq_len=32, n_layers=3)
     model = CausalByteTransformer(cfg)
     view = SkillBankView(torch.randn(4, 32), torch.randn(4, 64), torch.ones(4, dtype=torch.bool))
     for block in model.blocks:
@@ -372,30 +370,27 @@ def test_probe_memory_view_is_full_bank_plus_differentiable_local_slots():
     assert report["measured"] is False and report["simulated"] is False
 
 
-def test_autotune_reduces_batch_then_sparse_counts_and_fails_closed(monkeypatch):
+def test_autotune_halves_batch_then_fails_closed_without_shrinking_window(monkeypatch):
     config = smoke_config()
-    config["model"].update(attention_type="bigbird", max_seq_len=32,
-                           bigbird_window=4, bigbird_random_tokens=4, bigbird_global_tokens=2)
+    config["model"].update(attention_type="sliding_window", max_seq_len=32,
+                           window_size=4, sliding_chunk_size=2)
     config["training"]["micro_batch_size"] = 2
-    config["vram"] = {"target_max_gb": 13.5, "auto_reduce_sparse": True,
-                      "min_random_tokens": 0, "min_global_tokens": 1}
+    config["vram"] = {"target_max_gb": 13.5}
     trainer = Trainer(config, device="cpu", samples=smoke_samples(8), resume=False)
-    peaks = iter([14.0, 14.0, 14.0, 14.0, 14.0, 14.0])
+    peaks = iter([14.0, 14.0])
     monkeypatch.setattr(trainer, "probe_vram", lambda: {
         "measured": True, "peak_gb": next(peaks), "micro_batch": trainer.micro_batch,
         "seq_len": trainer.seq_len})
     with pytest.raises(MemoryError, match="refusing to start"):
         trainer.autotune_batch(13.5)
     assert trainer.micro_batch == 1
-    assert trainer.model_config.bigbird_random_tokens == 0
-    assert trainer.model_config.bigbird_global_tokens == 1
+    assert trainer.model_config.window_size == 4  # architecture contract preserved
 
 
-def test_bigbird_preset_requires_gradient_checkpointing():
+def test_sliding_window_preset_requires_gradient_checkpointing():
     config = smoke_config()
-    config["model"].update(attention_type="bigbird", max_seq_len=32,
-                           bigbird_window=4, bigbird_random_tokens=2,
-                           bigbird_global_tokens=2, gradient_checkpointing=False)
+    config["model"].update(attention_type="sliding_window", max_seq_len=32,
+                           window_size=4, sliding_chunk_size=2, gradient_checkpointing=False)
     with pytest.raises(ValueError, match="gradient_checkpointing=True"):
         Trainer(config, device="cpu", samples=smoke_samples(8), resume=False)
 
@@ -407,8 +402,11 @@ def test_simulated_t4_production_preset_fits_and_is_labelled_estimate():
     assert report["measured"] is False and report["simulated"] is True
     assert "simulated" in report["device"].lower()
     assert report["seq_len"] == 16384 and report["micro_batch"] == 1
-    assert report["bigbird_random_tokens"] == 32 and report["bigbird_global_tokens"] == 16
+    assert report["window_size"] == 1024 and report["sliding_chunk_size"] == 512
+    assert report["attention_type"] == "sliding_window"
     assert report["fits"] and report["peak_gb"] <= 13.5
+    assert report["meets_design_target"] and report["peak_gb"] < 10.0
+    assert report["frozen_encoder_bytes_per_parameter"] == 2
     assert sum(report["components_gb"].values()) == pytest.approx(report["peak_gb"], abs=0.01)
     larger = simulate_t4_vram(config, micro_batch=2)
     assert larger["peak_gb"] > report["peak_gb"]
@@ -422,4 +420,51 @@ def test_streaming_packer_emits_actual_16384_byte_chunks():
     rows = list(packer.feed(b"x" * (16384 * 2 + 17)))
     assert len(rows) >= 2
     assert all(ids.shape[0] == 16384 and targets.shape[0] == 16384 for ids, targets in rows[:-1])
-    assert CHECKPOINT_SCHEMA == 6
+    assert CHECKPOINT_SCHEMA == 7
+
+
+def test_inline_confidence_loss_matches_collected_state_reference():
+    cfg = _small_swa_config(max_seq_len=32, refinement_steps=3)
+    torch.manual_seed(0)
+    model = CausalByteTransformer(cfg)
+    ids = torch.randint(0, 256, (2, 12))
+    targets = ids[:, 1:].clone()
+    inputs = ids[:, :-1].clone()
+    loss, metrics = model.loss(inputs, targets, confidence_weight=0.1, return_metrics=True)
+    logits, info = model.forward(inputs, collect_states=True, return_info=True)
+    ce = F.cross_entropy(logits.reshape(-1, logits.shape[-1]), targets.reshape(-1))
+    valid = targets != 258
+    terms = []
+    thought_states = info.get("thought_states") or [None] * len(info["states"])
+    for state, thought in zip(info["states"], thought_states):
+        with torch.no_grad():
+            step_logits = model.head(model.norm_final(state)).float()
+            logp = torch.log_softmax(step_logits, dim=-1)
+            entropy = -(logp.exp() * logp).sum(-1) / math.log(cfg.vocab_size)
+            target_t = (entropy < 0.35).float()
+        conf = model.refinement.confidence(state, thought).float().clamp(1e-6, 1 - 1e-6)
+        terms.append(F.binary_cross_entropy(conf[valid], target_t[valid]))
+    reference = ce + 0.1 * torch.stack(terms).mean()
+    assert torch.allclose(loss, reference, atol=1e-5, rtol=1e-5)
+    assert metrics["confidence_bce"] == pytest.approx(float(torch.stack(terms).detach().mean()), abs=1e-5)
+
+
+def test_sliding_window_checkpointing_matches_plain_gradients():
+    cfg = _small_swa_config(max_seq_len=32, refinement_steps=2)
+    torch.manual_seed(0)
+    plain = CausalByteTransformer(cfg.scaled(gradient_checkpointing=False))
+    torch.manual_seed(0)
+    checked = CausalByteTransformer(cfg.scaled(gradient_checkpointing=True))
+    ids = torch.randint(0, 256, (1, 16))
+    l1 = plain.loss(ids, confidence_weight=0.1)
+    l2 = checked.loss(ids, confidence_weight=0.1)
+    assert torch.allclose(l1, l2, atol=1e-5, rtol=1e-5)
+    l1.backward()
+    l2.backward()
+    compared = 0
+    for p1, p2 in zip(plain.parameters(), checked.parameters()):
+        if p1.grad is not None:
+            assert p2.grad is not None
+            assert torch.allclose(p1.grad, p2.grad, atol=1e-5, rtol=1e-5)
+            compared += 1
+    assert compared > 0

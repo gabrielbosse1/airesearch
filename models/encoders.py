@@ -25,6 +25,7 @@ backbones for offline shape tests (never used for real ingestion).
 """
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 from typing import Any, Callable
@@ -144,16 +145,25 @@ class FrozenEncoder(nn.Module):
 
     @torch.no_grad()
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
-        if self.feature_fn is not None:
-            features = self.feature_fn(self.backbone, inputs)
-        else:
-            features = self.backbone(inputs)
+        # T4 preset may store frozen inference-only weights in fp16 to save
+        # VRAM. Autocast bridges fp32 raw inputs; returned features are fp32 so
+        # trainable projectors never see a dtype mismatch outside autocast.
+        parameter = next(self.backbone.parameters(), None)
+        low_precision = (inputs.device.type == "cuda" and parameter is not None
+                         and parameter.dtype in (torch.float16, torch.bfloat16))
+        context = (torch.autocast(device_type=inputs.device.type, dtype=parameter.dtype)
+                   if low_precision else contextlib.nullcontext())
+        with context:
+            if self.feature_fn is not None:
+                features = self.feature_fn(self.backbone, inputs)
+            else:
+                features = self.backbone(inputs)
         if features.ndim > 2:  # e.g. (B, T, D) audio frames -> mean pool
             features = features.mean(dim=tuple(range(1, features.ndim - 1)))
         if features.shape[-1] != self.output_dim:
             raise ValueError(f"backbone produced width {features.shape[-1]}, "
                              f"expected {self.output_dim}")
-        return features
+        return features.float()
 
 
 def _resnet_features(backbone: nn.Module, images: torch.Tensor) -> torch.Tensor:

@@ -1,4 +1,4 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.1 code as it exists
 
 **Scope.** Bottom-up description of the code in this checkout, from a scalar
 multiply to the training loop. Every formula is transcribed from the
@@ -45,42 +45,40 @@ h ← h + GatedSkillAdapter(RMSNorm(h), memory)   # §3, ALL 8 layers
 ```
 
 Attention: `q: D→D`, `k,v: D→H_kv·d_h = 256`, `o: D→D`; RoPE rotates q/k with
-θ=10000. The production preset selects **BigBird** (`attention_type: bigbird`);
-the legacy dense path still uses `scaled_dot_product_attention(is_causal=True)`.
-SwiGLU: `3·D·F = 12,582,912` params/layer. All 8 blocks are checkpointed.
+θ=10000. The production preset selects **sliding_window**; the legacy dense
+path still uses `scaled_dot_product_attention(is_causal=True)`. SwiGLU:
+`3·D·F = 12,582,912` params/layer. All 8 blocks are checkpointed, with finer
+attention / FFN / adapter-branch checkpoint boundaries inside each block.
 
-### 2b. Causal BigBird mask (`BigBirdSparseMask`) — mathematical contract
+### 2b. Causal sliding-window attention — exact contract and T4 kernel reality
 
-For query row `i`, key column `j`, head `h`, with `L=16384`, `W=256`, `R=32`,
-`G=16`, the allowed set is
+For query row `i` and key column `j`, with `W=window_size=1024`:
 
 ```
-A_i^h = { j : j ≤ i AND [ (i-W+1 ≤ j ≤ i)       # local, inclusive, self included
-                         OR j < G              # prefix global columns
-                         OR i < G              # prefix global rows
-                         OR j ∈ R_i^h ] }      # random past keys
-R_i^h ~ sample_without_replacement({G, ..., i-W},
-                                   min(R, max(0, i-W-G+1)))
+A_i = { j : i - W <= j <= i }
 ```
 
-The causal intersection `j ≤ i` applies to **global columns too**: the first
-`G` rows cannot attend forward. Early rows have fewer than `R` eligible
-nonlocal/nonglobal keys; the count is exact only when the eligible set is large
-enough. Random sets are seeded per head (`seed + h·1000003`) and reproducible.
+This is self plus up to `W` previous bytes, strictly causal. There are no
+random or global edges. `sliding_window_attention` partitions queries into
+chunks of `C=sliding_chunk_size=512`. For query chunk `[s, s+C)`, it reads only
+keys `[max(0, s-W), s+C)` and builds a small True=ATTEND mask of shape
+`(C, key_len)` using global positions. Each chunk is passed to
+`F.scaled_dot_product_attention(attn_mask=chunk_mask, is_causal=False)` and
+checkpointed, so backward keeps one small chunk workspace live. No `(L,L)`
+mask is allocated; `model.causal_mask` and `model.attention_mask` are `None`.
 
-`base` is a shared bool tensor `(1,1,L,L)` with **True = ATTEND** (SDPA boolean
-convention; the unused legacy dense `causal_mask` used True = FUTURE). Each
-head overlay is materialised lazily as `(1,1,L,L)` by scattering `R_i^h` into a
-clone of the base. Head attention is checkpointed, so backward recomputes one
-overlay at a time rather than retaining `(1,H,L,L)`.
+Late-row self-attention degree is `W+1=1025` (including self). Chunk mask
+storage is at most `C·(W+C)=512·1536=786,432` bool elements, versus
+`L²=268,435,456` for a full 16k mask. GQA K/V are repeated only inside the
+local key span.
 
-Late-row density is `(W+G+R)/L = 304/16384 ≈ 1.855%`. Storage: base
-`L² = 268,435,456 B`; one overlay another `L²`; random coordinates
-`H·L·R·8 = 33,554,432 B`. **Limit:** passing a boolean mask to SDPA prunes
-connectivity, not asymptotic FLOPs. CUDA forces the efficient-attention backend
-(no silent math fallback); CPU tests may use math as a reference. This is not a
-block-sparse BigBird kernel and does not provide literally infinite context.
-Reducing R/G does not necessarily shrink the dense mask allocation.
+**Backend honesty.** PyTorch's public SDPA API has no `window_size` argument.
+On CUDA this implementation forces `SDPBackend.EFFICIENT_ATTENTION`; the trainer
+probe verifies it before the expensive measurement. Upstream PyTorch constraints
+checked for v2.5.1, v2.9.0, and main require `sm_80+` for Flash and cuDNN SDPA,
+so a T4 (`sm_75`) uses memory-efficient attention, not Flash/cuDNN. CPU tests may
+use math as a numerical reference. The 16,384-byte packed row is not a dense
+16k self-attention window; long-range information must come from memory (§3).
 
 ## 3. The Gated Skill Adapter (`GatedSkillAdapter`) — the Phase 24 core
 
@@ -115,9 +113,10 @@ projector receives zero gradient — the trainer therefore merges the
 persistent bank into training views so keys face distractors
 (`BatchBuilder.pop_batch`).
 
-**Context-to-memory cross-attention (Phase 25, every layer).** In parallel with
-the GLU bridge, the adapter now teleports information from the committed memory
-timeline across gaps longer than the 16k window:
+**Context-to-memory cross-attention (Phase 25.1 long-range hand-off, every
+layer).** In parallel with the GLU bridge, the adapter teleports information
+from the committed memory timeline. With random/global self-attention edges
+removed, this is the explicit path beyond the 1024-byte local window:
 
 ```
 Q = RMSNorm(W_q^x h)          W_q^x ∈ R^{1024×1024}     (B,T,1024)
@@ -134,7 +133,8 @@ so the new branch is identity at step 0 and opens by gradient. Inactive rows are
 zeroed after SDPA (never an all-masked softmax NaN). Persistent slots are
 committed only **after** their producing batch is assembled (`BatchBuilder`
 delayed writes), so cross-attention cannot retrieve same-batch futures;
-batch-local slots remain row-isolated.
+batch-local slots remain row-isolated. Tests verify self-attention cannot see a
+far past byte while `cross_delta` can read that byte once committed to memory.
 
 **Parameter census (measured, meta-device construction):**
 
@@ -220,6 +220,12 @@ features ──SkillKeyProjector▶ key  = Linear(E, 1024)   [trainable]
 (key, value) ──write──▶ ProceduralSkillBank      [detached, inference]
 (key, value) ──batch_view──▶ training view       [differentiable]
 ```
+
+The T4 preset stores frozen inference-only backbones in fp16 on CUDA
+(`vram.frozen_encoder_dtype: float16`) and returns fp32 features to the
+trainable projectors. `encoders.video: null` avoids loading a dead video
+backbone for the image/audio stream. Trainable parameters, gradients, and
+AdamW moments remain fp32.
 
 Registry: `resnet50` (E=2048), `vit_b_16` (E=768, production default — its
 768-byte codec payload fits a 1024 context), `wav2vec2` (E=768, mean-pooled
@@ -340,24 +346,26 @@ lr=0 step; existing resumed moments are preserved, not double-counted). Configur
 frozen backbones are loaded so their persistent weights are present. CPU returns
 `measured=False`, never a fake peak.
 
-**Autotune / fail-closed.** Above **13.5 GB**, halve micro-batch to 1, then
-halve BigBird R toward 0 and G toward 1, rebuilding the mask and reprobing.
-Dense boolean-mask allocation may not shrink with R/G; if the measured peak is
-still above the ceiling, raise `MemoryError` and refuse to start.
+**Autotune / fail-closed.** Above **13.5 GB**, halve micro-batch to 1 and
+reprobe. The 1024-byte window is an architecture contract and is not silently
+shrunk. If batch 1 still exceeds the ceiling, raise `MemoryError` and refuse to
+start. The probe first verifies memory-efficient SDPA on the actual device for self-attention, chunk-local unequal-length masks, and cross-attention broadcast masks.
 
 **Simulated T4 accounting (`--simulate-t4`, analytic, NOT measured).** The
-production preset estimates **13.073 GB / 13.5 GB** with fp32
-params/grads/Adam (16 B/trainable param), rounded-up frozen encoder weights,
-fp32 checkpoint boundaries, one live block, one lazy BigBird overlay + possible
-fp16 backend bias, pure thought-step checkpoints, streamed confidence logits,
-full bank + local slots, and a 0.5 GB allocator/backend reserve. Largest terms:
-optimizer residency 6.353 GB, frozen encoders 1.100 GB, block boundaries
-0.604 GB, BigBird base/overlay/bias 1.074 GB, refinement 1.191 GB. This is a
-conservative shape-based estimate; the CUDA probe is the authority.
+Phase 25.1 production preset estimates **9.822 GB**, below the **10 GB design
+target** and the 13.5 GB hard ceiling. It assumes fp32 trainable
+params/grads/Adam (16 B/parameter), fp16 frozen encoder storage, fp32
+checkpoint boundaries, all-block plus sub-block checkpointing, one live
+chunk-local SWA workspace, inline confidence BCE (no second retained state
+list), full bank + local slots, and a 0.5 GB allocator/backend reserve.
+Largest terms: optimizer residency ~6.24 GB, frozen encoders ~0.37 GB, block
+boundaries ~0.60 GB, max live sub-checkpoint + within-layer boundaries ~0.97 GB,
+refinement ~0.92 GB. This is a conservative shape-based estimate; the CUDA
+probe is the authority.
 
 Checkpoints: atomic tmp+rename, every 30 min **and** every 500 steps, model +
-projectors + unified bank/policy + optimizer + scaler + RNG; trainer schema **6**,
-foundation schema **5**, memory schema **2**. Frozen encoders are rebuildable;
+projectors + unified bank/policy + optimizer + scaler + RNG; trainer schema **7**,
+foundation schema **6**, memory schema **2**. Frozen encoders are rebuildable;
 resume recreates projector param groups in order. Hub upload/download failures
 are reported as `uploaded/downloaded: false` with a reason.
 
@@ -457,7 +465,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **191 passed in ~10 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **193 passed in ~7 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -469,9 +477,9 @@ EDIT pass-through, bidirectional batches, accumulation equivalence,
 checkpoint/resume, time-based cadence, **quota-exact 50/25/15/10 windows**,
 renormalisation, mix-audit verdicts and truncation, **PAD masking/zero-loss
 invariants**, token-weighted CE and confidence BCE on a 50% PT-BR batch,
-trainer `data_mix` reporting, mixture fallbacks/packing, **BigBird causal
-local/random/global reference math, production 16384 mask audit, lazy per-head
-overlays, all-8-block checkpointing, cross-attention gradients in every layer,
+trainer `data_mix` reporting, mixture fallbacks/packing, **sliding-window
+exactness vs a dense reference, chunk-local causality, no full-length mask,
+all-8-block checkpointing, memory long-range hand-off, cross-attention gradients in every layer,
 decay-score/Forever permanence/policy-gradient stability, delayed memory commit,
 representative probe view, fail-closed autotune, labelled T4 simulator**,
 **strict streaming
@@ -491,6 +499,6 @@ the mix; there is no fifth bucket. The codec is lossy (p99 ≈ 0.074 on unit-nor
 Single-slot views give the key projector zero gradient until distractors
 exist (the trainer merges the bank). Real `ddgs` search needs a networked
 runtime; training uses the deterministic mock. GPU throughput/VRAM remain
-analytic until the notebook runs. Boolean-mask SDPA is connectivity-sparse, not
-FLOP-sparse; the 13.5 GB ceiling is enforced by the real probe, not by the
-simulator alone.
+analytic until the notebook runs. Self-attention is local; the memory hub is the
+long-range path. T4 uses memory-efficient SDPA, not Flash/cuDNN. The 13.5 GB
+ceiling is enforced by the real probe, not by the simulator alone.

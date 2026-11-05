@@ -1,4 +1,4 @@
-# Phase 25 -- ByteCore-DualMemory, the 4-hour T4 pre-training preset.
+# Phase 25.1 -- ByteCore-DualMemory, the 4-hour T4 pre-training preset.
 # PT-BR-first: 50% Portuguese (Brazil) documents, 25% code, 15% multimodal,
 # 10% English (data/sources.py enforces the quota, not just the expectation).
 #
@@ -11,11 +11,12 @@
 # torch.amp.GradScaler. Both are 2-byte formats; the fallback is required.
 #
 # Geometry: 8 layers x 1024-dim core, 16384 context, 8192-dim unified memory.
-# Causal BigBird connectivity: local W=256 + random R=32/head + prefix G=16.
-# Every layer has the original GLU bridge PLUS Q=1024, K=1024, V=8192
-# context-to-memory cross-attention (zero-init ReZero injection).
-# SDPA with a boolean mask is NOT a block-sparse FLOP kernel. The CUDA probe,
-# not this YAML or the analytic simulator, is the final authority on T4 fit.
+# Causal sliding-window attention: each byte attends to itself plus up to
+# window_size=1024 previous bytes. Chunk-local SDPA masks avoid any (L,L)
+# tensor; CUDA forces the memory-efficient backend (T4/sm_75 cannot use
+# PyTorch Flash/cuDNN SDPA). The unified memory cross-attention hub is the
+# ONLY path beyond the local window. The CUDA probe, not this YAML or the
+# analytic simulator, is the final authority on T4 fit.
 
 model:
   vocab_size: 265                  # 256 bytes + BOS/EOS/PAD + 6 tool/edit ids
@@ -25,11 +26,9 @@ model:
   n_kv_heads: 2                    # GQA: KV projections at 25% of MHA
   d_ff: 4096                       # SwiGLU hidden width
   max_seq_len: 16384               # RoPE: no learned position table
-  attention_type: bigbird
-  bigbird_window: 256              # inclusive local span, self included
-  bigbird_random_tokens: 32        # distinct eligible past keys per head
-  bigbird_global_tokens: 16        # prefix globals, still strictly causal
-  bigbird_seed: 24
+  attention_type: sliding_window
+  window_size: 1024                # max lookback distance; self + 1024 previous
+  sliding_chunk_size: 512          # query rows per chunk-local SDPA call
   memory_cross_attention: true
   dropout: 0.0
   norm_type: rmsnorm
@@ -56,7 +55,8 @@ memory:
 encoders:                          # FROZEN feature extractors (never trained)
   image: vit_b_16                  # 768-dim; codec truncated to the 16k row
   audio: wav2vec2                  # 768-dim, mean-pooled over time
-  video: vit_b_16                  # sampled frames -> mean-pooled matrix
+  video: null                      # T4 preset streams image/audio only; raw video
+                                   # backbone stays disabled to avoid dead VRAM
 
 training:
   requested_precision: bfloat16
@@ -85,11 +85,10 @@ training:
 
 vram:
   target_max_gb: 13.5              # hard ceiling; representative CUDA probe
-  auto_reduce_sparse: true         # then halve R/G and reprobe; fail if still over
-  min_random_tokens: 0
-  min_global_tokens: 1
   simulator_safety_gb: 0.5         # allocator/backend reserve in ESTIMATE only
   require_gradient_checkpointing: true
+  frozen_encoder_dtype: float16    # inference-only frozen backbones on CUDA;
+                                   # trainable params/grads/Adam remain fp32
 
 data:
   # Phase 24.2 STRICT streaming: build_mixture REJECTS streaming: false.

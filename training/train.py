@@ -21,7 +21,7 @@ Everything the 4-hour Colab run needs lives here:
   skill matrix AND media codec bytes conditioned on a text skill matrix;
 * causal-LM cross-entropy + confidence BCE + dynamic-memory policy loss;
 * gradient checkpointing, grad accumulation, cosine LR with warmup;
-* representative measured VRAM probe + batch/sparse autotune; the separate
+* representative measured VRAM probe + batch autotune; the separate
   ``--simulate-t4`` accounting mode is explicitly labelled as an estimate;
 * atomic checkpoints every 30 minutes (and every N steps), resumable locally
   or from the Hugging Face Hub;
@@ -46,17 +46,19 @@ import sys
 import tempfile
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterator, Mapping
 
 import torch
+import torch.nn.functional as F
 import yaml
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
 from models.foundation import (BOS, EOS, PAD, TOOL_SEARCH, TOOL_SEARCH_END, VOCAB_SIZE,
                                OBS_START, OBS_END, EDIT, EDIT_END,
-                               BigBirdSparseMask, CausalByteTransformer, FoundationConfig,
+                               CausalByteTransformer, FoundationConfig,
                                decode_ids, encode_bytes, pad_batch)
 from models.memory_model import (KEY_DIM, VALUE_DIM, DualMemory, EvictionEvent,
                                  SkillBankView, stack_views)
@@ -65,7 +67,7 @@ from models.encoders import (MultimodalIngestor, TextSkillProjector,
                              pooled_text_embedding, preprocess_image)
 from data.sources import BytePacker, MixtureSampler, build_mixture, mixture_snapshot
 
-CHECKPOINT_SCHEMA = 6  # v6: unified dynamic memory + BigBird/cross-attention
+CHECKPOINT_SCHEMA = 7  # v7: sliding-window attention + memory long-range hand-off
 
 
 # ---------------------------------------------------------------------------
@@ -115,16 +117,16 @@ def _trainable_parameters(config: Mapping[str, Any], model_cfg: FoundationConfig
 
 
 def simulate_t4_vram(config: Mapping[str, Any], *, micro_batch: int | None = None,
-                     seq_len: int | None = None, random_tokens: int | None = None,
-                     global_tokens: int | None = None) -> dict[str, Any]:
-    """Return a conservative simulated peak and its transparent components.
+                     seq_len: int | None = None, window_size: int | None = None,
+                     chunk_size: int | None = None) -> dict[str, Any]:
+    """Conservative simulated T4 peak for the sliding-window training path.
 
-    The model assumes fp32 master weights/grads/Adam moments (16 bytes per
-    trainable parameter), fp16 autocast inside blocks, fp32 residual/checkpoint
-    boundaries, all-block checkpointing, whole-loop refinement checkpointing,
-    and ONE BigBird overlay live at a time. It does NOT claim block-sparse
-    FLOPs or measure backend workspace; the safety reserve covers allocator
-    fragmentation and unmodelled temporaries.
+    This is an ESTIMATE, not a CUDA measurement. It assumes fp32 trainable
+    weights/grads/AdamW moments, fp16 autocast, fp32 residual boundaries,
+    all-block PLUS sub-block checkpointing, chunk-local sliding-window SDPA
+    (one small mask/workspace live at a time), inline confidence auxiliary
+    loss, and the configured frozen-encoder storage dtype. T4/sm_75 uses the
+    memory-efficient SDPA backend; PyTorch Flash/cuDNN SDPA require sm_80+.
     """
     model_cfg = FoundationConfig.from_mapping(config["model"])
     train = dict(config.get("training", {}))
@@ -132,59 +134,65 @@ def simulate_t4_vram(config: Mapping[str, Any], *, micro_batch: int | None = Non
     vram = dict(config.get("vram", {}))
     batch = int(micro_batch if micro_batch is not None else train.get("micro_batch_size", 1))
     length = int(seq_len if seq_len is not None else train.get("seq_len", model_cfg.max_seq_len))
-    r = int(random_tokens if random_tokens is not None else model_cfg.bigbird_random_tokens)
-    g = int(global_tokens if global_tokens is not None else model_cfg.bigbird_global_tokens)
-    if batch < 1 or length < 1 or length > model_cfg.max_seq_len or r < 0 or g < 1:
-        raise ValueError("invalid simulated batch/length/sparse counts")
-    if model_cfg.attention_type == "bigbird" and not model_cfg.gradient_checkpointing:
-        raise ValueError("BigBird T4 simulation requires gradient_checkpointing=True")
-    d, h, kv, ff = model_cfg.d_model, model_cfg.n_heads, model_cfg.n_kv_heads or model_cfg.n_heads, model_cfg.d_ff
+    window = int(window_size if window_size is not None else model_cfg.window_size)
+    chunk = int(chunk_size if chunk_size is not None else model_cfg.sliding_chunk_size)
+    if batch < 1 or length < 1 or length > model_cfg.max_seq_len or window < 1 or chunk < 1:
+        raise ValueError("invalid simulated batch/length/window/chunk")
+    if model_cfg.attention_type == "sliding_window" and not model_cfg.gradient_checkpointing:
+        raise ValueError("sliding-window T4 simulation requires gradient_checkpointing=True")
+    d = model_cfg.d_model
+    h = model_cfg.n_heads
+    kv = model_cfg.n_kv_heads or h
+    ff = model_cfg.d_ff
+    head_dim = d // h
     memory_dim = model_cfg.memory_dim or int(mem.get("value_dim", VALUE_DIM))
     key_dim = int(mem.get("key_dim", d))
     capacity = int(mem.get("capacity", int(mem.get("procedural_capacity", 1024))
                            + int(mem.get("episodic_capacity", 1024))))
-    slots = capacity + len(config.get("encoders", {})) + 1  # persistent + local projector slots
+    slots = capacity + sum(1 for name in config.get("encoders", {}).values() if name) + 1
     steps = max(1, model_cfg.refinement_steps)
     trainable, frozen = _trainable_parameters(config, model_cfg)
     act = batch * length * d
+    frozen_dtype = str(vram.get("frozen_encoder_dtype", "float32")).lower()
+    if frozen_dtype not in ("float32", "float16", "bfloat16", "auto"):
+        raise ValueError("frozen_encoder_dtype must be float32, float16, bfloat16, or auto")
+    frozen_bytes = 2 if frozen_dtype in ("float16", "bfloat16", "auto") else 4
+
+    # One chunk-local SWA call: small bool mask + possible backend bias,
+    # repeated GQA K/V for the local span, Q/output, and logsumexp workspace.
+    local_chunk = min(chunk, length)
+    key_span = min(length, window + local_chunk)
+    sliding_workspace = (5 * local_chunk * key_span
+                         + 2 * batch * h * key_span * head_dim * 2
+                         + 2 * batch * h * local_chunk * head_dim * 2
+                         + 4 * batch * h * local_chunk)
+    norm_temp = 4 * act
+    residual = 4 * act
+    block_groups = {
+        "attention": 2 * act * (4 + 2 * kv / h) + sliding_workspace + 2 * norm_temp + residual,
+        "ffn": 2 * 4 * batch * length * ff + 2 * norm_temp + residual,
+        "adapter_glu": (2 * batch * length * memory_dim + 2 * 3 * act
+                        + 8 * batch * length * slots + norm_temp + residual),
+        "adapter_cross": (2 * (6 * act + 2 * slots * d + batch * length * slots)
+                          + norm_temp + residual),
+    }
     components: dict[str, int] = {
-        # fp32 param + grad + exp_avg + exp_avg_sq. GradScaler adds negligible state.
         "fp32_params_grads_adam": 16 * trainable,
-        "frozen_encoder_weights": 4 * frozen,
+        "frozen_encoder_weights": frozen_bytes * frozen,
         "unified_memory_buffers": 4 * capacity * (key_dim + memory_dim + 8),
-        # Autocast leaves residual/checkpoint boundaries in fp32.
         "block_checkpoint_boundaries": 4 * (model_cfg.n_layers + 1) * act,
-        # One live recomputed block: Q/K/V/output/RoPE temporaries, SwiGLU,
-        # fp32 norm temporaries, wide GLU retrieval, cross-attention, SDPA work.
-        "live_block_attention": 2 * act * (4 + 2 * kv / h),
-        "live_block_ffn": 2 * 4 * batch * length * ff,
-        "live_block_norms": 4 * 4 * act,
-        "live_adapter_glu": 2 * batch * length * memory_dim + 2 * 3 * act,
-        # Manual GLU retrieval materialises fp16 scores, fp32 softmax, fp16 weights.
-        "adapter_retrieval_score_workspace": 8 * batch * length * slots,
-        "live_memory_cross_attention": 2 * (6 * act + 2 * slots * d + batch * length * slots),
-        "live_sdpa_workspace": 2 * 4 * act,
-        # Confidence needs every refined state; the loop checkpoint retains
-        # those outputs, while only one cell/thought step is live in backward.
-        "refinement_state_outputs": 4 * steps * act,
-        # Pure thought steps pass slots/state explicitly across checkpoints:
-        # hidden boundaries are retained, but only ONE step's context K/V is live.
+        # Sub-block checkpoints retain a few within-layer boundaries, but only
+        # the largest recomputed branch is live during backward.
+        "live_block_sub_boundaries": 3 * 4 * act,
+        "live_block_max_subcheckpoint": max(block_groups.values()),
+        # Inline confidence BCE avoids a second retained list of full states.
         "refinement_step_boundaries": 4 * steps * act,
         "refinement_live_thought_step": 2 * 4 * act + 6 * 2 * act,
         "refinement_live_cell": 2 * 6 * batch * length * model_cfg.refinement_rank + 4 * 4 * act,
-        # Streamed entropy avoids stacking S logits/log-probs; final CE still
-        # materialises logits and softmax temporaries at byte vocabulary width.
         "confidence_and_ce_logits": 4 * 4 * batch * length * VOCAB_SIZE,
         "ids_targets_embeddings": 8 * 2 * batch * length + 4 * act,
     }
-    if model_cfg.attention_type == "bigbird":
-        # Shared base + ONE lazy head overlay + a possible fp16 additive bias
-        # conversion by the efficient backend. Per-head coordinates are tiny.
-        components["bigbird_base_and_one_overlay"] = 2 * length * length
-        components["bigbird_backend_bias_workspace"] = 2 * length * length
-        components["bigbird_random_coordinates"] = 8 * h * length * r
-    else:
-        components["dense_causal_mask"] = length * length
+    if model_cfg.attention_type != "sliding_window":
         components["dense_sdpa_workspace"] = 2 * batch * h * length * length
     safety_gb = float(vram.get("simulator_safety_gb", 0.5))
     if safety_gb < 0:
@@ -198,21 +206,29 @@ def simulate_t4_vram(config: Mapping[str, Any], *, micro_batch: int | None = Non
         "device": "Tesla T4 16GB (simulated; no CUDA measurement)",
         "peak_gb": round(peak_bytes / GB, 3),
         "target_max_gb": target,
+        "design_target_gb": 10.0,
         "fits": bool(peak_bytes / GB <= target),
+        "meets_design_target": bool(peak_bytes / GB < 10.0),
         "micro_batch": batch,
         "seq_len": length,
-        "bigbird_random_tokens": r,
-        "bigbird_global_tokens": g,
+        "attention_type": model_cfg.attention_type,
+        "window_size": window,
+        "sliding_chunk_size": chunk,
+        "sdpa_backend_required": "memory_efficient (T4/sm_75); flash/cudnn require sm_80+",
         "trainable_parameters": trainable,
         "frozen_encoder_parameters_estimate": frozen,
+        "frozen_encoder_bytes_per_parameter": frozen_bytes,
         "components_gb": {name: round(value / GB, 4) for name, value in components.items()},
+        "block_group_estimates_gb": {name: round(value / GB, 4) for name, value in block_groups.items()},
         "assumptions": [
-            "decimal GB; fp32 weights/grads/AdamW moments (16 B/trainable parameter)",
+            "decimal GB; fp32 trainable weights/grads/AdamW moments (16 B/parameter)",
             "fp16 autocast inside blocks; fp32 residual/checkpoint boundaries",
-            "all transformer blocks checkpointed; whole refinement loop checkpointed",
-            "one BigBird head overlay materialised at a time; no block-sparse FLOP claim",
+            "all transformer blocks and attention/FFN/adapter branches checkpointed",
+            "exact chunk-local sliding window; no (L,L) mask; one chunk workspace live",
+            "T4 uses memory-efficient SDPA, not Flash/cuDNN (sm_80+ only)",
+            "inline confidence BCE avoids retaining a second full refinement-state list",
             "full unified bank plus batch-local projector slots in cross-attention",
-            "frozen encoder counts rounded up; encoder transient activations covered by reserve",
+            "frozen encoder counts rounded up; storage dtype from vram.frozen_encoder_dtype",
             "safety reserve is an estimate, not observed allocator fragmentation",
         ],
     }
@@ -609,7 +625,7 @@ def load_checkpoint(path: str | Path, *, model: CausalByteTransformer,
                     device: str | torch.device = "cpu") -> int:
     payload = torch.load(path, map_location=device, weights_only=False)
     if payload.get("schema_version") != CHECKPOINT_SCHEMA:
-        raise ValueError("not a Phase 25 unified checkpoint (schema 6)")
+        raise ValueError("not a Phase 25.1 unified checkpoint (schema 7)")
     model.load_state_dict(payload["model"])
     device = next(model.parameters()).device
     for name, state in payload["ingestors"].items():
@@ -711,8 +727,15 @@ class Trainer:
         if self.decay_reg_weight < 0 or self.decay_margin <= 0:
             raise ValueError("decay_reg_weight must be >= 0 and decay_margin must be > 0")
         vram_cfg = dict(config.get("vram", {}))
+        self._frozen_encoder_dtype = str(vram_cfg.get("frozen_encoder_dtype", "float32")).lower()
+        if self._frozen_encoder_dtype not in ("float32", "float16", "bfloat16", "auto"):
+            raise ValueError("frozen_encoder_dtype must be float32, float16, bfloat16, or auto")
+        if self.device.type != "cuda":
+            self._frozen_encoder_dtype = "float32"
+        elif self._frozen_encoder_dtype == "auto":
+            self._frozen_encoder_dtype = self.plan.resolved
         require_checkpoint = bool(vram_cfg.get("require_gradient_checkpointing",
-                                               self.model_config.attention_type == "bigbird"))
+                                               self.model_config.attention_type == "sliding_window"))
         if require_checkpoint and not self.model_config.gradient_checkpointing:
             raise ValueError("this preset requires gradient_checkpointing=True for all blocks")
         self.model.set_gradient_checkpointing(self.model_config.gradient_checkpointing)
@@ -760,6 +783,12 @@ class Trainer:
         self.history: list[dict[str, Any]] = []
 
     # -- lazy pieces ------------------------------------------------------
+    def _prepare_frozen_encoder(self, encoder: Any) -> Any:
+        encoder = encoder.to(self.device)
+        if self.device.type == "cuda" and self._frozen_encoder_dtype != "float32":
+            encoder = encoder.to(dtype=getattr(torch, self._frozen_encoder_dtype))
+        return encoder
+
     def ensure_ingestor(self, modality: str, *, feature_dim: int | None = None
                         ) -> MultimodalIngestor | None:
         if modality in self.ingestors:
@@ -768,13 +797,13 @@ class Trainer:
             if existing.encoder is None and name:
                 # Upgrade a resumed projector-only ingestor with its frozen
                 # encoder so raw media can keep flowing.
-                existing.encoder = build_encoder(name, pretrained=True).to(self.device)
+                existing.encoder = self._prepare_frozen_encoder(build_encoder(name, pretrained=True))
             return existing
         name = self._enc_cfg.get(modality)
         memory_dim = int(self._mem_cfg.get("value_dim", self.model_config.memory_dim or 8192))
         key_dim = int(self._mem_cfg.get("key_dim", self.model_config.d_model))
         if name:
-            encoder = build_encoder(name, pretrained=True).to(self.device)
+            encoder = self._prepare_frozen_encoder(build_encoder(name, pretrained=True))
             ingestor = MultimodalIngestor(encoder, memory_dim=memory_dim, key_dim=key_dim)
         elif feature_dim is not None:
             # Matrix-agnostic path: pre-computed features, projector only.
@@ -898,6 +927,20 @@ class Trainer:
         retained = torch.arange(1, min(bank.capacity, 9), device=self.device)
         ages = torch.linspace(0.0, 1.0, bank.capacity, device=self.device)
         bank.eviction_events.append(EvictionEvent(0, retained, ages, 1.0, False))
+        # Verify the actual T4-safe backend before the expensive probe. A
+        # silent math fallback would invalidate the memory estimate.
+        backend_width = self.model_config.d_model // self.model_config.n_heads
+        probe_q = torch.randn(1, 1, 128, backend_width, device=self.device, dtype=self.plan.dtype)
+        probe_k = torch.randn(1, 1, 192, backend_width, device=self.device, dtype=self.plan.dtype)
+        chunk_mask = torch.ones(128, 192, device=self.device, dtype=torch.bool)
+        cross_mask = torch.ones(1, 1, 1, 17, device=self.device, dtype=torch.bool)
+        with sdpa_kernel(SDPBackend.EFFICIENT_ATTENTION):
+            F.scaled_dot_product_attention(probe_q, probe_q, probe_q)
+            F.scaled_dot_product_attention(probe_q, probe_k, probe_k,
+                                           attn_mask=chunk_mask[None, None], is_causal=False)
+            F.scaled_dot_product_attention(probe_q, probe_q[:, :, :17], probe_q[:, :, :17],
+                                           attn_mask=cross_mask, is_causal=False)
+        del probe_q, probe_k, chunk_mask, cross_mask
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats(self.device)
         ids = memory_view = loss = total = policy = None
@@ -923,8 +966,10 @@ class Trainer:
             peak_gb = torch.cuda.max_memory_allocated(self.device) / 1e9
             return {"measured": True, "simulated": False, "peak_gb": round(peak_gb, 3),
                     "micro_batch": self.micro_batch, "seq_len": self.seq_len,
-                    "bigbird_random_tokens": self.model_config.bigbird_random_tokens,
-                    "bigbird_global_tokens": self.model_config.bigbird_global_tokens,
+                    "attention_type": self.model_config.attention_type,
+                    "window_size": self.model_config.window_size,
+                    "sliding_chunk_size": self.model_config.sliding_chunk_size,
+                    "sdpa_backend_verified": "memory_efficient (self + chunk-local mask + cross mask)",
                     "optimizer_state_allocated": True,
                     "paths": ["ce", "confidence", "memory_cross_attention", "policy", "adamw"]}
         finally:
@@ -941,55 +986,30 @@ class Trainer:
             del ids, memory_view, loss, total, policy
             torch.cuda.empty_cache()
 
-    def _rebuild_sparse_mask(self, random_tokens: int, global_tokens: int) -> None:
-        self.model_config = replace(self.model_config, bigbird_random_tokens=random_tokens,
-                                    bigbird_global_tokens=global_tokens)
-        self.model.config = self.model_config
-        self.model.attention_mask = None
-        if self.device.type == "cuda":
-            torch.cuda.empty_cache()
-        self.model.attention_mask = BigBirdSparseMask(
-            self.model_config.max_seq_len, self.model_config.n_heads,
-            window=self.model_config.bigbird_window, random_tokens=random_tokens,
-            global_tokens=global_tokens, seed=self.model_config.bigbird_seed,
-            device=self.device)
-
     def autotune_batch(self, target_max_gb: float = 13.5) -> dict[str, Any]:
-        """Probe, halve batch, then reduce R/G; fail closed above the ceiling."""
+        """Probe and halve micro-batch; fail closed above the hard ceiling.
+
+        The sliding window is part of the architecture contract (W=1024), so
+        autotune does not silently shrink long-range connectivity. Chunk-local
+        masks already avoid quadratic allocation; if batch 1 still exceeds the
+        ceiling, the run must stop rather than claim a fit.
+        """
         if target_max_gb <= 0:
             raise ValueError("target_max_gb must be positive")
         probe = self.probe_vram()
-        reductions: list[dict[str, int]] = []
         while probe.get("measured") and probe["peak_gb"] > target_max_gb and self.micro_batch > 1:
             self.micro_batch = max(1, self.micro_batch // 2)
             probe = self.probe_vram()
-        vram_cfg = dict(self.config.get("vram", {}))
-        if (probe.get("measured") and probe["peak_gb"] > target_max_gb
-                and bool(vram_cfg.get("auto_reduce_sparse", True))
-                and self.model_config.attention_type == "bigbird"):
-            min_r = int(vram_cfg.get("min_random_tokens", 0))
-            min_g = int(vram_cfg.get("min_global_tokens", 1))
-            r, g = self.model_config.bigbird_random_tokens, self.model_config.bigbird_global_tokens
-            while probe["peak_gb"] > target_max_gb and (r > min_r or g > min_g):
-                if r > min_r:
-                    r = max(min_r, r // 2)
-                elif g > min_g:
-                    g = max(min_g, g // 2)
-                self._rebuild_sparse_mask(r, g)
-                reductions.append({"random_tokens": r, "global_tokens": g})
-                probe = self.probe_vram()
-        probe["sparse_reductions"] = reductions
         if probe.get("measured") and probe["peak_gb"] > target_max_gb:
             raise MemoryError(
                 f"measured T4 peak {probe['peak_gb']:.3f} GB exceeds {target_max_gb:.3f} GB "
-                "after batch/sparse autotune; refusing to start. Dense boolean-mask SDPA "
-                "allocation does not necessarily shrink with R/G; use a block-sparse kernel "
-                "or a smaller model/context.")
+                "at micro_batch=1; refusing to start. Use a smaller model/context, "
+                "optimizer offload, or a lower-memory attention kernel.")
         if not probe.get("measured"):
             probe["simulated"] = simulate_t4_vram(
                 self.config, micro_batch=self.micro_batch, seq_len=self.seq_len,
-                random_tokens=self.model_config.bigbird_random_tokens,
-                global_tokens=self.model_config.bigbird_global_tokens)
+                window_size=self.model_config.window_size,
+                chunk_size=self.model_config.sliding_chunk_size)
         self.vram_report = probe
         return probe
 
@@ -1137,6 +1157,8 @@ def smoke_config() -> dict[str, Any]:
     return {
         "model": {"d_model": 64, "n_layers": 2, "n_heads": 4, "n_kv_heads": 2,
                   "d_ff": 128, "max_seq_len": 256, "dropout": 0.0,
+                  "attention_type": "sliding_window", "window_size": 64,
+                  "sliding_chunk_size": 16,
                   "refinement_steps": 4, "refinement_rank": 32,
                   "memory_dim": 128, "gradient_checkpointing": True},
         "memory": {"key_dim": 64, "value_dim": 128,
