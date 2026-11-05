@@ -7,7 +7,8 @@ Everything the 4-hour Colab run needs lives here:
 
 * precision resolution -- T4 (sm_75) CANNOT run bf16 autocast; ``auto``
   resolves to fp16 + GradScaler there, bf16 on Ampere+, fp32 on CPU;
-* the streaming 40/30/20/10 data mix (``data/sources.py``) packed to bytes;
+* the streaming PT-BR-first 50/25/15/10 data mix (``data/sources.py``),
+  quota-exact per 100-draw window (50% PT-BR docs), packed to bytes;
 * bidirectional multimodal batches: caption bytes conditioned on a media
   skill matrix AND media codec bytes conditioned on a text skill matrix;
 * causal-LM cross-entropy + auxiliary confidence BCE (adaptive loop);
@@ -51,7 +52,7 @@ from models.memory_model import DualMemory, SkillBankView, stack_views
 from models.encoders import (MultimodalIngestor, TextSkillProjector,
                              build_encoder, matrix_to_bytes,
                              pooled_text_embedding, preprocess_image)
-from data.sources import BytePacker, build_mixture
+from data.sources import BytePacker, MixtureSampler, build_mixture, mixture_snapshot
 
 CHECKPOINT_SCHEMA = 4
 
@@ -563,6 +564,8 @@ class Trainer:
         ).to(self.device)
 
         self.samples = samples
+        self.mixture: MixtureSampler | None = (
+            samples if isinstance(samples, MixtureSampler) else None)
         self.builder: BatchBuilder | None = None
         self.optimizer: torch.optim.Optimizer | None = None
         self.scaler = make_grad_scaler(self.plan)
@@ -703,8 +706,9 @@ class Trainer:
             checkpoint_minutes: float | None = None) -> dict[str, Any]:
         if self.samples is None:
             data_cfg = self.config.get("data", {})
-            self.samples = iter(build_mixture(data_cfg, seed=int(
-                self.config.get("training", {}).get("seed", 24))))
+            self.mixture = build_mixture(data_cfg, seed=int(
+                self.config.get("training", {}).get("seed", 24)))
+            self.samples = iter(self.mixture)
         tool_rate = float(self.config.get("training", {}).get("tool_trajectory_rate", 0.02))
         if tool_rate > 0:
             self.samples = inject_tool_trajectories(self.samples, rate=tool_rate,
@@ -762,6 +766,9 @@ class Trainer:
                               **metrics}
                     if self.device.type == "cuda":
                         record["vram_gb"] = round(torch.cuda.max_memory_allocated(self.device) / 1e9, 3)
+                    if self.mixture is not None:
+                        # Effective (post-failure) weights + realised doc share.
+                        record["data_mix"] = mixture_snapshot(self.mixture)["observed_share"]
                     self.history.append(record)
                     append_jsonl(self.metrics_path, record)
                     print(json.dumps(record), flush=True)
@@ -771,7 +778,9 @@ class Trainer:
                     record = self._save()
                     self.history.append({"checkpoint_event": record})
         final = self._save()
+        data_mix = mixture_snapshot(self.mixture) if self.mixture is not None else None
         summary = {"steps": self.step, "tokens": tokens, "stop_reason": stop_reason,
+                   "data_mix": data_mix,
                    "precision": self.plan.as_dict(), "vram_probe": vram,
                    "final_checkpoint": final, "last_metrics": last_metrics,
                    "batch_stats": dict(self.builder.stats) if self.builder else {},

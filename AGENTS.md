@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24.1)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -31,6 +31,21 @@ and `README.md` (how to run it).
   `TextSkillProjector` train. Swapping encoders must never touch the core.
 - **One architecture at every scale.** The CPU tests and the T4 run use the
   same classes; only the integers change (`configs/t4_scaled.yaml`).
+- **PT-BR is the primary language.** The streaming mix is exactly
+  50% `ptbr` / 25% `code` / 15% `multimodal` / 10% `english` documents and it
+  is enforced **per 100-draw window** (largest-remainder quota + seeded
+  shuffle), not by a per-item `rng.random()` draw. Do not restore the
+  Bernoulli sampler, do not add a fifth bucket, and do not "temporarily"
+  rebalance toward English. `tests/test_sources.py` asserts every window.
+- **The mixing unit is documents.** 50% PT-BR documents is not 50% PT-BR
+  bytes; `audit_mixture` prints both shares and the notebook gates on the
+  document share. Never quote the byte share as if it were the quota.
+- **Masking is one contract for all four groups.** A single
+  `ignore_index=PAD(258)` cross-entropy and a single token-weighted confidence
+  BCE cover text, code, English and multimodal rows (whose prompts are
+  masked). A fully masked batch returns a zero loss, never `0/0` NaN. Do not
+  add per-source losses or per-source weights without re-running
+  `tests/test_train.py` masking tests.
 - **Unmeasured is reported as unmeasured.** This environment has no GPU.
   VRAM/throughput/bf16 behaviour are claims that require the Colab run.
   Never present an analytic estimate as a measurement.
@@ -53,9 +68,10 @@ models/foundation.py     byte Transformer + GatedSkillAdapter + confidence
 models/memory_model.py   DualMemory (episodic + procedural), 1024/8192 banks
 models/encoders.py       frozen encoders, skill projectors, uint8 codec
 training/train.py        the ONE training script (+ sandboxed search runtime)
-data/sources.py          streaming 40/30/20/10 mix + byte packing
+data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
+                         + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 4096 ctx, 8192 memory)
-tests/                   129-test regression suite (CPU, ~3 s)
+tests/                   142-test regression suite (CPU, ~3 s)
 pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints)
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
 requirements.txt  .gitignore  package __init__.py files
@@ -83,8 +99,11 @@ python -m training.train --config configs/t4_scaled.yaml \
 - New model knobs go in `FoundationConfig` (validated, rejected if unknown)
   and in `configs/t4_scaled.yaml`; checkpoint schema bumps are explicit.
 - New data sources go in `DEFAULT_SOURCES` with a fallback chain and a
-  license-respecting id; the mixture must stay 40/30/20/10 unless the spec
-  changes.
+  license-respecting id; the mixture must stay 50/25/15/10
+  (`ptbr`/`code`/`multimodal`/`english`) unless the spec changes, and both
+  `GROUP_WEIGHTS` and `configs/t4_scaled.yaml` must move together.
+- The notebook's mix-audit cell must run **before** `training.train` and must
+  assert `report["quotas_ok"]`. A run that starts without a PASS is a bug.
 - Every behavioural claim needs a test. The suite is the contract.
 - Checkpoints: atomic writes, resumable, projector-only encoder persistence.
   Never break `load_checkpoint` compatibility without a schema bump.

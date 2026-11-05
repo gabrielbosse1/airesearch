@@ -1,4 +1,4 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 24 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 24.1 code as it exists
 
 **Scope.** Bottom-up description of the code in this checkout, from a scalar
 multiply to the training loop. Every formula is transcribed from the
@@ -202,29 +202,100 @@ order. Hub upload/download via `huggingface_hub`, failures reported as
 one live retrieved `(4,1024,8192)` fp16 tensor ≈ 0.067 GB. Comfortably inside
 14 GB; the probe verifies on the real device.
 
-## 9. Data (`data/sources.py`)
+## 9. Data (`data/sources.py`) — PT-BR first
 
-Streaming only. Weights 0.40 code / 0.30 language / 0.20 multimodal / 0.10
-logic; deterministic seeded sampling; exhausted/failed groups dropped and
-weights renormalised (recorded in `failures`). Fallback chains per group;
-dead COYO URLs are skipped, embedded MSCOCO-5k and LibriSpeech keep the
-multimodal fraction alive. `BytePacker` frames documents `BOS doc EOS` and
-packs to fixed-length shifted pairs with carry — no byte dropped.
+Streaming only (`load_dataset(..., streaming=True)`), four groups and no fifth
+bucket:
+
+| Group | Weight | Chain |
+|---|---|---|
+| `ptbr` | **0.50** | `TucanoBR/GigaVerbo` → `HuggingFaceFW/fineweb-2` (`por_Latn`) |
+| `code` | 0.25 | `bigcode/the-stack` (python, javascript) → `the-stack-smol` |
+| `multimodal` | 0.15 | COYO (URL images) → MSCOCO-5k (embedded) → LibriSpeech (audio) |
+| `english` | 0.10 | `HuggingFaceFW/fineweb` (`sample-10BT`) |
+
+**Quota-exact sampling, not Bernoulli.** The Phase 24 sampler drew
+`rng.random()` per item, so the ratio was only correct in expectation (a
+100-item window could land at 43%). `MixtureSampler` now allocates every
+window of `MIX_WINDOW = 100` draws with the largest-remainder method,
+
+```python
+exact   = w_i / Σw · W
+counts  = floor(exact);  leftover = W − Σcounts
+counts += 1 for the `leftover` largest fractional parts (name tie-break)
+tickets = shuffle([group] * counts[group])      # seeded RNG
+```
+
+so 0.50/0.25/0.15/0.10 allocates exactly `{ptbr: 50, code: 25, multimodal: 15,
+english: 10}` and any multiple of 100 draws carries the target ratio exactly,
+while the document order stays stochastic and seed-reproducible
+(test-asserted: every consecutive window is exactly on target, and two seeds
+produce the same counts but a different order). Exhaustion drops a group,
+renormalises the survivors and **rebuilds the current window**, so a dead
+chain cannot leave stale tickets belonging to the dead weight
+(`failures[group] = "exhausted"`). `build_mixture` rejects unknown weight keys
+before opening a single stream.
+
+**Mixing unit.** The weights govern *documents*, the only quantity a sampler
+controls; the byte/token share is a different number. `audit_mixture` reports
+both, plus a per-group verdict:
+
+```
+PT-BR-first data mix audit  |  100 batches x 4 = 400 documents  (0.0 s)
+source        target    docs    doc %       bytes   byte %   status
+PT-BR          50.0%     200    50.0%      27,156    44.5%   ok
+Code           25.0%     100    25.0%      20,967    34.4%   ok
+Multimodal     15.0%      60    15.0%       7,740    12.7%   ok
+English        10.0%      40    10.0%       5,175     8.5%   ok
+total         100.0%     400   100.0%      61,038   100.0%
+verdict: PASS -- document share within +/-2.0 pp of target (quota window = 100)
+```
+
+(Measured here on **synthetic streams** through the real `build_mixture` →
+`audit_mixture` path, seed 24, `batches=100`, `batch_size=4`, fake
+`_open_rows`; document counts are the sampler's real output, byte counts are
+fixture-dependent.) The trainer records the realised mix per log step in
+`runs/metrics.jsonl["data_mix"]` and the final weights/counts/failures in the
+run summary.
+
+**Loss and masking (24.1.3).** All four groups flow through one
+`ignore_index=PAD(258)` cross-entropy and one confidence BCE, both means over
+**non-PAD tokens**. Measured invariants (CPU, tiny model, `tests/test_train.py`):
+
+* CE equals `F.cross_entropy(logits[valid], targets[valid])` exactly — only the
+  mask decides what is learned, not the padding length;
+* truncating a row's PAD tail leaves the loss bit-identical (padding is inert),
+  for packed text rows and for multimodal rows alike;
+* an all-PAD batch used to be `0/0 = NaN` in `F.cross_entropy`; `loss()` now
+  returns a graph-carrying **zero loss** with zero gradients (never NaN);
+* a batch that is 50% PT-BR is exactly the token-weighted blend of its parts:
+  `L_mixed = (n_ptbr·L_ptbr + n_cap·L_cap)/(n_ptbr + n_cap)` for CE, the
+  confidence BCE and the total (rel. tol 1e-4) — short, heavily padded caption
+  rows cannot dilute the PT-BR gradient.
+
+`BytePacker` frames documents `BOS doc EOS` and packs to fixed-length shifted
+pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **129 passed in ~3.3 s** (CPU). Coverage:
+`python -m pytest tests/ -q` → **142 passed in ~3.3 s** (CPU). Coverage:
 exact GLU math at production widths, key-matching fidelity (aligned query
 retrieves its value to 1e-3), all-8-layer injection + exact parameter count,
 masked/empty retrieval, projector gradient flow, bank FIFO/detach/persistence,
 frozen-encoder contract, codec bounds, matrix agnosticism, adaptive
 break/cap/targets, token-triggered sandboxed search + EDIT pass-through,
 bidirectional batches, accumulation equivalence, checkpoint/resume,
-time-based cadence, mixture ratios/fallbacks/packing, notebook validity,
-and the cleanup contract itself.
+time-based cadence, **quota-exact 50/25/15/10 windows**, renormalisation,
+mix-audit verdicts and truncation, **PAD masking/zero-loss invariants**,
+token-weighted CE and confidence BCE on a 50% PT-BR batch, trainer `data_mix`
+reporting, mixture fallbacks/packing, notebook validity (audit precedes the
+run), and the cleanup contract itself.
 
 **Known limits.** 4 h ≈ order 10⁸ tokens: a pre-training start, not a
-finished model. The codec is lossy (p99 ≈ 0.074 on unit-normal features).
+finished model. The mix is a document quota, so the *byte* share of PT-BR is
+~45% rather than 50% (measured on fixtures) — token-weighted sampling would be
+a different mechanism and is not implemented. `open-web-math` is no longer in
+the mix; there is no fifth bucket. The codec is lossy (p99 ≈ 0.074 on unit-normal features).
 Single-slot views give the key projector zero gradient until distractors
 exist (the trainer merges the bank). Real `ddgs` search needs a networked
 runtime; training uses the deterministic mock. GPU throughput/VRAM remain

@@ -7,6 +7,12 @@ head, and ingests images/audio/video as frozen-encoder skill matrices.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
+**Portuguese (Brazil) is the primary language** (Phase 24.1): 50% of every
+training window is PT-BR text, with code, multimodal and English as support
+skills. The quota is enforced per 100-draw window and audited in the notebook
+before the GPU budget is spent — see
+[Data mix (PT-BR first)](#data-mix-pt-br-first).
+
 There is no tokenizer: the model reads and writes raw bytes `0..255`. There
 is no regex tool parsing: `[TOOL_SEARCH]` is a vocabulary id that triggers a
 sandboxed subprocess, and `[EDIT]` is ordinary vocabulary learned by
@@ -40,9 +46,9 @@ cross-entropy. The authoritative math is in
 | `models/memory_model.py` | DualMemory: episodic + procedural banks, 1024-dim keys / 8192-dim values, FIFO, gradient-free writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
 | `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
-| `data/sources.py` | Streaming 40/30/20/10 mix with fallback chains, byte packing |
+| `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 129 tests: GLU math, memory, projection, adaptive loop, tooling, trainer, sources, notebook, hygiene |
+| `tests/` | 142 tests: GLU math, memory, projection, adaptive loop, tooling, trainer, quorum mix, masking, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 
 ## Quickstart
@@ -65,19 +71,58 @@ On Colab: open `pretrain_4h.ipynb`, select a T4 runtime, add the `HF_TOKEN`
 secret, run all cells. Checkpoints land in `gabrielbosse9/airesearch` every
 30 minutes; re-running resumes automatically.
 
-## Data mix (streaming)
+## Data mix (PT-BR first)
 
 | Weight | Group | Sources (first that works wins, then fallbacks) |
 |---|---|---|
-| 40% | code | `bigcode/the-stack` Python + JavaScript → `the-stack-smol` |
-| 30% | language | `TucanoBR/GigaVerbo` (PT-BR) + `HuggingFaceFW/fineweb` (EN) |
-| 20% | multimodal | COYO image/caption → MSCOCO-5k embedded → LibriSpeech audio |
-| 10% | logic | `open-web-math/open-web-math` |
+| **50%** | **ptbr** | `TucanoBR/GigaVerbo` → `HuggingFaceFW/fineweb-2` (`por_Latn`) |
+| 25% | code | `bigcode/the-stack` Python + JavaScript → `the-stack-smol` |
+| 15% | multimodal | COYO image/caption → MSCOCO-5k embedded → LibriSpeech audio |
+| 10% | english | `HuggingFaceFW/fineweb` (`sample-10BT`) |
+
+The sampler is **quota-exact, not on average**: `MixtureSampler` allocates each
+window of 100 draws with the largest-remainder method (→ exactly 50/25/15/10)
+and shuffles it with the seeded RNG, so any multiple of 100 documents carries
+the target ratio while document order stays stochastic. A dead source chain is
+dropped and the survivors renormalised (recorded in `failures`, never silent).
+`open-web-math` is not part of the PT-BR-first mix; there is no fifth bucket.
+
+`pretrain_4h.ipynb` cell 6 pulls **100 real batches** through the mixture and
+prints the realised mix before training starts. Both quantities are shown and
+they are not the same thing:
+
+```
+PT-BR-first data mix audit  |  100 batches x 4 = 400 documents  (0.0 s)
+source        target    docs    doc %       bytes   byte %   status
+-----------------------------------------------------------------------
+PT-BR          50.0%     200    50.0%      27,156    44.5%   ok
+Code           25.0%     100    25.0%      20,967    34.4%   ok
+Multimodal     15.0%      60    15.0%       7,740    12.7%   ok
+English        10.0%      40    10.0%       5,175     8.5%   ok
+-----------------------------------------------------------------------
+total         100.0%     400   100.0%      61,038   100.0%
+verdict: PASS -- document share within +/-2.0 pp of target (quota window = 100)
+```
+
+(Rehearsed here on synthetic streams — the document share is the real,
+test-asserted behaviour; byte counts depend on the live datasets.) The weights
+govern **documents**; a code file is far longer than an image caption, so the
+byte share will never equal 50/25/15/10. Multimodal documents also expand into
+two training rows (caption + media codec). Tool/edit trajectories are injected
+*on top* at `tool_trajectory_rate=0.02` and are outside the quota by design.
+The trainer logs the realised mix in `runs/metrics.jsonl` (`data_mix`) and in
+the run summary.
 
 ## Honest notes
 
 - **T4 precision:** sm_75 cannot run bf16 autocast. The trainer resolves
   `auto` to **fp16 + GradScaler** there (bf16 on Ampere+), and logs which.
+- **Masking is source-agnostic.** Every group trains under the same
+  `ignore_index=258` cross-entropy; caption prompts and codec prefixes are
+  masked, padding is masked, and a fully masked batch returns a zero loss
+  instead of `0/0` NaN. CE and the auxiliary confidence BCE are means over
+  non-PAD tokens, so a 50% PT-BR batch is the token-weighted blend of its
+  parts — asserted in `tests/test_train.py`.
 - **4 hours is a small token budget** for 265M parameters (order 10⁸ tokens).
   Expect falling loss and byte-level structure, not a finished assistant.
 - **Media bytes** in the text→media direction are the deterministic uint8
