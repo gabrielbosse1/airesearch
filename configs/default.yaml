@@ -1,125 +1,82 @@
-# ByteCore-Diffusion: diffusion-based multimodal model on raw bytes.
-# Philosophy: "Tokens are a crutch." Everything is raw bytes (0-255).
-# A concept bank lets the model learn new concepts without retraining
-# (memory write instead of gradient update).
-
-data:
-  train_samples: 4000
-  val_samples: 500
-  test_samples: 500
-  data_dir: data
-  processed_dir: data/processed
-  # Synthetic modality settings (all byte counts must fit in max_seq_len)
-  text_max_len: 40        # utf-8 bytes per text sample
-  img_size: 8             # grayscale image side (pixels = bytes) -> 64 bytes
-  audio_len: 64           # raw PCM bytes per audio clip
-  max_seq_len: 128        # unified byte sequence length (padded)
+# ByteCore-DualMemory — small CPU / unit-test configuration.
+#
+# This is the *same class* as the production preset; only the integers change.
+# It is small enough to forward+backward on a laptop CPU in seconds, which is
+# what the regression suite uses. For the 183,830,791-parameter Phase 22 run see
+# `configs/t4_scaled.yaml`.
+#
+# Load with:  python -c "from training.phase22_common import load_config; print(load_config('configs/default.yaml')['model'])"
+# Unknown keys are rejected, not ignored (FoundationConfig.from_mapping).
 
 model:
-  vocab_size: 256         # raw bytes
+  vocab_size: 261                 # 256 raw bytes + BOS/EOS/PAD/REF_START/REF_END
   d_model: 64
-  n_layers: 3
+  n_layers: 4
   n_heads: 4
+  n_kv_heads: 0                   # 0 => multi-head attention (no GQA)
   d_ff: 256
-  max_len: 130            # max_seq_len + 1 cond token
-  diffusion_timesteps: 50
-  concept_capacity: 256   # concept bank slots
-  concept_dim: 64
-  dropout: 0.1
+  max_seq_len: 256
+  dropout: 0.0
+  norm_type: layernorm            # the Phase 16 defaults, reproduced exactly
+  ffn_type: gelu
+  position_type: learned
+  refinement_steps: 0             # no refinement loop
+  refinement_rank: 64
+  rope_theta: 10000.0
+  norm_eps: 0.00001
+  gradient_checkpointing: false
+
+# The scaled stack (RMSNorm + SwiGLU + RoPE + GQA + weighted-tied refinement) is
+# what configs/t4_scaled.yaml enables. Overriding here changes no code path,
+# only the numbers -- e.g. to smoke-test the wide components on CPU:
+#
+#   model:
+#     norm_type: rmsnorm
+#     ffn_type: swiglu
+#     position_type: rope
+#     n_kv_heads: 2
+#     refinement_steps: 2
 
 training:
-  epochs: 6
-  batch_size: 32
-  lr: 0.001
-  device: cpu
-  seed: 42
-  # Optional training-only alignment is disabled by default; legacy Gaussian objective.
-  alignment_loss_weight: 0.0
-  alignment_gamma: 0.02
-  edit_noise_probability: 0.0
-  edit_noise_fraction: 0.10
+  requested_precision: bfloat16
+  precision: auto                 # auto | bfloat16 | float16 | float32
+  grad_scaler: auto
+  micro_batch_size: 2
+  grad_accum: 1
+  seq_len: 128
+  learning_rate: 0.0003
+  weight_decay: 0.1
+  warmup_steps: 10
+  max_grad_norm: 1.0
+  lr_schedule: cosine
+  adam_betas: [0.9, 0.95]
+  seed: 23
+  phase1_max_steps: 20
+  phase2_max_steps: 10
+  phase3_max_steps: 10
+  log_every: 5
+  checkpoint_every: 1000
+  save_precision: float32
 
-evaluation:
-  noise_levels: [0.0, 0.02, 0.05, 0.10]
-  noise_modes: [substitute, insert, delete]
-  inference_timing_batches: 10
+data:
+  cache_dir: data_cache_phase22
+  streaming: true
+  shard_bytes: 67108864
+  license_manifest: runs/phase22/dataset_manifest.json
+  # Real Hub ids only; see data/phase22_sources.py. Copy the `phase1`/`phase2`
+  # blocks from configs/t4_scaled.yaml to stream actual data.
 
-# Phase 5 confidence thresholds (diagnostic-only; adaptive halting stays off).
-phase5_calibration:
-  adaptive_halting_enabled: false
-  source: validation_selection; thresholds require independent deployment validation
-  diffusion_denoising_thresholds:
-    '0.90': null
-    '0.95': null
-    '0.99': null
-  generator_next_byte_thresholds:
-    '0.90': null
-    '0.95': null
-    '0.99': null
-# End Phase 5 confidence thresholds.
+checkpoints:
+  local_dir: runs/phase22/checkpoints
+  phase1_name: checkpoint_phase1.pt
+  phase2_name: checkpoint_phase2.pt
+  phase3_name: final_model.pt
+  hf_repo: null
+  hf_path_in_repo: phase22
+  resume_from_hf: false
+  atomic_write: true
 
-# Config-driven halting is wired to both APIs but fails closed unless a
-# checkpoint has matching task-scoped calibration and an explicit threshold.
-# Independent quality validation is still the caller's responsibility.
-adaptive_halting:
-  diffusion_sampling:
-    enabled: false
-    confidence_threshold: null
-    min_steps: 1
-    confidence_reduction: min
-  thought:
-    enabled: false
-    confidence_threshold: null
-    min_thought_steps: 1
-    max_thought_steps: 1
-
-# ===========================================================================
-# Phase 16 / ByteCore v2: the scalable foundation.
-# A standard causal byte-level Transformer over raw bytes. No pointer-generator
-# copy head, no rigid control frames: tool use is ReAct text intercepted by a
-# regex, memory enters as a prefix, and verification is the sandbox's job.
-# The architecture is identical at every scale -- only these numbers change.
-# ===========================================================================
-foundation:
-  # bytes 0-255 + <bos> 256 + <eos> 257 + <pad> 258 + <ref> 259 + </ref> 260
-  vocab_size: 261
-  d_model: 64            # 512+ for a production run
-  n_layers: 4            # 12+ for a production run
-  n_heads: 4             # 8 for a production run
-  d_ff: 256              # 2048 for a production run
-  max_seq_len: 512       # 2048+ for a production run
-  dropout: 0.1
-  presets:
-    # Small enough for a CPU unit test; structurally identical to production.
-    test:
-      d_model: 32
-      n_layers: 2
-      n_heads: 2
-      d_ff: 128
-      max_seq_len: 256
-    # Phase 17: the test stack with room for the real GitHub trajectories,
-    # whose longest rendered sequence is 690 bytes (median 441). Everything
-    # else is unchanged, so this is the same model, not a new one.
-    github:
-      max_seq_len: 768
-    # Documented scale target. Not trainable on one CPU; the code path is the
-    # same class, so switching is a config change, not a rewrite.
-    # ~87M parameters. Widening to d_model 1024 / d_ff 4096 (same class, same
-    # code path) is ~150M; both are the CPU model with different numbers.
-    production:
-      d_model: 768
-      n_layers: 12
-      n_heads: 8
-      d_ff: 3072
-      max_seq_len: 2048
-
-foundation_training:
-  epochs: 4
-  batch_size: 64
-  lr: 0.003
-  weight_decay: 0.01
-  warmup_epochs: 1
-  seed: 16001
-  # Batches are bounded by tokens, not rows: attention memory scales as
-  # rows * heads * length^2, so a fixed row count OOMs on long trajectories.
-  token_budget: 4096
+output:
+  report_dir: runs/phase22
+  metrics_jsonl: runs/phase22/metrics.jsonl
+  vram_jsonl: runs/phase22/vram.jsonl

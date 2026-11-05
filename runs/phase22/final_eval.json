@@ -11,8 +11,8 @@
     "status": "unverified",
     "shards_available": false,
     "repo_training_corpora": {
-      "scanned_files": 3,
-      "scanned_bytes": 40351,
+      "scanned_files": 0,
+      "scanned_bytes": 0,
       "matches": []
     },
     "training_shards": {
@@ -21,8 +21,8 @@
       "matches": []
     },
     "legacy_replay": {
-      "scanned_files": 2,
-      "scanned_bytes": 35203,
+      "scanned_files": 0,
+      "scanned_bytes": 0,
       "matches": []
     },
     "scanned_scope": "training corpora + shards only (evaluator/docs excluded)",

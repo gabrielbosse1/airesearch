@@ -1,1042 +1,137 @@
 # ByteCore-DualMemory
 
-An experimental PyTorch architecture for multimodal **raw bytes**, persistent
-memory, and bounded latent computation. Text is UTF-8 bytes, images are
-8-bit grayscale bytes, and audio is 8-bit PCM bytes. There is **no external
-tokenizer**. This is a small research system, not a generally reliable language
-model, fact checker, or autonomous agent.
+A byte-level causal Transformer (`183,830,791` parameters in its production
+preset) plus an external hierarchical memory store, trained on real streamed
+Hugging Face data in three phases on a single Colab T4.
 
-## Architecture
+There is no tokenizer: the model reads and writes raw bytes `0..255`. There is
+also no diffusion core, no pointer-generator copy head and no control-byte frame
+parser — those existed in earlier phases and were deleted. The authoritative
+description of what the code does is [ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md);
+the operating rules are [AGENTS.md](AGENTS.md).
 
-| Upgrade | Implementation |
+## Repository map
+
+| Path | Contents |
 |---|---|
-| Hierarchical memory | Time-decaying episodic entries, semantic mixtures of distinct exemplars, and procedural traces. `ImportanceScorer` combines surprise, access frequency, and recency. Writes and consolidation do not require gradients. |
-| RETRO-style injection | Top-K memory vectors are injected into selected transformer layers by gated cross-attention and/or prefix tokens. Live chunked retrieval uses only the preceding chunk; memory and generator can be co-trained. |
-| Cognitive loop | A session-local latent scratchpad reads byte spans; `THINK` updates latents without emitting bytes; `EDIT_OP` stages insert/delete/replace/move edits; `SAVE_SPAN` commits them; `DONE` finishes. |
-| Epistemic state | A parallel causal thought stream and supervised confidence heads. Adaptive computation is opt-in and bounded; calibration is tracked by task. |
-| Executable and graph memory | Procedures store exact input/output byte patterns, ordered latent traces, and explanation bytes for safe replay. Explicit structured facts support bounded, temporally valid multi-hop evidence paths. |
+| `models/foundation.py` | RMSNorm, SwiGLU, RoPE, GQA, iterative refinement, the causal byte Transformer, checkpoint I/O |
+| `models/memory_model.py` | episodic / semantic-exemplar / procedural store, importance scorer, top-K reads |
+| `models/foundation_memory.py` | memory injected as `[MEM] topic = value` prefix bytes |
+| `models/react.py`, `models/sandbox.py` | `Thought/Action/Observation` tool use as bytes + sandboxed execution, `[REF]` resolution |
+| `models/holdout.py`, `models/procedural.py`, `models/contradiction_graph.py` | provenance guard, byte-exact procedure replay, temporal fact graph |
+| `data/phase22_sources.py` | the real Hugging Face dataset registry and streaming converters |
+| `training/phase22_common.py` | `BytePacker`, precision resolution, VRAM ladder, checkpoints, Hub I/O |
+| `training/phase22_reward.py` | sandbox-RL reward, `[PAST_ACTION]`/`[CURRENT_DRAFT]`, `[EDIT]` commands |
+| `training/phase22_train.py` | the three-phase trainer |
+| `evaluation/final_agent_eval.py`, `evaluation/phase22_benchmark.py` | held-out probes, parameter/VRAM/inventory report |
+| `notebook/build_phase22_notebooks.py` + `01/02/03_*.ipynb` | the T4 pipeline |
+| `configs/default.yaml`, `configs/t4_scaled.yaml` | CPU/test preset, production preset |
+| `tests/` | 92 regression tests |
 
-The generator vocabulary is exactly 264 IDs: raw bytes **0–255**, function
-controls `FUNC_CALL=256`, `FUNC_ARG=257`, `FUNC_END=258`, and cognitive controls
-`LOAD_SPAN=259`, `SAVE_SPAN=260`, `THINK=261`, `EDIT_OP=262`, `DONE=263`.
-Controls are internal IDs, never canvas bytes. Regular `generate()` masks the
-cognitive controls; function controls remain host-intercepted.
-
-## Install and run
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/python data/generate.py                 # creates ignored data/processed/
-OMP_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-OMP_NUM_THREADS=1 .venv/bin/python evaluation/evaluate.py
-OMP_NUM_THREADS=1 .venv/bin/python evaluation/evaluate_upgrades.py
-# Uses a separate directory; the demo writes its grown checkpoint there.
-OMP_NUM_THREADS=1 .venv/bin/python demo/dual_memory_demo.py --runs-dir /tmp/bytecore-demo
-```
-
-Omitting the demo's `--runs-dir` reads and **updates** `runs/dual_memory/`.
-The evaluation scripts write reports and metrics into `runs/`; the generated
-JSONL splits are ignored by Git. `runs/report.md` measures diffusion and
-`runs/upgrade_report.md` measures the upgrade mechanisms.
-
-## Cognitive editing
-
-The included generator checkpoint has a **narrow synthetic** policy trained on
-`I:`, `D:`, `R:`, and `M:` followed by three letters in `a`–`h`. This proves
-that learned control/pointer heads can drive the entire loop; it is not general
-instruction-following training.
-
-```python
-import torch
-from models import GeneratorConditioned
-
-generator = GeneratorConditioned(d_model=64, n_layers=2, n_heads=4, d_ff=128)
-generator.load_state_dict(torch.load("runs/dual_memory/generator.pt", weights_only=True))
-generator.eval()
-result = generator.cognitive_generate(b"R:abc", max_steps=8)
-assert result.done and result.canvas == b"R:?bc"
-print([event.action.token for event in result.events])  # LOAD, THINK, EDIT, SAVE, DONE
-```
-
-For deterministic workflows or supervision, supply a host controller that
-returns `CognitiveAction` objects. LOAD ranges are half-open canvas indices;
-EDIT indices are relative to the loaded workspace. MOVE's destination is in
-the original workspace coordinates. Edits are staged: neither a subsequent
-LOAD nor DONE can silently discard a dirty span. At the step limit, the result
-contains the unchanged committed canvas plus `pending_workspace` and
-`pending_span`. The scratchpad is cloned per call, never shared or saved in a
-checkpoint. Both `max_steps` and `max_canvas_bytes` are bounded.
-
-```python
-from models import CognitiveAction
-
-plan = iter([
-    CognitiveAction(generator.LOAD_SPAN, start=0, end=3),
-    CognitiveAction(generator.THINK, think_steps=2),
-    CognitiveAction(generator.EDIT_OP, kind="insert", start=1, data=b"\x00\xff"),
-    CognitiveAction(generator.SAVE_SPAN),
-    CognitiveAction(generator.DONE),
-])
-result = generator.cognitive_generate(b"abc", controller=lambda observation: next(plan))
-assert result.canvas == b"a\x00\xffbc" and result.done
-```
-
-`cognitive_policy` and `training.cognitive_train.cognitive_supervision_loss`
-expose differentiable action, span, kind, and byte logits for labelled traces.
-The learned policy emits one payload byte per insert/replace operation; host
-controllers can supply arbitrary-length byte payloads within the canvas limit.
-`training/train_cognitive.py` reproduces the narrow synthetic training run.
-
-## Long-term memory and safe procedure replay
-
-`MemoryModel.write()` and `consolidate()` directly update persistent banks;
-`retrieve()` returns a `(K, d_model)` matrix, while
-`retrieve_differentiable()` carries gradients through top-K selection using a
-straight-through estimator. `pool=True` is available for legacy single-vector
-callers. An empty or fully masked retrieval cannot leak other entities.
-
-```python
-import torch
-from models import MemoryModel, CognitiveAction
-
-memory = MemoryModel(d_model=64, capacity=256)
-slot = memory.write_procedure(
-    b"\x00input\xff", b"\xffoutput\x00", torch.randn(2, 64),
-    b"exact stored example", metadata={"name": "example"},
-)
-execution = memory.execute_procedure(b"\x00input\xff")
-assert execution.slot == slot and execution.output == b"\xffoutput\x00"
-# An explicit host can replay saved latent steps into a fresh scratchpad:
-result = generator.cognitive_generate(
-    execution.output, initial_trace=execution.latent_trace,
-    controller=lambda _: CognitiveAction(generator.DONE),
-)
-assert result.canvas == execution.output
-memory.save("memory.pt")  # includes metadata and the session clock
-```
-
-A procedure is **data**, not Python code. Replay requires an exact input match
-and never evaluates stored bytes; an optional explicitly supplied host callback
-can consume latent steps. It does not generalize an example to unseen inputs.
-Newer matching entries win. Slots can be evicted or reused, so they are not
-permanent IDs. Oversized structured patterns/explanations/traces are rejected,
-not truncated. Defaults are 512 input/output bytes, 1,024 explanation bytes,
-and four latent steps; configure them when constructing `MemoryModel`.
-
-`ingest_examples()` also writes exact replayable procedures and co-trains the
-models. Explicit masks distinguish padding from valid byte `0`. Co-training
-updates weights and invalidates prior confidence calibration.
-
-## Contradiction evidence, not lie detection
-
-Use `Fact` / `write_fact` for structured assertions. Identifiers are raw bytes
-(or UTF-8 strings converted to bytes). The graph follows positive `same_as`
-links in either direction and chains a predicate only when explicitly marked
-`transitive=True`. A different positive object is a conflict only when the
-relation is explicitly `exclusive=True`; opposite polarity of the same fact
-also conflicts. Validity intervals are half-open `[valid_from, valid_to)` and all
-provided numeric times must use the same scale. `as_of` checks a specific time.
-
-```python
-from models import Fact
-
-memory.write_fact(Fact(b"alice", b"same_as", b"alice-id"))
-memory.write_fact(Fact(b"alice-id", b"language", b"python",
-                       exclusive=True, valid_from=10, valid_to=20))
-claim = Fact(b"alice", b"language", b"rust")
-report = memory.explain_contradiction(claim, as_of=15, max_hops=3)
-assert report.status == "conflict" and len(report.evidence[0].path_slots) == 2
-assert memory.explain_contradiction(claim, as_of=25).status == "unknown"
-```
-
-The report distinguishes `support`, `conflict`, `mixed`, and `unknown`, includes
-actual paths and interval intersections, and flags a truncated search. The
-trainable temporal message-passing score is reported separately from explicit
-logical evidence. `training.graph_train.graph_consistency_loss` can train the
-reasoner on trusted labels. The compatibility method `check_contradiction()`
-returns `1.0` when no evidence is found; **that does not establish truth**. For
-unstructured embeddings it is only a similarity heuristic. Neither method can
-infer intent or decide whether someone lied. Graph edges are rebuilt from live
-memory slots so eviction cannot leave stale edges.
-
-## Confidence and adaptive halting
-
-`GeneratorConditioned.forward(..., return_state=True)` exposes per-position
-thought, confidence logits, and probabilities. `DiffusionCore` exposes
-confidence logits with `return_confidence=True`. Training uses detached exact
-byte-correctness targets and binary cross entropy; validation can fit a
-scalar temperature with `ConfidenceHead.calibrate(logits, targets, scope=...)`.
-A single generator head shares its temperature across uses, so recalibrating
-one scope replaces the previous calibration. Calling `.train()` invalidates it.
-
-`think_scratchpad(..., confidence_threshold=...)` and
-`ByteCoreDiffusion.generate(..., confidence_threshold=..., return_stats=True)`
-stop work per sample once a threshold is reached, subject to minimum and maximum
-steps. By default adaptive halting is **off**. The included diffusion head was
-calibrated on **q-sampled denoising**, not ancestral generation; the included
-generator head was calibrated on next-byte prediction, not scratchpad
-thinking. A scope-mismatch warning is emitted for those adaptive uses. Fit and
-validate calibration for the actual application and distribution before relying
-on a threshold; high confidence is not a correctness guarantee.
-
-The reproducible `training/train_confidence.py` trains only the heads, fits
-validation temperatures, and writes new checkpoints to a separate output
-directory; it does not overwrite the input checkpoints. The included checkpoint
-heads were trained and assessed this way. On the included held-out multimodal
-next-byte set, the generator's correctness was about **1%** without memory;
-well-calibrated low confidence does not mean good generation.
-
-## Compatibility and limits
-
-- Phase-1 259-ID generator checkpoints load strictly into the 264-ID model;
-  existing byte/function embedding and output rows are copied exactly. Older
-  single-vector generator checkpoints migrate their projection to the first
-  RETRO adapter, but memory-conditioned behavior is not identical.
-- Memory schema 3 loads v1 flat and v2 hierarchical checkpoints, preserving
-  the original pair scorer and initializing new graph/procedure fields. Guarded
-  memories use schema 4 and reject unverifiable legacy slots. Use `save()` /
-  `load()` for metadata, guard policy and session time, not bare `state_dict()`.
-- Legacy diffusion checkpoints load without changing their denoising tensors;
-  a missing confidence head is initialized and is **uncalibrated**. Checkpoint
-  dimensions/capacities must match constructors. Old optimizer state is not
-  resized automatically; recreate optimizers after a vocabulary upgrade. New
-  264-ID or guarded schema-4 checkpoints cannot be expected to load in older code.
-- At `d_model=64`, three layers, `d_ff=256`, memory capacity 512: memory has
-  100,205 parameters (Phase 1: 83,499); the generator has 523,420 with injection
-  every layer (Phase 1: 329,932), or 477,337 every two layers, before Phase 9
-  adds 16,640 structured-request parameters to width-64 generators. Diffusion
-  now has 200,065 parameters (195,905 before Phase 9). Memory byte buffers and
-  per-layer attention also add storage/compute.
-- The current diffusion report explicitly separates reconstructing an already
-  corrupted input from recovering the original. At 10% corruption, measured
-  real-byte recovery is 0.9128 for substitutions, 0.3693 for insertions, and
-  0.3812 for deletions; insertion/deletion comparisons are position-wise without
-  realignment. The small models and synthetic demonstrations are not production
-  quality without substantial task-specific training and independent testing.
-
-## Phase 5: Diagnostic Attribution
-
-Phase 5 adds held-out confidence calibration, optimal raw-byte edit traces,
-differentiable sequence alignment, and intervention-based diagnostics. The
-complete measured results and limitations are in
-[`runs/diagnostic_report.md`](runs/diagnostic_report.md) and
-[`runs/failure_modes.md`](runs/failure_modes.md).
-
-### Calibration and thresholds
-
-`evaluation/calibrate_confidence.py` fits a temperature on even validation
-examples, selects thresholds on odd validation examples with balanced noise
-conditions, and reports ECE/MCE and error on the test split. Diffusion records
-contain per-byte embedding MSE; generator records contain next-byte
-cross-entropy. Confidence predicts correctness; it is not the MSE or loss.
-`runs/calibration_predictions.npz` retains the underlying observations and
-`runs/calibration.png` visualizes test reliability and observed error. The
-calibrated `state_dict` copies are under `runs/phase5_calibrated/`; they do not
-replace the original checkpoints.
-
-No 90%, 95%, or 99% threshold was supported in this experiment. Those config
-values are `null`, and `phase5_calibration` is a diagnostic record, **not** an
-instruction to enable inference halting. The task-specific selection does not
-validate THINK or ancestral sampling. Refit calibration after training.
-
-### Edit traces and co-training
-
-`data/ingest_real_traces.py` accepts JSONL records containing `input_hex`,
-`output_hex`, optional `id`, `split`, `kind`, `source` and UTF-8 `explanation`.
-Hex encoding preserves arbitrary raw bytes including NUL and 255. It uses
-optimal unit-cost Levenshtein insertion/deletion/replacement (MOVE is not a
-primitive in that optimality claim), bounded quadratic dynamic programming,
-and generates internal LOAD/THINK/EDIT/SAVE/DONE actions. Procedural memory
-stores exact inputs and outputs, sampled actual scratchpad states, serialized
-actions and explanation bytes. No stored code is executed.
-
-`training.co_train.ingest_examples(..., cognitive_trace_weight=...)` can
-jointly train the generator and memory using validated teacher-forced actions;
-it includes conditioned and unconditioned cognitive-policy losses. The model
-emits one byte per learned insert/replace action. Exact stored-answer replay is
-not model-generated editing. The fixture contains short real before/after
-repository excerpts split by source file; the 80-epoch isolated experiment
-historically reproduced 22/22 stored procedures, 5/10 training edits autonomously
-and 0/8 held-out edits autonomously. The old verification memory contained
-held-out targets added after model evaluation and has since been replaced with
-guarded train-only memory. The historical model budget was target-derived;
-Phase 6 uses a fixed budget. This small fixture is not an external benchmark.
+## Install
 
 ```bash
-OMP_NUM_THREADS=1 .venv/bin/python data/ingest_real_traces.py \
-  --pairs data/real_edit_pairs.jsonl --split train --epochs 0 --output-dir runs/phase6/ingestion
-OMP_NUM_THREADS=1 .venv/bin/python evaluation/test_real_traces.py --generator runs/real_traces/generator.pt --train-epochs 0
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Soft-DTW alignment
-
-`models.alignment.soft_dtw_alignment()` aligns embedding sequences with masks;
-valid byte positions need not be contiguous. Soft-DTW is entropy-smoothed and
-may be negative. `ByteCoreDiffusion.compute_loss()` accepts `corrupted_emb`,
-`alignment_loss_weight` and `alignment_gamma`; its direct API defaults to the
-legacy weight zero. Config-driven `training/train.py` now also defaults to
-zero alignment weight and zero paired edit-corruption probability; either can
-be enabled explicitly for a new training experiment. Alignment adds **zero
-learned parameters**, but its training cost is
-quadratic in sequence length. The fixed-length model cannot infer missing output
-lengths from this loss alone.
-
-The matched retraining test at 10% corruption measured roughly 39% insertion
-and 40% deletion original-position accuracy (target >70% unmet); clean
-reconstruction fell by about 0.7 percentage points. Edit-aligned similarity is
-a separate metric and does not show that deleted bytes were recovered. The
-original checkpoints were not replaced.
-
-### Reproduce diagnostics
-
-Run from the repository root after generating `data/processed/`:
+## Quickstart
 
 ```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/calibrate_confidence.py --write-config
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/test_real_traces.py --generator runs/real_traces/generator.pt --train-epochs 0 --output-dir runs/phase6/real_traces
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/evaluate_alignment.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/ablation_study.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/head_attribution.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/importance_validation.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/edit_operation_analysis.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/learning_curve.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/failure_detection.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/evaluate.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/diagnostic_report.py
+python -m pytest -q                              # 92 passed, 1 skipped
+python -m evaluation.phase22_benchmark           # writes runs/phase22/*.json
+python -m training.phase22_train --self-test     # CPU plumbing smoke test
 ```
 
-The head heatmap measures output-projection ablation of RETRO cross-attention
-heads, not self-attention or prefix ablation. Importance/utility correlations
-use a small set of slot removals and may be dominated by unselected slots.
-Current clean trace experiments write under `runs/phase6/real_traces/`, and
-alignment experiments under `runs/alignment/`, leaving the main checkpoints
-intact. The default generator is not a reliable natural-language or code editing
-model.
+The self-tests run on repository bytes and synthetic trajectories. They validate
+plumbing; they produce no model result.
 
-## Phase 6: clean evaluation, guarded memory and explicit routing
+## The model
 
-The measured results and unmet targets are in [runs/phase6_report.md](runs/phase6_report.md).
-The prior verification memory contained 12 held-out pairs and was replaced by a
-guarded train-only snapshot. The separate legacy dual-memory checkpoint has 67
-slots without verifiable provenance; guarded evaluation rejects such slots, not
-because every one is known contaminated, but because cleanliness cannot be proved.
-The new real-trace run saves before test, evaluates read-only with a fixed budget,
-and gets 10/10 stored train replay, 5/10 autonomous train and 0/8 autonomous test.
-The fixture lacks actionable edit instructions; lookup is not learned generation.
+`CausalByteTransformer` under `configs/t4_scaled.yaml`:
 
-### Attach a holdout registry before writing
+| | |
+|---|---|
+| depth / width | `n_layers=12`, `d_model=1024` |
+| attention | 8 query heads, 2 KV heads (`d_h=128`), causal, fused SDPA |
+| FFN | SwiGLU `1024→4096→1024`, bias-free |
+| norm | pre-norm RMSNorm, `eps=1e-6` |
+| positions | RoPE, `θ=10000`, no learned table |
+| refinement | 2 weight-tied passes, rank 256, `α` initialised to 0 |
+| vocabulary | 261 (bytes + `BOS/EOS/PAD/REF_START/REF_END`) |
+| **parameters** | **183,830,791** |
 
-```python
-from data.holdout_registry import synthetic_holdouts
-from data.ingest_real_traces import load_pairs
-from models.holdout import HoldoutGuard
-from models.memory_model import MemoryModel
+A forward pass maps `(B,L)` ids to `(B,L,261)` logits through 12 pre-norm blocks,
+two refinement passes and a final RMSNorm. `gradient_checkpointing: true` keeps
+only block boundaries in memory.
 
-held_out = (load_pairs("data/real_edit_pairs.jsonl", split="validation")
-            + load_pairs("data/real_edit_pairs.jsonl", split="test")
-            + synthetic_holdouts("data/processed", max_length=128))
-guard = HoldoutGuard.from_records(held_out)
-memory = MemoryModel(d_model=64, capacity=256)
-memory.set_holdout_guard(guard)        # attach before any writes or loads
-# Guarded generic writes need raw_input=... and, if known, raw_output=...
-with memory.read_only():              # no writes or access-stat updates
-    entries, vectors = memory.retrieve(query_embedding)
-assert memory.audit_holdouts()["failed_slots"] == 0
+## Memory
+
+`MemoryModel(d_model=64, capacity=512)` keeps three tiers in a shared space —
+episodic `(256,64)`, semantic exemplars `(128,4,64)`, procedural `(128,64)` with
+`(128,4,64)` latent traces — scored by
+
+```
+logit = q·k/√d − decay_rate·write_age/50 + 0.35·importance
 ```
 
-`query_embedding` above is an application-provided tensor. Guarded concepts use
-`model.bank.set_holdout_guard(guard)` and `model.write_concept(name, raw_bytes)`.
-A guarded checkpoint preserves its registry; old slots without provenance fail
-closed. Metadata with a `test`/`validation` split is rejected even unguarded.
-Hash checks cover exact content and registered substrings at least 16 bytes;
-co-training also scans symbolic intermediate canvases and consecutive trace
-payload runs before mutation. They do not catch semantic/near duplicates, short substrings, hidden encodings, opaque vectors,
-pretrained weights, or direct tensor tampering. The registry must include every
-relevant held-out dataset and the caller must supply truthful provenance; this
-is not a security or privacy boundary.
+with a learned, bounded importance scorer and `softmax` over the selected top-K.
+Retrieval returns the raw top-K vectors (`(K,d)`) or their weighted pool; a
+straight-through estimator provides the training-time gradient. Memory reaches a
+prompt as prefix bytes, never as a side-channel tensor.
 
-### Explicit editing dispatch
+## Data and training (three phases)
 
-```python
-from models.edit_router import EditRequest, EditRouter
-# diffusion and generator are loaded models; 128 is this checkpoint's training width.
-router = EditRouter(diffusion, generator, diffusion_pad_to=128)
-result = router.execute(EditRequest(b"I:abc", "insert"), max_steps=8)
-print(result.engine, result.output, result.completed)  # DONE is not correctness
-```
-
-The operation is declared by the caller, not inferred from a target. Insert,
-delete and move use the cognitive model; fixed-length denoising uses diffusion;
-`replace` needs an explicit `length_preserving` flag. Free-form diffusion
-instructions are still rejected; Phase 9 additionally accepts a trained model
-and explicit binary mask and replacement bytes. Cognitive natural-language
-instruction priming remains experimental. The historical Phase 6 toy benchmark gets
-64/64 each for insert/delete/move but 0/64 targeted same-length replacements
-when routed to diffusion. On 100 synthetic 10% substitution inputs the denoiser
-mostly copied the already-corrupted bytes rather than recovering them.
-
-### Halting policy and reproduction
-
-`configs/default.yaml` provides disabled `adaptive_halting.diffusion_sampling`
-and `.thought` entries. Pass the relevant mapping as `adaptive_config=` to
-`ByteCoreDiffusion.generate`/`p_sample_loop` or `cognitive_generate`. Enabling
-requires an explicit threshold and matching calibration scope; it does not prove
-the policy is safe on a new distribution. Explicit `confidence_threshold=` is
-an experimental warning-only override. Phase 6's paired sampling test found no
-policy meeting its strict validation no-loss criterion; the THINK experiment
-saved work versus a four-step comparison but not the existing one-step default.
-Do not enable either by default based on those results.
+Phase 1 is raw next-byte causal LM over real code (`bigcode/the-stack`), PT-BR
+(`TucanoBR/GigaVerbo`, `HuggingFaceFW/fineweb-2 por_Latn`), English
+(`fineweb-edu`, DCLM) and math (`open-web-math`). Phase 2 distils conversation
+(`no_robots` — non-commercial, `Tucano-SFT`, `distilabel-sft-easy`,
+`CodeFeedback`) and real Minecraft trajectories (VLA stage 3, MET-Bench) into
+`Thought → Action → Observation → Answer` bytes with prompt masking. Phase 3 runs
+sandbox RL with a deterministic search tool and the reward in
+`training/phase22_reward.py`.
 
 ```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/phase6_routing.py
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python evaluation/phase6_halting.py
-.venv/bin/python evaluation/phase6_report.py
+python -m training.phase22_train --phase 1 --device cuda   # -> checkpoint_phase1.pt
+python -m training.phase22_train --phase 2 --device cuda   # -> checkpoint_phase2.pt
+python -m training.phase22_train --phase 3 --device cuda   # -> final_model.pt
 ```
 
-## Phase 8: reasoning supervision and memory-free policy gradients
-
-See [the measured Phase 8 report](runs/phase8_rl_report.md). The final-epoch
-policy, the validation-selected policy and their starting checkpoint all scored
-**0/8 exact** on the real held-outs; the requested >4/8 was not met. The selected
-model also scored **0/4** real validation (only two episodes completed) and
-**0/10** instructed synthetic validation. Real held-out records do not contain
-an actionable edit request, so the desired output is generally underdetermined.
-The byte guards cannot certify the contents of pretrained weights or semantic
-novelty. The checkout did not contain verifiable Phase 7 mask-conditioning code;
-this phase does not claim it was validated.
-
-`GeneratorConditioned.reasoning_predictor` predicts a detached, order-sensitive
-but lossy sketch of `target - current` from the mean post-THINK scratchpad. The
-target is a training label, never a policy input. With cognitive traces,
-`co_train_step` adds `0.5 * reasoning_loss` by default. The head adds 8,320
-parameters to the width-64 Phase 8 model (352,728 total before Phase 9). An entirely absent head is
-initialized during strict legacy load; a partially missing one remains an error.
-Older code cannot strictly load a checkpoint containing the new head. Existing
-optimizer state cannot automatically acquire the new parameters, and confidence
-calibration is invalidated by further training.
-
-The selected reasoning head is worse than an all-zero predictor on 5/6 training groups; the sketch is especially small for line/move examples. See `runs/phase8/reasoning_train_diagnostic.json`. This is a training-only diagnostic, not held-out evidence.
-
-`training.rl_editing` samples the same bounded cognitive loop used at inference,
-without memory or controllers, and then replays the sampled sequence with
-gradients. It includes actual masked control and argument probabilities and
-accounts for destination remapping. The self-critical greedy baseline is
-independent of the sampled actions. The requested byte-Levenshtein reward minus
-0.01 per THINK iteration or EDIT action can favor no-ops on long documents;
-reward, completion and exact success are different metrics. The replay shares
-an attention code path with sampling; the PyTorch process-global MHA fast-path
-flag is temporarily disabled under a lock and restored.
-
-The opt-in `ingest_examples(..., curriculum=True)` and the RL trainer schedule
-five 20%-wide bands: single-byte substitutions, single-word replacements,
-single-line edits, multiline insert/delete, and code-block MOVE. The supervised
-and RL mixture anneals from 80/20 to 20/80. Only train examples and train traces
-are used in loss/reward; all examples and symbolic intermediate canvases are
-checked against registered holdouts before optimizer updates. Validation selects
-only final-stage checkpoints, then the real test is scored with a fixed
-128-action budget, no memory, stored trace, target input or controller.
-
-```bash
-.venv/bin/python data/generate.py  # rebuild ignored processed holdout registry
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m training.rl_editing \
-  --epochs 20 --examples-per-stage 8 --real-anchors 2 --rollout-budget 16 \
-  --eval-budget 128 --temperature 0.8 --lr 0.0003 --seed 881 --threads 1
-.venv/bin/python -m evaluation.phase8_reasoning
-.venv/bin/python -m evaluation.phase8_report
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-```
-
-`runs/phase8/generator.pt` is validation-selected; `last_epoch.pt` is the last
-training epoch. `metrics.json` records the reward curve, choices and per-task
-outputs; `reward_curve.png` plots it. Training was tested with PyTorch
-2.5.1+cu124 on CPU, NumPy 1.26.4 and Matplotlib 3.11.2. Stage-to-stage reward
-changes are not a controlled comparison because the tasks change.
-
-
-## Phase 9: explicit edit arguments and native masked diffusion
-
-See [the Phase 9 report](runs/phase9_report.md) for training, selection, tests,
-raw traces and limitations. The requested `Hello Worl` → `Hello Word` case now
-passes both native diffusion and the no-memory/no-controller cognitive loop.
-The cognitive case was **included and oversampled in training**: the separate
-natural-instruction test scored **0/68**, so the example is not evidence of
-general instruction following. The guarded memory did not already contain the
-example; a copy reproduced it only after the exact answer was explicitly stored.
-
-### Cognitive argument frames
-
-`models.cognitive_arguments.encode_edit_arguments` and
-`decode_edit_arguments` serialize/validate the learned policy's EDIT fields
-before they are applied. `CognitiveEvent.argument_bytes` contains literal data
-bytes following the internal `EDIT_OP` control; `event.control_and_arguments`
-exposes their internal control-plus-byte sequence. The heads predict fields jointly;
-this is not autoregressive argument-byte generation. Controls never become
-canvas bytes, and edits remain staged until `SAVE_SPAN`.
-
-The header is `[position_low, opcode_and_flags, payload_byte]`. Unflagged
-opcodes are insert=0, delete=1, replace=2, move=3; delete/move use zero as a
-payload placeholder. Single-byte replace at position 9 with byte 100 is
-`[9,2,100]`. Position >255 sets `0x80` and appends the high bits as canonical
-unsigned LEB128 (position 300: `[44,130,100,1]`). Flag `0x40` adds a non-unit
-span length; `0x20` adds a non-unit payload length and remaining bytes; MOVE
-then appends its original-workspace destination. Extensions occur in that order.
-The default maximum coordinate is 4096; malformed or extra fields are rejected.
-Host actions can carry multi-byte payloads; autonomous insert/replace predicts
-one payload byte per action.
-
-Optional `structured_request` supplies the desired position, kind and byte
-explicitly to learned argument heads. It is **not** a host controller and does
-not force the edit, but because the input already specifies the action, its
-results measure structured copying rather than natural-language understanding.
-Only one-byte replacement conditioning is trained in the bundled checkpoint;
-other kinds and non-unit spans require an explicit untrained override.
-
-```python
-from training.train_confidence import load_generator
-
-model = load_generator("runs/phase9/structured_generator.pt", "cpu", 4).eval()
-source = b"Hello Worl"
-instruction = b"Replace the byte at zero-based position 9 from 108 ('l') to 100 ('d')."
-result = model.cognitive_generate(source, instruction_bytes=instruction,
-                                  structured_request=bytes([9, 2, 100]), max_steps=12)
-assert result.done and result.canvas == b"Hello Word"
-assert [e.argument_bytes for e in result.events if e.action.token == model.EDIT_OP] == [bytes([9, 2, 100])]
-```
-
-Distinct structured test cases scored **254/264**, including **7/8** with
-positions >255. Natural-only held-out cases scored 0/68; the eight real
-held-outs without actionable instructions remain 0/8. These are small synthetic
-experiments, not a deployment accuracy claim.
-
-### Native diffusion masking
-
-`p_sample_loop_with_mask(shape, edit_mask, original_emb=...,
-requested_byte_ids=...)` and `p_sample_loop(..., edit_mask=...)` preserve
-unmasked source embeddings at every DDPM step. `masked_edit` returns bytes and
-copies **only unmasked originals**; selected values are decoded from model
-predictions. A mask alone describes where, not what: supply the requested
-values independently. Untrained mask checkpoints fail closed by default, and
-masked adaptive confidence thresholds are not supported.
-
-```python
-import torch
-from training.train_masked_diffusion import load_model
-
-model = load_model("configs/default.yaml", "runs/phase9/diffusion").eval()
-ids = torch.tensor([[72,101,108,108,111,32,87,111,114,108]])
-mask = torch.tensor([[0,0,0,0,0,0,0,0,0,1]], dtype=torch.bool)
-requested = torch.zeros_like(ids); requested[0, 9] = 100
-torch.manual_seed(42)
-assert model.masked_edit(ids, mask, requested).tolist() == [[72,101,108,108,111,32,87,111,114,100]]
-```
-
-`compute_loss` accepts `edit_mask` or `random_edit_mask_probability`, optional
-`source_emb` and requested IDs; it supervises selected valid bytes only. On
-separate synthetic sets, diffusion achieved **78/80** exact multi-mask rows
-and **235/256** all-byte requests; all unmasked bytes were preserved. The
-original core has no padding-attention mask, so changing sequence width changes
-context. `EditRouter` accepts binary `edit_mask` and `replacement_bytes` fields
-for explicit fixed-length edits, but still rejects free-form instructions.
-
-Width-64 Phase 9 adds 16,640 structured-request generator parameters and 4,160
-diffusion parameters. Absent legacy heads initialize to zero and are marked
-untrained; partial newer heads remain strict-load errors. Older code cannot
-strictly load new checkpoints, and optimizer/calibration state needs rebuilding.
-The trained flags are metadata, not accuracy guarantees. Historical checkpoints
-were not overwritten.
-
-```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m training.train_positional_edits
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m training.train_structured_requests
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m training.train_masked_diffusion
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m evaluation.phase9_diagnostic
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m evaluation.phase9_benchmark
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-.venv/bin/python -m evaluation.phase9_report
-```
-
-## Phase 10: conversational foundation (legacy mode)
-
-The commands and explicit-memory-only behavior in this section require `--legacy-phase10`; the Phase 12 default automatically stores complete transcripts and reversible vectors when `--memory` is supplied.
-
-The Phase 10 path is a small, **bounded research prototype**, not a general
-chatbot. `GeneratorConditioned` now has a learned seven-way intent classifier
-(`Linear → SiLU → Linear`) and a trainable byte-convolution encoder. The
-frozen causal generator provides context without changing Phase 9 editing
-weights. A separate autoregressive byte decoder generates limited social
-responses. Its internal EOS is not a raw output byte. Four exact factual
-questions use a small host-supplied reference table; other inputs classified as
-questions abstain instead of inventing an answer. Misclassification can route a
-question to a different path.
-
-Run an ephemeral interactive session (no persistent memory):
-
-```bash
-OMP_NUM_THREADS=1 .venv/bin/python -m demo.conversation --legacy-phase10 --show-intent
-```
-
-Opt in to a local, **unencrypted** memory file, then restart the command to
-recall explicitly saved facts:
-
-```bash
-OMP_NUM_THREADS=1 .venv/bin/python -m demo.conversation --legacy-phase10 --memory runs/user_memory/local.pt --user local --show-intent
-# Try: Remember my hometown is Recife.
-# On a later run: Can you recall my hometown.
-# To delete from the current bank: Forget my hometown.
-```
-
-Memory commands intentionally have narrow grammar: `remember my KEY is VALUE`,
-`what is my KEY?`, `can you recall my KEY`, and `forget my KEY` (plus documented
-minor variants). The classifier can still misunderstand them. Memories are
-explicit, exact raw-byte lookup—not automatic recording or general semantic
-recall. Recent turns fit only within the 128-byte context; longer current
-messages receive a request to shorten them. Keys in the chat grammar are ASCII;
-values are UTF-8. The programmatic memory API can store arbitrary bytes, but
-non-text values are not emitted as conversational text.
-
-For a narrowly specified edit, `/document TEXT` or `/document-hex HEX` loads
-raw bytes in the demo; `replace byte 3 with 113` then supplies a **zero-based
-byte** position and replacement. The host parses those explicit fields, sends a
-structured request to the learned cognitive policy, and returns the changed
-document only after verifying the model completed exactly that edit. It does not
-force the output. Other edits and vague requests require clarification. The
-classifier and decoder are not evidence of free-form instruction following.
-
-`ConversationMemory` stores scoped facts in existing procedural key/value
-memory, with opt-in atomic checkpoint replacement and rollback for ordinary
-write failures. A full bank rejects new facts through this API rather than
-silently evicting another user's record; updates replace the same key. User IDs
-are **not authentication**. The host must authenticate users, restrict access,
-protect backups and supply encryption where needed. Locks are shared only
-through one wrapper, not between processes. Forgetting clears current bank
-entries and the latest saved file, not prior backups, filesystem remnants or
-caches. `runs/user_memory/` is ignored by Git; avoid storing private data in
-other tracked paths.
-
-Width-64 parameter counts: Phase 9 generator 369,368; intent encoder +16,480;
-intent head +4,615; Phase 10 generator 390,463; separate social decoder
-+62,273. Legacy generators load with deterministically initialized, untrained
-intent components; a session refuses to use them until trained. Partial new
-checkpoints fail strict loading, older code cannot strictly load Phase 10
-checkpoints, and optimizer/calibration state must be rebuilt or revalidated.
-The response checkpoint is bound to its exact generator SHA-256 and expected attention-head count.
-
-On the post-selection, manually authored 35-message challenge, intent accuracy
-was **23/35**, and vague/clarification intents were **0/5**. The policy still
-asked for clarification on **5/5** of those vague prompts via fallbacks. A
-five-case negative/malformed-command safety check passed, but is not security
-evidence.
-The 0.55 confidence threshold is uncalibrated; even an incorrect negated memory
-request received ~0.995 confidence, and the explicit grammar—not confidence—
-prevented the write. A single synthetic cross-session memory/edit scenario
-passed. The head-only baseline's template-test result informed the encoder
-design, so that template test is a development holdout, not untouched final
-evidence. Social response targets are repeated training templates. See
-`runs/phase10_report.md`, `runs/phase10/training_metrics.json`, and
-`runs/phase10/benchmark.json` for details and limitations.
-
-Reproduce from this checkout after installing requirements and generating
-`data/processed/` if absent (new training writes into `runs/phase10`):
-
-```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m training.train_conversation --intent-epochs 60 --response-epochs 100 --batch-size 128 --feature-batch-size 32 --intent-lr 0.003 --response-lr 0.003 --seed 101010 --threads 1 --output-dir runs/phase10
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m evaluation.phase10_benchmark --samples 30 --threads 1
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 .venv/bin/python -m unittest discover -s tests -v
-```
-
-## Phase 11: contextual byte conversation
-
-Phase 11 adds hard-negative intent training, user-scoped recent episodic retrieval and an autoregressive byte pointer/generator. Run this historical path explicitly:
-
-```bash
-.venv/bin/python -m demo.conversation --legacy-phase11 --show-intent
-# My favorite color is blue.
-# What is my favorite color?
-```
-
-**Privacy change:** adding `--memory runs/user_memory/local.pt` automatically writes complete user and assistant turns to an **unencrypted** checkpoint. User names are not authentication. Run with `--no-episode-storage` to disable implicit transcript storage/retrieval; local history and explicitly requested facts still work. A per-turn "do not save" request is not stored; a session-wide "don't store anything" also disables future storage and local history for that session, without deleting older records. `Forget my <key>` removes that exact explicit fact and clears the user's *entire* stored conversation transcript, but not backups or disk remnants. Atomic saves do not make concurrent processes safe. Supply host-level consent, authentication, permissions and encryption.
-
-The response network sees raw input bytes, intent and up to five retrieved episodes, and the generator receives retrieved memory vectors. A deterministic, exact-evidence fallback may answer when neural copying fails; benchmark output distinguishes these paths. Known factual questions, grammar-limited side-effect safeguards and tiny synthetic English datasets do not provide open-domain language competence or calibrated safety. Use `--legacy-phase10` for the original explicit-memory-only prototype. See `runs/phase11_report.md`, `AGENTS.md`, and `QWEN_CHAT_PROMPT.md` for reproducibility, held-out caveats, regression results and parameter counts.
-
-Measured on small synthetic sets: vague intent **9/10**, overall intent **62/70**, and two-turn system retention **10/10** (only **5/10** from the learned decoder; five required the grounded fallback). Same-input sampled responses had **5 distinct byte sequences in 20 samples**; some wording was malformed. Injected memory vectors changed none of the ten greedy decoder outputs when raw episode bytes were retained. The full regression suite passed **147/147**. On the older Phase 10 development set, intent accuracy fell from **287/384 to 229/384**, particularly for remember/forget. Anchored explicit memory commands can override the classifier after it runs, and the result exposes the route. These are not evidence of general dialogue or privacy safety.
-
-## Phase 12: vector-only memory, bounded replay and diverse byte responses
-
-The default demo adds a narrow vector-only recall path:
-
-```bash
-.venv/bin/python -m demo.conversation --show-intent
-# My favorite color is blue.
-# What is my favorite color?
-# Assistant: blue   [source=vector_reader, vector_only=True]
-```
-
-The system parses a limited affirmative fact grammar and stores 1–40 UTF-8 value bytes in one to five reversible width-64 bit-vector slots. For supported recall questions it supplies **only the question and retrieved vectors** to a trained neural readout, not the earlier transcript or a host-provided answer. An exact owner/topic parser selects the slots. This demonstrates vector dependence, **not learned semantic compression or general dialogue**. Values over 40 bytes are not supported by this path. With `--no-episode-storage`, automatic transcript/vector storage and retrieval are disabled; old explicit facts and in-process history remain available through earlier behavior.
-
-**Privacy:** with `--memory PATH`, complete conversations **and reversible fact vectors** are stored unencrypted. Hashed owner/topic keys and the orthogonal rotation are not encryption; user IDs are not authentication. Opt in only with appropriate host-level consent, access controls and encryption. Forgetting a key purges its vectors and the user's stored transcript, not backups, disk remnants, other facts or unsynchronized writers. `Forget Alice's workplace` removes the corresponding workplace vector and transcript for that user. The default mode is ephemeral. `--legacy-phase11` and `--legacy-phase10` retain the older prototypes.
-
-The capacity-1,000 guarded replay snapshot contains synthetic training examples only and is never populated automatically from user conversations. Intent training used 90 new and 38 old examples per batch; the new decoder objectives did not all use a 70/30 mix. Response diversity is trained with a differentiable loss over predicted byte distributions plus byte cross-entropy. Styles are synthetic and may be memorized.
-
-Measured on small synthetic tests: **10/10** vector-only structured fact recalls; the public blue answer changed when vectors were zeroed or swapped; retention passed after **500 actual filler messages** and after a fresh-process save/reload. Fresh intent was **62/70 (88.6%)**. The inspected old Phase 10 development set improved to **298/384** from Phase 11's **229/384**, but this does not guarantee no forgetting. Direct decoding on one protected prompt yielded **14 distinct/20** and no structural/template-proxy failures; the complete session misrouted that prompt and produced only **1 distinct/20**. An exploratory raw-byte probe decoded 256/256 individual byte values but failed some multi-byte binary sequences. The full suite passed **168/168**. See `runs/phase12_report.md` for all limitations, ablations and reproduction commands.
-
-## Phase 15: external tool use and sandbox execution
-
-The pivot away from internal semantic verification. **Verification is outsourced to the sandbox; the model's role is reliable tool routing and iterative editing.** A frozen Phase 12 generator plus a small trained policy emits a tool-call frame; the host executes it and feeds the result bytes back.
-
-```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_tool_use --epochs 60 --lr 0.002 --lr-step 20 --lr-decay 0.4 --output-dir runs/phase15
-python -m evaluation.tool_eval --with-regression
-python -m evaluation.copy_probe --output runs/phase15/copy_probe.json
-python -m demo.tool_agent --generator runs/phase12/generator.pt --policy runs/phase15/tool_policy.pt
-```
-
-*How a turn works*
-
-1. The user types one line. The policy encodes `[request] + [optional TOOL_RESULT bytes]` and predicts a route.
-2. If the route is a tool, the decoder emits `[TOOL_CALL] [tool] [TOOL_ARG_START] [argument bytes] [TOOL_ARG_END]`. Generation pauses.
-3. The host parses the frame **fail-closed** (unknown tool, missing terminator, over-long argument or an unparsable frame aborts the turn) and runs `ByteSandbox`.
-4. The host injects `[TOOL_RESULT] [result bytes]` and lets the model continue, so the next turn sees the execution output. The model itself never emits `TOOL_RESULT`.
-
-*Measurements (final-epoch checkpoint, fixed seeds)*
-
-| Check | Result | Target |
-| --- | --- | --- |
-| Tool routing (exact frame) | **17/20** | >18/20 |
-| Tool routing (correct tool only) | **20/20** | >18/20 |
-| Routing execution match | **17/20** | -- |
-| Iterative debugging | **2/5** | >=3/5 |
-| Phase 12 vector-only recall | **10/10** | 10/10 |
-| Unit tests | **209** | all passing |
-
-Full validation: route **85.3%**, frame **72.1%**, call-frame **72.6%** (481 rows), decline **100.0%** (371 rows). Decline behaviour: **18/40** conversational prompts and **48/60** across all Phase 10 intents produce no tool call.
-
-**Limits.** The sandbox is hardening, not a security boundary: child processes inherit the host filesystem and network. Routing and debugging prompts are synthetic single-line Python from a fixed template pool, so these numbers are not a generalisation claim. Argument bytes come from a copy head, not from parsing the program; the policy fails when an argument is long enough to exceed its copy fidelity, and `os.listdir` requests can fall into a degenerate free-running loop. See `runs/phase15_report.md` for the full analysis, ablations and reproduction commands.
-
-## Phase 16: the scalable foundation (ByteCore v2)
-
-The pivot from prototype hacks to a foundation that can be scaled. **The model is a standard causal byte-level Transformer; verification is outsourced to the sandbox; tool use is ReAct text intercepted by a regex; memory enters as a prefix.**
-
-```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python -m training.train_foundation --epochs 8 --batch-size 64 --lr 0.0012
-python -m evaluation.foundation_eval
-python -m demo.tool_agent --once "Calculate 6 * 7."
-```
-
-*What was removed from the active path*
-
-| Removed | Replaced by |
-| --- | --- |
-| Pointer-generator copy head (`copy_gate`, attention-as-pointer) | plain causal attention; copying emerges as next-byte prediction |
-| Rigid `[TOOL_CALL][ARG_START]...[TOOL_ARG_END]` frames | `Action: tool("arg")` text caught by one regex |
-| Learned internal verifier | the sandbox, whose output re-enters the stream as bytes |
-| Bespoke result channels | `[MEM] ...` prefix bytes for memory, `Observation: ...` for tools |
-
-*How a turn works*
-
-1. Optional retrieval renders `[MEM] topic = value` lines in front of the request.
-2. The model continues the stream: `Thought: ...`, then `Action: exec_python("...")`.
-3. The host parses that line, runs the sandbox, **truncates** anything the model emitted after the action, and appends the real `Observation: ...`.
-4. The model produces `Answer: ...`. It never fabricates an observation.
-
-*Measurements (final-epoch checkpoint, fixed seeds)*
-
-| Check | Result | Target |
-| --- | --- | --- |
-| Next-byte accuracy, short held-out sequences | **95.03%** | >85% |
-| Next-byte accuracy, all held-out sequences | **94.63%** | -- |
-| Argument byte-exact (free-running) | **42/60** | -- |
-| Generated code that runs cleanly | **58/60** | -- |
-| Tool interception checks | **8/8** | all pass |
-| Phase 12 vector-only recall | **10/10** | 10/10 |
-| Unit test suite | **258 tests in 164.051s** | all passing |
-
-Per-segment next-byte accuracy: action 97.1, answer 92.5, observation 94.2, preamble 90.2, thought 99.2. Data: **12,160** ReAct trajectories (chat 1120, exec 5040, file 1680, memory 1120, repair 2240), instance-disjoint splits, every observation produced by the real sandbox. Model: **266,243 parameters** at `d_model=64`, 4 layers, 4 heads.
-
-*Scale.* `configs/default.yaml` exposes `d_model`, `n_layers`, `n_heads`, `d_ff` and `max_seq_len`. The `production` preset is ~87M parameters and `d_model=1024` is ~150M -- the same class, different numbers.
-
-**Limits, stated plainly.** Trajectories are synthetic and templated, and the accuracy score is dominated by format bytes: inside `Action:` lines the model gets 98.8% of punctuation and 96.7% of letters right but only **89.7% of digits**, because digits are the bytes it must copy out of the request. It learned the ReAct protocol, not literal copying -- 42/60 held-out arguments are byte-exact even though 58/60 execute cleanly. Positional embeddings are learned and absolute, so context is capped at `max_seq_len`. The sandbox is hardening, not a security boundary. Phase 15's pointer/frame stack is frozen for reproducibility and is no longer imported by any Phase 16 module. See `runs/phase16_report.md`.
-
-## Phase 17: training on real GitHub data
-
-Phase 16's observations were real (produced by executing code) but its *requests* were invented. Phase 17 replaces the invented half: 4,476 records from ten public repositories, rendered into 4,475 ReAct trajectories whose observations are the return values of four real corpus tools.
-
-```bash
-export GITHUB_TOKEN="$(gh auth token)"
-python -m data.github_collector --max-items-per-kind 200 --output-dir data/github_raw
-python -m data.github_to_react --verify 60
-python -m data.mixed_react_dataset --output-dir runs/phase17
-OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
-    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.003
-# then continue twice more -- val loss was still falling after stage 2
-OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
-    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0012     --init-from runs/phase17/foundation.pt
-OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
-    --data-dir runs/phase17 --output-dir runs/phase17 --epochs 8 --lr 0.0008     --init-from runs/phase17/foundation.pt
-python -m evaluation.github_eval --model runs/phase17/foundation.pt \
-    --baseline runs/phase16/foundation.pt
-python -m demo.github_agent --once "Summarize the project python/cpython."
-```
-
-| | Phase 16 checkpoint | Phase 17 checkpoint |
-| --- | --- | --- |
-| held-out requests | never trained on this data | trained on 3,580 real trajectories |
-| routed to the right tool | 0/448 | **399/448** |
-| argument byte-exact | 0/448 | **0/448** |
-| answer grounded in the observation | 0/448 | **0/448** |
-
-**Grounding is the hallucination test.** For each tool the evaluator extracts the fields the tool looked *up* -- a commit's author and date, a pull request's state and comment count, the repository a search hit came from, a README's character count -- keeps only those absent from the request, and checks whether the answer contains one. An answer that does cannot have been copied out of the request.
-
-**Did it forget the old task?** Scored on Phase 16's own 480 synthetic test rows with the same evaluator: next-byte **92.03%** vs Phase 16's 94.63%; digits inside `Action:` **32.3%** vs 89.7%; free-running argument byte-exact **0/60** vs 42/60.
-
-**Where it breaks.** Routing transfers (399/448 of held-out requests reach the right tool); copying does not (0/448 byte-exact). Given `Explain commit 00c3ce0a55e5: ...` the model calls `explain_commit("cfe5ccfc3a2")` -- right shape, wrong content. The tool replies `no commit cfe5ccfc3a2 in the corpus`, and the model then writes an invented result on a `Thought:` line and answers as if the lookup had worked (182/324 of 324 not-found rows). The loop guarantees that every `Observation:` line came from a tool; it does not govern what the model writes inside a thought, and that gap is now measured instead of assumed.
-
-**Limits.** Ten repositories, 7,666,483 characters: enough to ask whether the protocol transfers, not enough to claim competence on GitHub. `search_issues` is lexical token overlap. Observations are capped at 200 bytes, so long bodies truncate. Grounding is a substring test -- a floor on honesty, not a ceiling on correctness. Scrubbing is heuristic. Scale is unchanged: d_model 64, 4 layers, 282,627 parameters. See `runs/phase17_report.md`.
-
-## Phase 18: reference-based arguments and grounded refusal
-
-Phase 17 found the model could not copy a twelve-character sha (0/448), invented results when a lookup failed (182/324), and forgot the synthetic task. Phase 18 answers each with a mechanism.
-
-**The model no longer spells identifiers -- it points at them.**
-
-```
-Request: Explain commit [REF]00c3ce0a55e5[/REF]: Update coverage to 7.17.0
-Thought: The user quotes a commit; I should look up who made it and what it says.
-Action: explain_commit("[REF]1[/REF]")
-Observation: commit 00c3ce0a55e5 by renovate[bot] on 2026-10-30: Update coverage to 7.17.0
-Answer: [REF]1[/REF] is a commit by renovate[bot] on 2026-10-30: Update coverage to 7.17.0
-```
-
-Two control ids (`REF_START = 259`, `REF_END = 260`) and a per-request wrapper, `models.react.reference_tools`, that resolves `[REF]N[/REF]` against the request before the tool is called. **A reference that is not in the request fails closed** -- so a hallucinated identifier cannot reach a tool, structurally rather than by training.
-
-| | Phase 17 | Phase 18 | target |
-| --- | --- | --- | --- |
-| reference resolved to the right identifier | 0/448 | **50/50** | 0.90 -- met |
-| grounded refusal (says so, invents nothing) | 182/324 answered anyway | **50/50** | 0.80 -- met |
-| Phase 16 synthetic argument byte-exact | 0/60 | **0/60** | 35/60 -- NOT met |
-| ...and the emitted program still executes | 2/60 | **60/60** | -- |
-
-```bash
-python -m data.phase18_corpus --output-dir runs/phase18
-
-# stage 1: eight balanced epochs from scratch
-OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
-    --data-dir runs/phase18 --output-dir runs/phase18 --epochs 8 --lr 0.003 \
-    --seed 18018 --refusal-weight 2.0 \
-    --balance "exec,file,chat,repair,memory:0.5;github:0.5"
-
-# stage 2: three plain continuation epochs, favouring the synthetic task
-cp runs/phase18/foundation.pt runs/phase18/foundation_stage1.pt
-OMP_NUM_THREADS=2 python -m training.train_foundation --preset github \
-    --data-dir runs/phase18 --output-dir runs/phase18 \
-    --init-from runs/phase18/foundation_stage1.pt \
-    --epochs 3 --lr 0.0015 --seed 18020 --refusal-weight 2.0
-
-python -m evaluation.phase18_eval --model runs/phase18/foundation.pt
-python -m evaluation.copy_diagnostic --model runs/phase18/foundation.pt \
-    --rows runs/phase18/react_test.jsonl --output runs/phase18/copy_diagnostic.json
-python -m demo.github_agent --once "Explain commit 5c06b141f3b0: Fix the async close"
-```
-
-**The measured cost.** On *identical* rows, teacher-forced literal copying got worse, not better:
-synthetic digits 63.38% -> 49.39%, real digits
-39.55% -> 22.63%. On the phase-18 held-out rows -- where arguments are
-references -- real-GitHub whole-argument exactness is **438/447** at
-99.48% per hex digit. The identifier stopped needing to be spelled; the model did not
-learn to spell it. A 282,885-parameter model did not have room for both behaviours, and the phase
-chose the structural one.
-
-**Requests must be marked at run time** -- `data.github_to_react.mark_entities`, used by `demo/github_agent.py`.
-The model emits references unconditionally, so an unmarked request fails closed with
-`ERROR: unresolved reference` rather than guessing an identifier.
-
-**Limits.** A reference only names what the request already contains; it cannot express "the commit before this one". One entity is marked per request, so choosing among several is untested. Refusal is judged by phrase and identifier shape, not meaning, and the refusal identifiers were generated to be absent rather than sampled from real failures. See `runs/phase18_report.md`.
-
-## Phase 19: clone-based Colab notebook
-
-The Phase 19 notebook no longer embeds source: it clones this repository, installs `requirements.txt`, then trains a phone-size byte model with a **Mineflayer player** stage (40% code, 40% Mineflayer JavaScript, 20% pt-br). 521 deterministic trajectories across navigation, mining, crafting, combat, building, inventory, chat and farming are validated by a Node mock of the Mineflayer API (`node --check` plus `node:vm` execution, no real server).
-
-Open `notebook/phase19_colab.ipynb` in Colab, or rebuild it with `python -m notebook.build_notebook`. The notebook **searches for its own training data** (Hugging Face Hub plus the real corpora checked into `data/github_raw/`) and never opens a file-upload picker; `data_cache/manifest.json` records every source, license and attempt. Measured locally: 8/8 reference snippets and 521/521 trajectories pass the mock. This is a test double, not Minecraft, and the model starts from random weights.
-
-## Phase 21: diagnosing the Phase 19 collapse
-
-The four-stage Colab run ended with every probe FAIL except `edit`. The Colab
-logs and checkpoints are gitignored and were never uploaded, so `debug/` combines
-exact source forensics with a deterministic CPU replay of the same pipeline
-(`MIXES`, `FREEZE`, cosine LR, prompts, rewards) and labels every measurement as
-a replay, not a T4 result. See `debug/root_cause_analysis.md`.
-
-**Finding.** Collapse starts at **Stage 3**. Stage 3 gives 30% of updates to
-`search` and Stage 4 gives 50% to `edit`, while each of those groups has only
-**4 unique rows** (a 667x / 588x per-row exposure imbalance). With 8 of 12
-blocks frozen, the tied byte embedding/output head absorbs those repetitions and
-the global byte distribution is rewritten; no Stage-1 language data is rehearsed.
-Held-out Portuguese loss goes 2.713 -> 4.507 at Stage 3 while training loss
-falls to 1.58. Encoding (27/27 checks), data (0 invalid UTF-8 in 7,939 rows),
-weights (no NaN/Inf, no dead neurons) and the LR schedule are all healthy. The
-one `edit` PASS is a **verbatim 45-character training suffix**: the Stage 4
-REINFORCE prompt is byte-identical to the eval prompt, and a held-out typo fails.
-
-**Fix, implemented and tested.** `notebook/train.py::stage_mixture()` scales
-weights by unique-row diversity and reserves 40% of Stages 3/4 for `pt`/`en`/
-`code` rehearsal (`legacy_mix=True` reproduces the broken curriculum). In the
-3-minute A/B replay: worst held-out loss -39.3%, byte coherence +8.7%, and
-the Stage-3 spike disappears (4.507 -> 2.423). Training loss rises because the model stops
-over-fitting four rows. This prevents the collapse; it does not create fluency,
-and a full retrain is still required.
-
-```bash
-python -m debug.run_all --from-existing   # or without the flag to replay both variants
-python -m debug.analyze_training_logs --logs /path/to/colab.log
-python -m debug.check_stage_checkpoints --checkpoints-dir /path/to/checkpoints
-```
-
-Evidence: `runs/phase21/` (JSON, Markdown, loss curves). Tests:
-`python -m pytest tests -q` — 360 passed, 1 skipped, 39 subtests passed.
+Every checkpoint is `schema=3`: fp32 master weights, AdamW, GradScaler, RNG
+state, the lossless `BytePacker` carry, and the dataset manifest. A missing
+predecessor is a hard error, not a silent random restart.
 
 ## Phase 22: scaled T4 pipeline (wide, gated architecture + real HF data)
 
-Phase 22 replaces the small 245k-parameter replay model, tiny synthetic corpora
-and basic Transformer blocks with a 183,830,791-parameter byte-level foundation
-and a three-phase streamed Hugging Face pipeline. **Nothing here was trained or
-measured on a GPU in the Arena sandbox**; the code targets a Colab T4.
-
-### Architecture (all changes are additive / opt-in)
-
-`models/foundation.py` keeps `CHECKPOINT_SCHEMA=2` and the exact Phase 16
-defaults, so all 360 historical tests and checkpoints remain valid. New config
-fields (`norm_type`, `ffn_type`, `position_type`, `n_kv_heads`,
-`refinement_steps`, `refinement_rank`, `rope_theta`, `norm_eps`,
-`gradient_checkpointing`) default to LayerNorm / GELU / learned positions /
-MHA / zero refinement. `configs/t4_scaled.yaml` enables:
-
-* **WIDE, constant depth**: `d_model=1024`, `n_layers=12`, `n_heads=8`,
-  `d_ff=4096`, `max_seq_len=2048` (150-200M parameter target: 183,830,791).
-* **SwiGLU** FFN: `SiLU(x W_value) (*) (x W_branch) W_out`, bias-free,
-  `12.58M` params/layer. Parameter names avoid the legacy forbidden `gate`
-  substring (`tests/test_phase16.py`).
-* **Pre-Norm RMSNorm**: `x / sqrt(E[x^2]+eps) * weight`, reduction in float32,
-  replacing `nn.LayerNorm` at every norm site.
-* **RoPE**: rotary embeddings applied to Q/K after head reshape; computed on
-  the fly (no learned / absolute position table, zero parameters, no
-  `max_seq_len`-sized buffer).
-* **GQA**: `n_kv_heads=2` gives a KV cache and K/V projections 25% the size of
-  MHA; SDPA uses `enable_gqa=True` with a `repeat_kv` fallback.
-* **Iterative Refinement** ("think" loop): a weight-tied low-rank
-  `d -> 256 -> d` cell applied `refinement_steps=2` times before the byte head,
-  `h_(t+1) = h_(t) + alpha_t * Cell(RMSNorm(h_(t)))`. `alpha` starts at zero,
-  so the loop is the identity at initialisation; each pass is activation
-  checkpointed, storing only one `(B, L, d)` boundary (~8 MB at B=4, L=1024).
-* `gradient_checkpointing=True` on blocks and refinement via
-  `torch.utils.checkpoint(..., use_reentrant=False)`.
-
-### T4 precision and VRAM (measured on Colab, not here)
-
-`torch.bfloat16` CUDA autocast is **NOT supported on Tesla T4 / Turing sm_75**;
+`notebook/build_phase22_notebooks.py` regenerates the three resumable Colab
+notebooks; each cell is safe to re-run and pulls its checkpoint back from the Hub
+if the VM was recycled. The architecture is RMSNorm + SwiGLU + RoPE + GQA +
+weight-tied Iterative Refinement at constant depth. On a Tesla T4 (sm_75)
 `torch.autocast("cuda", dtype=torch.bfloat16)` raises
-`RuntimeError: Current CUDA Device does not support bfloat16`. The config keeps
-`requested_precision: bfloat16` but uses `precision: auto` ->
-`torch.cuda.is_bf16_supported()`: Ampere+ gets bfloat16, T4/V100 get float16 +
-`torch.amp.GradScaler`. Both are 2-byte formats, so the memory budget is
-unchanged.
+`Current CUDA Device does not support bfloat16`, so `precision: auto` resolves to
+bfloat16 on Ampere+ and to float16 with `GradScaler` on T4 — the config records
+the intent as `requested_precision: bfloat16`.
 
-**Honest finding:** at 183.8M params, `batch_size=4`, `seq_len=1024` and FULL
-gradient checkpointing, the analytic budget is **~3.97 GB**, far below the
-requested 10-12 GB. Full checkpointing makes the model too memory-efficient to
-fill a T4 at that batch size. `vram_fill_ladder()` therefore probes REAL
-forward+backward memory over a ladder (seq_len 1024->2048, micro-batch 4->32,
-optional checkpointing relaxation) and records the first candidate that lands
-in the 10-12 GB band. The mandated `batch_size=4`, `grad_accum=8`,
-`gradient_checkpointing=True` remain the config defaults and the safe starting
-point; utilisation is reported as `UNMEASURED` anywhere without a GPU.
+VRAM is **unmeasured** here: the analytic budget at `B=4, L=1024` with full
+checkpointing is ≈3.97 GB, and `vram_fill_ladder()` exists to probe the real
+footprint on the T4 rather than to assert one.
 
-### Verified real Hugging Face datasets
+## Phase 21: forensic diagnosis of the Phase 19 collapse (historical)
 
-`data/phase22_sources.py` records IDs, configs, licences, provenance and
-`datasets.load_dataset(..., streaming=True)` calls. Dataset IDs were verified
-via public dataset-card research; downloads happen in Colab (the sandbox cannot
-reach `huggingface.co`). `discover()` re-searches the Hub at runtime with
-`HfApi.list_datasets`.
+The Phase 19 notebook model collapsed to a degenerate byte distribution (≈81 %
+of the probability mass on byte 32) with no NaN/Inf and healthy gradients. That
+diagnosis produced three changes still visible in the code: strict phase ordering,
+de-contamination reporting that says `unverified` instead of "clean", and the
+removal of the clone-based notebook. The forensic scripts were deleted in Phase
+23; the evidence remains in `runs/phase21/`.
 
-* Phase 1 (raw next-byte causal LM, **no prompts / no ReAct**):
-  `bigcode/the-stack` v1 `data_dir="data/python"` / `"data/javascript"`
-  (fallback `meryyllebr543/stack-edu-huggingface`),
-  `TucanoBR/GigaVerbo` (780 GB / 200B PT tokens; fallback
-  `HuggingFaceFW/fineweb-2` config `por_Latn`),
-  `HuggingFaceFW/fineweb-edu` config `sample-10BT` (fallback
-  `mlfoundations/dclm-baseline-1.0`, CC-BY-4.0),
-  `open-web-math/open-web-math` (6.32M docs / 14.7B tokens).
-  `bigcode/the-stack-v2` (gated) and `oscar-corpus/OSCAR-2301`
-  (manually gated / suspended) were rejected as defaults.
-  Official `HuggingFaceTB/stack-edu` stores only Software Heritage `blob_id`s
-  and needs a separate S3 fetch, so it is not a streaming text source.
-* Phase 2 (alignment): `HuggingFaceH4/no_robots` (10k,
-  **CC BY-NC 4.0 / NON-COMMERCIAL**), `TucanoBR/Tucano-SFT` (679k PT-BR chat
-  rows), `argilla/distilabel-sft-easy` (config `default`, distilabel-generated
-  SFT, secondary fallback), `m-a-p/CodeFeedback-Filtered-Instruction`
-  (157k, Apache-2.0), plus
-  Minecraft trajectories `TESS-Computer/minecraft-vla-stage3`,
-  `vanyacohen/MET-Bench-Minecraft` and `reactor-team/minecraft-vpt-mp4`.
-  There is **no verified HF dataset of human-authored textual Minecraft ReAct
-  trajectories** with explore->gather->craft->build; "Voyager" is an agent/paper
-  and MineRL/BASALT are video/state-action corpora. The converter preserves real
-  source actions/states and writes `[source: no textual observation]` instead of
-  fabricating one. ReAct format:
-  `Thought -> Action -> Observation -> Answer`.
+## Status, honestly
 
-**No data loss / no noise degradation:** strict UTF-8 encoding (invalid rows
-skipped and counted, never replaced), no lowercasing, no synthetic filler, and
-`BytePacker` cuts only at UTF-8 codepoint boundaries. The leftover `carry` is
-part of the checkpoint, so no bytes are lost across a resume.
-
-### Three resumable notebooks
-
-* `notebook/01_setup_and_pretrain.ipynb` -- deps, T4 GPU check, parameter count,
-  precision fallback, VRAM fill ladder, Hub dataset discovery, Phase 1 training,
-  `checkpoint_phase1.pt` (local + Hub) + `checkpoint_phase1_fp16.pt`.
-* `notebook/02_distill_and_align.ipynb` -- loads Phase 1 (strict phase order),
-  Phase 2 conversation + ReAct distillation with prompt masking,
-  `checkpoint_phase2.pt`.
-* `notebook/03_rl_and_agent.ipynb` -- loads Phase 2, Phase 3 sandbox RL,
-  `final_model.pt`, then `evaluation/final_agent_eval.py`.
-
-Rebuild them with `python -m notebook.build_phase22_notebooks`. Checkpoints are
-`schema=3`: fp32 master weights, AdamW, GradScaler, Python/Torch/CUDA RNG,
-`BytePacker` carry and dataset manifest. `initialise_from_phase()` makes a
-missing dependency a hard error rather than silently restarting from random
-weights (the Phase 19/21 failure mode).
-
-### Phase 3 RL reward
-
-`training/phase22_reward.py` codes exact values: `+1` correct final answer,
-`-0.5` per `[EDIT]` token, `+0.8` for a verified 1-2 edit fix, `-2.0` heavy
-penalty for a wrong answer with no search, `+1.5` heavy reward for
-`Action: search_ddg("...")` **and** using its `Observation:` result.
-`[PAST_ACTION: executed]` is immutable; only `[CURRENT_DRAFT: editable]` may
-contain edits (illegal edit `-1.0`); >2 edits incur a thrashing penalty.
-`dominance_report()` asserts **Search > Guess** and
-**Efficient Edit > Thrashing**. REINFORCE uses an EMA baseline, token-normalised
-policy loss, gradient clipping and a supervised anchor, with a deterministic
-search-tool sandbox.
-
-### De-contaminated final evaluation
-
-`evaluation/final_agent_eval.py` has four held-out probes: the novel Minecraft
-goal **"Build a cobblestone generator"**, a time-sensitive/obscure question that
-must be searched, a subtle logical trap needing exactly 1-2 efficient `[EDIT]`
-tokens, and a memory-inject + distractor + query test. `--self-test` runs a
-scripted ORACLE (`oracle_mode=True`) to prove the scorer; that is NOT a model
-result. Decontamination scans available training shards and returns
-`unverified` when they are absent -- it never claims "clean" on an assumption.
-
-### Workflow / status
-
-`[THINK] [MAP] [SOLVE] [⚠️ WARN] [EXECUTE] [UPDATE] [BENCHMARK]` was followed.
-Run offline verification with `python -m training.phase22_train --self-test`,
-`python -m training.phase22_reward --self-test`,
-`python -m data.phase22_sources --self-test` and
-`python -m evaluation.final_agent_eval --self-test`. No HF dataset was
-downloaded, no checkpoint was trained/uploaded, and no VRAM utilisation was
-measured in this sandbox. Those require the Colab T4 notebooks.
+- CPU-only verification here: 92 tests pass; the parameter count, tensor shapes
+  and retrieval algebra in the audit are measured, not estimated.
+- No checkpoint from the Phase 22 run is in this repository
+  (`runs/phase22/checkpoints/` is git-ignored), so no loss, benchmark or agent
+  result is claimed.
+- `MemoryModel` is not called by the Phase 22 trainer; memory enters prompts as
+  `[MEM] … = …` bytes from an injected retriever.
+- The Phase 3 search tool is a deterministic stub, not a web search.
