@@ -137,9 +137,15 @@ def test_injection_in_all_eight_production_layers():
     expected = (8 * per_layer
                 + 265 * 1024               # token embedding
                 + 1024 + 3 * 1024 * 256 + 4 + 1025  # refinement + conf head
+                # Phase 24.4 latent thought buffer (S=4 slots, D=1024):
+                + 4 * 1024                 # learned slot embeddings
+                + 2 * (4 * 1024 * 1024 + 4 * 1024)  # cross-MHAs: in_proj 3D^2+3D, out D^2+D
+                + 4 * 1024                 # cross-attention pre-norms
+                + 2                        # ReZero gates (buffer, context)
+                + 1024 + 1025              # thought_norm + thought_confidence head
                 + 1024                     # norm_final
                 + 1024 * 265 + 265)        # byte head
-    assert model.parameters_count == expected == 265_618_710
+    assert model.parameters_count == expected == 274_025_753
 
 
 def test_stack_views_broadcasts_global_to_batched():

@@ -55,14 +55,14 @@ import yaml
 from models.foundation import (BOS, EOS, PAD, TOOL_SEARCH, TOOL_SEARCH_END,
                                OBS_START, OBS_END, EDIT, EDIT_END,
                                CausalByteTransformer, FoundationConfig,
-                               encode_bytes, pad_batch)
+                               decode_ids, encode_bytes, pad_batch)
 from models.memory_model import DualMemory, SkillBankView, stack_views
 from models.encoders import (MultimodalIngestor, TextSkillProjector,
                              build_encoder, matrix_to_bytes,
                              pooled_text_embedding, preprocess_image)
 from data.sources import BytePacker, MixtureSampler, build_mixture, mixture_snapshot
 
-CHECKPOINT_SCHEMA = 4
+CHECKPOINT_SCHEMA = 5  # v5: latent thought buffer in the foundation (Phase 24.4)
 
 
 # ---------------------------------------------------------------------------
@@ -451,7 +451,7 @@ def load_checkpoint(path: str | Path, *, model: CausalByteTransformer,
                     device: str | torch.device = "cpu") -> int:
     payload = torch.load(path, map_location=device, weights_only=False)
     if payload.get("schema_version") != CHECKPOINT_SCHEMA:
-        raise ValueError("not a Phase 24 unified checkpoint")
+        raise ValueError("not a Phase 24.4 unified checkpoint (schema 5)")
     model.load_state_dict(payload["model"])
     device = next(model.parameters()).device
     for name, state in payload["ingestors"].items():
@@ -890,6 +890,27 @@ def run_smoke(*, steps: int = 4, workdir: str | Path = "runs/smoke") -> dict[str
     prompt = encode_bytes(b"question: what are python bytes?\n")
     ids, stats = trainer.model.generate_with_tools(prompt, search, max_new_bytes=48)
     summary["tool_demo"] = {"generated_ids": int(ids.numel()), **stats}
+    # Coherence eyeball: a greedy PT-BR continuation from the trained model.
+    with torch.no_grad():
+        continuation = trainer.model.generate(encode_bytes(b"O Brasil e um pais"),
+                                              max_new_bytes=48)
+    summary["sample_continuation"] = decode_ids(continuation).decode("utf8", "replace")
+    # Phase 24.4: latent scratchpad telemetry (activation norm proves usage).
+    refinement = trainer.model.refinement
+    if refinement is not None and refinement.thoughts is not None:
+        trainer.model.eval()
+        with torch.no_grad():
+            trainer.model(encode_bytes(b"O Brasil e um pais da America do Sul.").unsqueeze(0))
+        thoughts = refinement.thoughts
+        summary["thought"] = {
+            "buffer_shape": list(thoughts.last_buffer.shape),
+            "thought_steps": int(thoughts.last_steps),
+            "activation_norm": float(thoughts.last_norm),
+            "buffer_gate": float(thoughts.buffer_gate.detach()),
+            "context_gate": float(thoughts.context_gate.detach()),
+            "thought_confidence_weight_norm": float(
+                refinement.thought_confidence.weight.detach().norm()),
+        }
     return summary
 
 

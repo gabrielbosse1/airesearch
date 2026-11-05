@@ -1,9 +1,10 @@
 # ByteCore-DualMemory
 
-A byte-level causal Transformer (**265,618,710 parameters** in its production
+A byte-level causal Transformer (**274,025,753 parameters** in its production
 preset) that reads an **8192-dim skill/memory space** through a **Gated Skill
 Adapter** in every layer, decides its own "thinking" budget with a confidence
-head, and ingests images/audio/video as frozen-encoder skill matrices.
+head over a **latent thought matrix**, and ingests images/audio/video as
+frozen-encoder skill matrices.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
@@ -27,7 +28,7 @@ cross-entropy. The authoritative math is in
 [ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md); operating rules are in
 [AGENTS.md](AGENTS.md).
 
-## The three ideas
+## The four ideas
 
 1. **Gated Skill Adapter (1024 ↔ 8192).** The 1024-dim hidden state queries
    1024-dim memory keys (high-fidelity matching), retrieves the 8192-dim skill
@@ -44,19 +45,28 @@ cross-entropy. The authoritative math is in
    4 passes; a `Linear(1024, 1) → sigmoid` confidence head breaks early above
    0.9 at inference. An auxiliary BCE loss teaches it to recognise low-entropy
    (decided) states.
+4. **Latent Thought Matrix (Phase 24.4).** Inside the loop, an isolated
+   `(B, 4, 1024)` scratchpad thinks without emitting bytes: bidirectional
+   cross-attention lets the buffer read the context and the context frontier
+   read the buffer (slot `t` updates from slot `t-1` + context). The
+   confidence head evaluates the **combined** state, so an uncertain buffer
+   keeps the loop running. The buffer **never** passes through the byte
+   head, and only the frontier position reads it back — no future byte
+   leaks through the scratchpad (both contracts are test-asserted).
 
 ## Repository map
 
 | Path | Contents |
 |---|---|
-| `models/foundation.py` | Byte Transformer, GatedSkillAdapter, confidence-headed refinement, token-id tool generation, checkpoint I/O |
+| `models/foundation.py` | Byte Transformer, GatedSkillAdapter, confidence-headed refinement, LatentThoughtBuffer scratchpad, token-id tool generation, checkpoint I/O |
 | `models/memory_model.py` | DualMemory: episodic + procedural banks, 1024-dim keys / 8192-dim values, FIFO, gradient-free writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
 | `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 161 tests (fully offline): GLU math, memory, projection, adaptive loop, tooling, trainer, quota mix, masking, streaming enforcement, notebook, hygiene |
+| `tests/` | 170 tests (fully offline): GLU math, memory, projection, adaptive loop, latent thought matrix, tooling, trainer, quota mix, masking, streaming enforcement, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
+| `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 
 ## Quickstart
 
@@ -68,6 +78,10 @@ python -m pytest tests/ -q
 
 # Full-pipeline plumbing validation on CPU (tiny model, synthetic fixtures).
 python -m training.train --smoke
+
+# Smoke + coherence probe: also prints the latent thought-buffer activation
+# norms (proof the scratchpad is used) and a greedy byte continuation.
+python smoke_test_coherence.py --steps 4
 
 # Real pre-training (GPU machine; streams HF datasets, checkpoints to the Hub).
 python -m training.train --config configs/t4_scaled.yaml \

@@ -8,7 +8,7 @@ REPO = Path(__file__).resolve().parent.parent
 REQUIRED = [
     "models/foundation.py", "models/memory_model.py", "models/encoders.py",
     "training/train.py", "data/sources.py",
-    "configs/t4_scaled.yaml", "pretrain_4h.ipynb",
+    "configs/t4_scaled.yaml", "pretrain_4h.ipynb", "smoke_test_coherence.py",
     "README.md", "ARCHITECTURE_AUDIT.md", "AGENTS.md",
     "requirements.txt", ".gitignore",
     "models/__init__.py", "training/__init__.py", "data/__init__.py",

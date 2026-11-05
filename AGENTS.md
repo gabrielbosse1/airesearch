@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24.2)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24.4)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -23,6 +23,19 @@ and `README.md` (how to run it).
   `GatedSkillAdapter` must stay `Linear(8192, 2048)` → split →
   `Information ⊙ sigmoid(Filter)`. Do not "simplify" it to a linear
   projection; the multiplicative gate is the architecture.
+- **The Latent Thought Matrix is purely latent (Phase 24.4).** The
+  `LatentThoughtBuffer` `(B, max_thought_steps=4, d_model)` lives inside
+  `IterativeRefinement`: bidirectional cross-attention (buffer reads context,
+  context frontier reads buffer), slot `t` updated from slot `t-1` + context.
+  It must NEVER pass through the byte head — only refined CONTEXT states
+  reach `head(norm_final(h))`. Write-back touches ONLY the last position:
+  the buffer summarises the whole window, so writing it into earlier
+  positions would leak future bytes (causality is test-asserted). Init is
+  asymmetric ReZero: `buffer_gate=1`, `context_gate=0`, slots/thought-conf
+  zero — a double-zero init DEADLOCKS the scratchpad (measured: norms stayed
+  0.0; do not "simplify" both gates to zero). The confidence head evaluates
+  the combined context+thought state. `max_thought_steps: 0` reproduces the
+  legacy architecture exactly. Checkpoint schemas: foundation v4, trainer v5.
 - **Memory is a store, not a gradient update.** Bank writes are
   `@torch.no_grad()` and detach. Only reads (and batch-local projector views)
   are differentiable. Keys are 1024-dim, values 8192-dim, in every bank.
@@ -84,7 +97,8 @@ without evidence produced in this repository.
 
 ```
 models/foundation.py     byte Transformer + GatedSkillAdapter + confidence
-                         loop + token-id tool generation + checkpoint I/O
+                         loop + LatentThoughtBuffer scratchpad (24.4)
+                         + token-id tool generation + checkpoint I/O
 models/memory_model.py   DualMemory (episodic + procedural), 1024/8192 banks
 models/encoders.py       frozen encoders, skill projectors, uint8 codec
 training/train.py        the ONE training script (+ sandboxed search runtime)
@@ -92,9 +106,10 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 4096 ctx, 8192 memory)
-tests/                   161-test regression suite (CPU, ~6 s, fully offline)
+tests/                   170-test regression suite (CPU, ~8 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
                          mix audit + Zero-Disk verification before training)
+smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
 requirements.txt  .gitignore  package __init__.py files
 ```
@@ -112,6 +127,7 @@ document in the same change.
 pip install -r requirements.txt
 python -m pytest tests/ -q                 # must stay 100% green
 python -m training.train --smoke           # CPU plumbing validation
+python smoke_test_coherence.py --steps 4   # + thought-buffer activation norms
 python -m training.train --config configs/t4_scaled.yaml \
     --hf-repo gabrielbosse9/airesearch --max-minutes 220 --checkpoint-minutes 30
 ```

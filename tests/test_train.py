@@ -330,3 +330,17 @@ def test_run_smoke_full_pipeline(tmp_path):
     assert summary["batch_stats"]["text_to_media"] > 0
     assert summary["batch_stats"]["ingested"] > 0
     assert "tool_demo" in summary
+
+
+def test_smoke_coherence_script_reports_thought_norms(tmp_path, capsys):
+    """Phase 24.4.5: the coherence smoke prints the scratchpad activation
+    norm (proof of usage) and passes its own probes, fully offline."""
+    import smoke_test_coherence
+    result = smoke_test_coherence.main(["--steps", "2", "--workdir", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert "latent thought buffer" in out
+    assert "activation_norm" in out and "slot_norms" in out
+    assert result["probe"]["activation_norm"] > 0.0
+    assert result["probe"]["buffer_shape"][1] == 4
+    assert result["smoke"]["thought"]["buffer_shape"][1] == 4
+    assert "sample_continuation" in result["smoke"]

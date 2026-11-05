@@ -29,6 +29,9 @@ model:
   position_type: rope
   refinement_steps: 4              # adaptive loop: up to 4 "think" passes
   refinement_rank: 256
+  max_thought_steps: 4             # Phase 24.4 latent scratchpad slots (B, 4, 1024);
+                                   # bidirectional cross-attention, never byte-emitted,
+                                   # frontier-only write-back keeps causality
   confidence_threshold: 0.9        # break early when confidence > 0.9
   memory_dim: 8192                 # the wide skill space
   rope_theta: 10000.0

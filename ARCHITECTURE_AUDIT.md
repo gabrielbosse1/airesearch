@@ -87,8 +87,9 @@ persistent bank into training views so keys face distractors
 |---|---|
 | Adapter per layer (`W_q` 1,048,576 + `W_g` 16,777,216 + scale 1) | 17,825,793 |
 | 8 adapters | 142,606,344 |
-| Core without adapters | 123,012,366 |
-| **Total** | **265,618,710** |
+| Core without adapters (pre-24.4) | 123,012,366 |
+| Latent thought buffer + thought-confidence (Phase 24.4, §6b) | 8,407,043 |
+| **Total** | **274,025,753** |
 
 The analytic count is asserted exactly by
 `tests/test_gated_adapter.py::test_injection_in_all_eight_production_layers`.
@@ -165,6 +166,48 @@ Measured (8-step CPU smoke): CE 5.596 → 5.382, confidence BCE 0.6931 →
 ingested, resume bit-exact at step 4/8. Tests force early break (1 step) and
 full loop (4 steps) via the head bias, and verify the BCE target equals the
 analytic low-entropy fraction to 1e-4.
+
+### 6b. Latent Thought Matrix (`LatentThoughtBuffer`, Phase 24.4)
+
+A dedicated `(B, S, D)` scratchpad (`S = max_thought_steps = 4`, prod
+`D = 1024`) inside the loop — the model "thinks" without emitting bytes:
+
+```
+s_t = s_(t-1) + g_buf · CrossAttn(Q = s_(t-1) + e_t, K/V = h)   (buffer reads)
+h_T ← h_T + g_ctx · CrossAttn(Q = h_T, K/V = s_(0..t))          (context reads)
+conf(h, s̄) = σ(W_c·RMSNorm(h) + W_s·RMSNorm(s̄) + b)             (combined state)
+```
+
+* **Bidirectional cross-attention**, both pre-normed, `need_weights=False`
+  (fused SDPA). Scores are `(B, heads, S, T)` and `(B, heads, 1, S)` —
+  linear in T, ≈0.4% of one T×T self-attention map at production shapes
+  (0.5 MB vs 134 MB fp32 at B=4, T=1024, H=8). Measured incremental peak
+  RSS of the whole loop with the scratchpad vs without: **+82 MB** (CPU
+  fp32, no_grad, B=4/T=1024/D=1024, `ru_maxrss` high-water diff; fp16 on
+  the T4 will be smaller). No OOM risk.
+* **Causality:** the buffer summarises the whole window, so ONLY the
+  frontier position `T` reads it back (its next-byte target may depend on
+  the entire window). Positions `< T` are untouched — test-asserted
+  byte-for-byte (`test_thought_writeback_is_causal`).
+* **Isolation:** the buffer never reaches `head`; the byte head only ever
+  sees `norm_final(final context state)` — test-asserted with a forward
+  pre-hook (`test_thought_buffer_isolated_from_lm_head`).
+* **Asymmetric ReZero (measured, not assumed):** `g_ctx = 0`, slots `0`,
+  `W_s = 0` at init ⇒ logits/confidence EXACTLY equal the legacy
+  (`max_thought_steps=0`) model. `g_buf = 1`, NOT 0: the first smoke probe
+  showed a double-zero init **deadlocks** (zero slots ⇒ zero write-back
+  output ⇒ zero gradient on both gates; activation norm stayed 0.0 through
+  training). With the read side open, `∂L/∂g_ctx = ⟨∂L/∂h_T, inject⟩ ≠ 0`
+  at step 0 and the write side opens from step 1. After the fix, the 4-step
+  smoke reports activation norm **3.65**, `g_ctx ≈ 6.6e-4`,
+  `‖W_s ≈ 4.9e-3` (`smoke_test_coherence.py`, regression-tested).
+* Slots accumulate via `torch.stack` (no in-place writes: earlier slots
+  stay version-stable for autograd across loop iterations). Unwritten slots
+  (early break) keep their learned init in the exposed `(B, S, D)` telemetry.
+
+Parameter delta: slots 4,096 + 2 cross-MHAs 8,396,800 + 4 pre-norms 4,096 +
+2 gates + thought-norm 1,024 + thought-confidence 1,025 = **8,407,043**.
+Checkpoint schemas bumped explicitly: foundation v3→v4, trainer v4→v5.
 
 ## 7. True tooling (`generate_with_tools` + `run_search`)
 
@@ -297,7 +340,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **161 passed in ~5.6 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **170 passed in ~7.8 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -312,8 +355,11 @@ invariants**, token-weighted CE and confidence BCE on a 50% PT-BR batch,
 trainer `data_mix` reporting, mixture fallbacks/packing, **strict streaming
 (`streaming=True` on every call, `IterableDataset` type verification,
 seeded `buffer_size` shuffle, single call site, step-based loop, sized-source
-rejection, end-to-end offline quota)**, notebook validity (audit + Zero-Disk
-cell precede the run), and the cleanup contract itself.
+rejection, end-to-end offline quota)**, **latent thought matrix (shape,
+slot recurrence, lm-head isolation, frontier-only causality, zero-init
+legacy equivalence, combined-state confidence, gate bootstrap against the
+double-zero deadlock)**, the coherence smoke script, notebook validity
+(audit + Zero-Disk cell precede the run), and the cleanup contract itself.
 
 **Known limits.** 4 h ≈ order 10⁸ tokens: a pre-training start, not a
 finished model. The mix is a document quota, so the *byte* share of PT-BR is

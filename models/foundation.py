@@ -43,6 +43,14 @@ confidence head reads each intermediate state; at inference the loop breaks
 as soon as confidence exceeds ``confidence_threshold`` (default 0.9). During
 training all passes run and an auxiliary BCE loss teaches the head to fire on
 low-entropy (decided) states.
+
+Phase 24.4 adds the LATENT THOUGHT MATRIX: a ``LatentThoughtBuffer`` of shape
+``(B, max_thought_steps, d_model)`` inside the loop. Bidirectional
+cross-attention lets the scratchpad read the context and the context
+frontier read the scratchpad; the confidence head evaluates the combined
+state. The buffer is purely latent -- it NEVER passes through the byte head
+(``head`` only ever sees refined context hidden states), and the write-back
+touches only the last position so no future byte leaks through the buffer.
 """
 from __future__ import annotations
 
@@ -90,6 +98,7 @@ class FoundationConfig:
     n_kv_heads: int = 0                 # 0 => MHA; >0 => GQA
     refinement_steps: int = 0           # max weight-tied "think" passes (4 prod)
     refinement_rank: int = 256          # low-rank bottleneck inside the loop
+    max_thought_steps: int = 4          # latent scratchpad slots (0 disables; 4 prod)
     confidence_threshold: float = 0.9   # early-break threshold at inference
     memory_dim: int = 0                 # 0 disables the adapter; 8192 in prod
     rope_theta: float = 10000.0
@@ -121,6 +130,8 @@ class FoundationConfig:
             raise ValueError("refinement_steps must be a non-negative integer")
         if not isinstance(self.refinement_rank, int) or self.refinement_rank < 1:
             raise ValueError("refinement_rank must be a positive integer")
+        if not isinstance(self.max_thought_steps, int) or self.max_thought_steps < 0:
+            raise ValueError("max_thought_steps must be a non-negative integer (0 disables)")
         if not 0.0 < float(self.confidence_threshold) <= 1.0:
             raise ValueError("confidence_threshold must be in (0, 1]")
         if not isinstance(self.memory_dim, int) or self.memory_dim < 0:
@@ -291,11 +302,134 @@ class GatedSkillAdapter(nn.Module):
 # ---------------------------------------------------------------------------
 # Iterative refinement with the model-decided adaptive loop
 # ---------------------------------------------------------------------------
+class LatentThoughtBuffer(nn.Module):
+    """Isolated latent scratchpad for the adaptive loop (Phase 24.4).
+
+    A dedicated ``(B, max_thought_steps, d_model)`` workspace where the model
+    "thinks" without emitting bytes and without polluting the context window:
+
+    * **Buffer processes** -- at loop step ``t``, slot ``t`` is updated from
+      slot ``t-1`` and the context:
+      ``state_t = state_(t-1) + g_buf * CrossAttn(state_(t-1) + slot_t, h)``
+      (Q = one thought slot, K/V = the full context ``(B, T, D)``).
+    * **Context thinks** -- the context reads the written slots back through
+      a second cross-attention (Q = context, K/V = slots ``0..t``).
+
+    **Causality contract (critical).** The buffer is a GLOBAL summary of the
+    whole ``(B, T)`` window, so writing it back into every position would
+    leak future bytes into earlier predictions through the scratchpad. Only
+    the FRONTIER position (the last one, whose next-byte prediction may
+    depend on the entire window) reads the buffer back; positions ``< T-1``
+    are untouched. ``tests/test_foundation.py`` asserts this byte-for-byte.
+
+    **Isolation contract.** The buffer never reaches the byte head: the
+    transformer passes only the refined context hidden states to
+    ``head(norm_final(h))``. The scratchpad influences bytes exclusively
+    through the gated frontier cross-attention above.
+
+    **Step-0 stability (asymmetric ReZero).** ``context_gate`` (write side)
+    initialised to 0 and slot embeddings to zero: a fresh model's logits and
+    confidence are EXACTLY the pre-24.4 architecture's. ``buffer_gate`` (read
+    side) initialised to 1, NOT 0: with both gates at zero the system
+    deadlocks -- zero slots make the write-back attention output exactly
+    zero, so ``context_gate`` gets zero gradient, while ``buffer_gate``'s
+    consumers are all gated off (observed in the smoke probe: norms stayed
+    0.0 through training). With the read side open, slots are non-zero from
+    the first forward, ``dL/d(context_gate) = <dL/dh, inject> != 0``, and the
+    write side opens smoothly from step 1 while the byte pathway starts
+    unperturbed.
+
+    Attention cost: scores are ``(B, heads, S, T)`` / ``(B, heads, 1, S)`` --
+    linear in T, ~0.4% of one T x T self-attention map at production shapes.
+    """
+
+    def __init__(self, config: FoundationConfig) -> None:
+        super().__init__()
+        self.capacity = int(min(config.max_thought_steps, config.refinement_steps))
+        if self.capacity < 1:
+            raise ValueError("LatentThoughtBuffer needs at least one thought slot")
+        d_model = config.d_model
+        self.slot_embeddings = nn.Parameter(torch.zeros(1, self.capacity, d_model))
+        self.read_context = nn.MultiheadAttention(d_model, config.n_heads,
+                                                  dropout=config.dropout, batch_first=True)
+        self.write_back = nn.MultiheadAttention(d_model, config.n_heads,
+                                                dropout=config.dropout, batch_first=True)
+        self.norm_thought_q = make_norm(config)
+        self.norm_context_kv = make_norm(config)
+        self.norm_context_q = make_norm(config)
+        self.norm_thought_kv = make_norm(config)
+        # Asymmetric ReZero: read side OPEN (buffer thinks from step 0), write
+        # side CLOSED (bytes unperturbed at init). Double-zero would deadlock:
+        # zero slots -> zero inject -> zero gradient on BOTH gates forever.
+        self.buffer_gate = nn.Parameter(torch.ones(()))
+        self.context_gate = nn.Parameter(torch.zeros(()))
+        # Telemetry (detached): the last forward's buffer, for tests/smoke.
+        self.last_buffer: torch.Tensor | None = None
+        self.last_norm: float = 0.0
+        self.last_steps: int = 0
+        self._slots: list[torch.Tensor] = []
+        self._state: torch.Tensor | None = None
+
+    def begin(self) -> None:
+        """Reset the per-forward recurrence (each forward thinks anew)."""
+        self._slots = []
+        self._state = None
+
+    def step(self, hidden: torch.Tensor, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """One loop step: update slot ``index``, inject into the frontier.
+
+        Returns ``(hidden, pooled_thought)`` where ``pooled_thought`` (B, D)
+        is the mean of the written slots -- the combined-state signal the
+        confidence head reads.
+        """
+        slot = min(index, self.capacity - 1)   # loop longer than capacity: roll last slot
+        if self._state is None:
+            prev = hidden.new_zeros(hidden.shape[0], hidden.shape[2])
+        else:
+            prev = self._state
+        query = (prev + self.slot_embeddings[:, slot]).unsqueeze(1)      # (B, 1, D)
+        context = self.norm_context_kv(hidden)                           # (B, T, D)
+        delta, _ = self.read_context(self.norm_thought_q(query), context, context,
+                                     need_weights=False)
+        state = prev + self.buffer_gate * delta.squeeze(1)               # (B, D)
+        self._state = state
+        self._slots.append(state)
+        # Stack (never in-place): earlier slots stay version-stable for autograd.
+        written = torch.stack(self._slots, dim=1)                        # (B, t+1, D)
+        frontier = hidden[:, -1:, :]                                     # (B, 1, D)
+        kv = self.norm_thought_kv(written)
+        inject, _ = self.write_back(self.norm_context_q(frontier), kv, kv,
+                                    need_weights=False)
+        hidden = torch.cat([hidden[:, :-1], frontier + self.context_gate * inject], dim=1)
+        return hidden, written.mean(dim=1)
+
+    def finalize(self) -> torch.Tensor:
+        """Expose the full ``(B, capacity, D)`` buffer (unwritten slots keep
+        their learned init) as detached telemetry."""
+        written = torch.stack(self._slots, dim=1)
+        if written.shape[1] < self.capacity:
+            rest = self.slot_embeddings[:, written.shape[1]:].expand(written.shape[0], -1, -1)
+            written = torch.cat([written, rest], dim=1)
+        self.last_buffer = written.detach()
+        self.last_norm = float(written.detach().float().norm().item())
+        self.last_steps = len(self._slots)
+        return self.last_buffer
+
+
 class IterativeRefinement(nn.Module):
     """Weight-tied low-rank "think" loop with a confidence-based early exit.
 
     ``h_(t+1) = h_t + alpha_t * Cell(RMSNorm(h_t))``, ``alpha`` zero-init.
     The confidence head ``Linear(d_model, 1) -> sigmoid`` reads each state.
+
+    Phase 24.4: a ``LatentThoughtBuffer`` scratchpad runs inside the loop.
+    Each pass (1) updates thought slot ``t`` from slot ``t-1`` + context,
+    (2) lets the context frontier read the written slots back (bidirectional
+    cross-attention, ReZero-gated), then (3) applies the weight-tied cell.
+    The confidence head evaluates the COMBINED state: its logit gains a
+    zero-init ``thought_confidence`` term read from the pooled scratchpad, so
+    an uncertain buffer keeps the loop running and a converged one lets it
+    break. The buffer itself never reaches the byte head.
 
     * Training: ALL ``steps`` passes run; intermediate states are returned so
       the trainer can build the auxiliary BCE target (low byte-entropy).
@@ -316,14 +450,33 @@ class IterativeRefinement(nn.Module):
         self.confidence_head = nn.Linear(config.d_model, 1)
         nn.init.zeros_(self.confidence_head.weight)
         nn.init.zeros_(self.confidence_head.bias)
+        # Phase 24.4 latent scratchpad (max_thought_steps=0 keeps the legacy
+        # architecture exactly: no extra parameters, no extra compute).
+        if int(config.max_thought_steps) > 0:
+            self.thoughts = LatentThoughtBuffer(config)
+            self.thought_norm = make_norm(config)
+            self.thought_confidence = nn.Linear(config.d_model, 1)
+            nn.init.zeros_(self.thought_confidence.weight)
+            nn.init.zeros_(self.thought_confidence.bias)
+        else:
+            self.thoughts = None
 
     def cell(self, hidden: torch.Tensor) -> torch.Tensor:
         values = self.norm(hidden)
         return self.up(F.silu(self.down(values)) * self.branch(values))
 
-    def confidence(self, hidden: torch.Tensor) -> torch.Tensor:
-        """Per-position confidence in (0, 1), shape ``(B, T)``."""
-        return torch.sigmoid(self.confidence_head(self.norm(hidden)).squeeze(-1))
+    def confidence(self, hidden: torch.Tensor,
+                   thought: torch.Tensor | None = None) -> torch.Tensor:
+        """Per-position confidence in (0, 1), shape ``(B, T)``.
+
+        ``thought`` (B, D) is the pooled scratchpad state: the head evaluates
+        the COMBINED context + thought state. The thought term is zero-init,
+        so confidence is neutral with respect to the buffer at step 0.
+        """
+        logit = self.confidence_head(self.norm(hidden)).squeeze(-1)
+        if thought is not None and self.thoughts is not None:
+            logit = logit + self.thought_confidence(self.thought_norm(thought))
+        return torch.sigmoid(logit)
 
     def forward(self, hidden: torch.Tensor, *, use_checkpoint: bool = False,
                 adaptive: bool = False, threshold: float | None = None,
@@ -332,7 +485,15 @@ class IterativeRefinement(nn.Module):
         states: list[torch.Tensor] | None = [] if collect_states else None
         steps_run = 0
         confidence_value: float | None = None
+        thought_pools: list[torch.Tensor] = []
+        if self.thoughts is not None:
+            self.thoughts.begin()
         for index in range(self.steps):
+            # Phase 24.4: the scratchpad reads the problem, the context
+            # frontier reads the scratchpad (both ReZero-gated, causal).
+            if self.thoughts is not None:
+                hidden, pool = self.thoughts.step(hidden, index)
+                thought_pools.append(pool)
             alpha = self.step_scales[index]
             if use_checkpoint and self.training and torch.is_grad_enabled():
                 delta = checkpoint(self.cell, hidden, use_reentrant=False)
@@ -343,12 +504,17 @@ class IterativeRefinement(nn.Module):
             if states is not None:
                 states.append(hidden)
             if adaptive and not self.training:
-                conf = self.confidence(hidden)
+                conf = self.confidence(hidden, thought_pools[-1] if thought_pools else None)
                 confidence_value = float(conf.min().item())
                 if confidence_value > threshold:
                     break
+        if self.thoughts is not None:
+            self.thoughts.finalize()
         return hidden, {"steps_run": steps_run, "confidence": confidence_value,
-                        "states": states}
+                        "states": states,
+                        "thought_states": thought_pools if thought_pools else None,
+                        "thought_steps": self.thoughts.last_steps if self.thoughts is not None else 0,
+                        "thought_norm": self.thoughts.last_norm if self.thoughts is not None else 0.0}
 
 
 class CausalSelfAttention(nn.Module):
@@ -453,6 +619,10 @@ class CausalByteTransformer(nn.Module):
         if self.refinement is not None:
             nn.init.zeros_(self.refinement.confidence_head.weight)
             nn.init.zeros_(self.refinement.confidence_head.bias)
+            # The thought-confidence term must also stay neutral at step 0.
+            if self.refinement.thoughts is not None:
+                nn.init.zeros_(self.refinement.thought_confidence.weight)
+                nn.init.zeros_(self.refinement.thought_confidence.bias)
 
     @staticmethod
     def _initialize(module: nn.Module) -> None:
@@ -540,7 +710,8 @@ class CausalByteTransformer(nn.Module):
             if return_metrics:
                 return total, {"ce": 0.0, "confidence_bce": 0.0, "total": 0.0,
                                "mean_entropy": None,
-                               "steps_run": int(info["steps_run"])}
+                               "steps_run": int(info["steps_run"]),
+                               "thought_norm": float(info.get("thought_norm") or 0.0)}
             return total
         ce = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
                              targets.reshape(-1), ignore_index=PAD)
@@ -559,8 +730,9 @@ class CausalByteTransformer(nn.Module):
                 conf_targets = (entropy < float(entropy_threshold)).float()
                 mean_entropy = float(entropy[..., valid].mean().item())
             terms = []
-            for state, target_t in zip(states, conf_targets):
-                conf = self.refinement.confidence(state).float().clamp(1e-6, 1.0 - 1e-6)
+            thought_states = info.get("thought_states") or [None] * len(states)
+            for state, target_t, thought in zip(states, conf_targets, thought_states):
+                conf = self.refinement.confidence(state, thought).float().clamp(1e-6, 1.0 - 1e-6)
                 terms.append(F.binary_cross_entropy(conf[valid], target_t[valid]))
             aux = torch.stack(terms).mean().to(ce.dtype)
         total = ce + float(confidence_weight) * aux
@@ -568,7 +740,8 @@ class CausalByteTransformer(nn.Module):
             return total, {"ce": float(ce.item()), "confidence_bce": float(aux.item()),
                            "total": float(total.item()),
                            "mean_entropy": mean_entropy,
-                           "steps_run": int(info["steps_run"])}
+                           "steps_run": int(info["steps_run"]),
+                           "thought_norm": float(info.get("thought_norm") or 0.0)}
         return total
 
     @property
@@ -692,7 +865,7 @@ def pad_batch(sequences: list[torch.Tensor], length: int) -> tuple[torch.Tensor,
     return ids, targets
 
 
-CHECKPOINT_SCHEMA = 3
+CHECKPOINT_SCHEMA = 4  # v4: latent thought buffer (Phase 24.4)
 
 
 def save_foundation(model: CausalByteTransformer, path: str | Path, *,
@@ -716,7 +889,7 @@ def save_foundation(model: CausalByteTransformer, path: str | Path, *,
 def load_foundation(path: str | Path, *, device: torch.device | str = "cpu") -> CausalByteTransformer:
     state = torch.load(path, map_location=device, weights_only=True)
     if not isinstance(state, dict) or state.get("schema_version") != CHECKPOINT_SCHEMA:
-        raise ValueError("not a ByteCore v3 foundation checkpoint")
+        raise ValueError("not a ByteCore v4 foundation checkpoint")
     model = CausalByteTransformer(FoundationConfig(**state["config"]))
     model.load_state_dict(state["state_dict"], strict=True)
     return model.to(device)
