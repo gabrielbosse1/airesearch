@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24.4)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -35,10 +35,30 @@ and `README.md` (how to run it).
   zero — a double-zero init DEADLOCKS the scratchpad (measured: norms stayed
   0.0; do not "simplify" both gates to zero). The confidence head evaluates
   the combined context+thought state. `max_thought_steps: 0` reproduces the
-  legacy architecture exactly. Checkpoint schemas: foundation v4, trainer v5.
-- **Memory is a store, not a gradient update.** Bank writes are
-  `@torch.no_grad()` and detach. Only reads (and batch-local projector views)
-  are differentiable. Keys are 1024-dim, values 8192-dim, in every bank.
+  legacy architecture exactly. Checkpoint schemas: foundation v5, trainer v6,
+  memory v2.
+- **BigBird is causal and honestly sparse (Phase 25).** Production
+  `attention_type: bigbird`, `max_seq_len: 16384`, W=256/R=32/G=16. Allowed
+  edges are local OR global OR random, ALWAYS intersected with `j ≤ i`; global
+  prefix rows cannot look forward. The shared base is bool `(1,1,L,L)` with
+  True=ATTEND; per-head random overlays are materialised lazily and head
+  attention is checkpointed so eight dense overlays are not retained at once.
+  Boolean-mask SDPA is connectivity-sparse, NOT a block-sparse FLOP kernel.
+  Never claim linear complexity or infinite context. CUDA forces the efficient
+  backend; do not silently fall back to math.
+- **Cross-attention teleports committed memory.** Every GatedSkillAdapter keeps
+  the original GLU AND adds Q=1024 hidden, K=1024 bank keys, V=8192 bank values
+  cross-attention through a zero-init ReZero gate. Persistent writes commit
+  only AFTER the current batch is assembled; same-batch future leakage is
+  forbidden. Empty/masked rows retrieve zero, never NaN.
+- **Memory is a store, not a gradient update.** Bank keys/values are written
+  `@torch.no_grad()` and detached. Only reads, batch-local projector views, and
+  the small per-slot importance/decay policy parameters are differentiable.
+  Keys are 1024-dim, values 8192-dim. ONE physical bank: `DualMemory.episodic`
+  aliases `procedural`. Eviction score = importance − softplus(decay_raw)·age;
+  Forever slots have exactly zero effective decay, importance above the short
+  range, and a hard eviction guard. Policy parameters survive replacement.
+  Do not restore FIFO or reset policy on write.
 - **Encoders are frozen.** `requires_grad_(False)`, eval mode forever,
   forward under `no_grad`. Only the `SkillProjector`/`SkillKeyProjector`/
   `TextSkillProjector` train. Swapping encoders must never touch the core.
@@ -81,7 +101,12 @@ and `README.md` (how to run it).
   `tests/test_train.py` masking tests.
 - **Unmeasured is reported as unmeasured.** This environment has no GPU.
   VRAM/throughput/bf16 behaviour are claims that require the Colab run.
-  Never present an analytic estimate as a measurement.
+  Never present an analytic estimate as a measurement. `--simulate-t4` is an
+  explicit estimate; `Trainer.probe_vram` is the real CUDA authority. The
+  production ceiling is 13.5 GB: batch 1×32, all 8 blocks checkpointed,
+  representative probe (memory/confidence/policy/AdamW), batch then R/G
+  autotune, and fail-closed if still over. Lowering R/G does not necessarily
+  shrink dense-mask allocation.
 - **T4 cannot bf16.** `precision: auto` resolves to fp16 + GradScaler on
   sm_75. Never hardcode bf16 autocast on a T4 path.
 
@@ -93,20 +118,21 @@ code; update docs through file I/O; run the test suite; separate observed
 results from goals; never claim a target, speed-up or safety property
 without evidence produced in this repository.
 
-## Repository map (Phase 24, stripped to the bone)
+## Repository map (Phase 25, stripped to the bone)
 
 ```
-models/foundation.py     byte Transformer + GatedSkillAdapter + confidence
-                         loop + LatentThoughtBuffer scratchpad (24.4)
-                         + token-id tool generation + checkpoint I/O
-models/memory_model.py   DualMemory (episodic + procedural), 1024/8192 banks
+models/foundation.py     byte Transformer + causal BigBird + GatedSkillAdapter
+                         + memory cross-attention + confidence loop
+                         + LatentThoughtBuffer + token-id tools + checkpoint I/O
+models/memory_model.py   unified dynamic bank (episodic alias), 1024/8192,
+                         learnable decay/importance + Forever guard
 models/encoders.py       frozen encoders, skill projectors, uint8 codec
 training/train.py        the ONE training script (+ sandboxed search runtime)
 data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
-configs/t4_scaled.yaml   production preset (8 layers, 4096 ctx, 8192 memory)
-tests/                   170-test regression suite (CPU, ~8 s, fully offline)
+configs/t4_scaled.yaml   production preset (8 layers, 16384 BigBird ctx, 8192 memory)
+tests/                   191-test regression suite (CPU, ~10 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
                          mix audit + Zero-Disk verification before training)
 smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)

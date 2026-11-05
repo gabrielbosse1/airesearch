@@ -1,4 +1,4 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 24.1 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25 code as it exists
 
 **Scope.** Bottom-up description of the code in this checkout, from a scalar
 multiply to the training loop. Every formula is transcribed from the
@@ -14,8 +14,8 @@ environment has no GPU).
 
 | Symbol | Production value | Meaning |
 |---|---|---|
-| `B` | 4 (micro-batch) | sequences per step |
-| `T` | ≤ 4096 (train window 1024) | bytes per sequence |
+| `B` | 1 (micro-batch) | sequences per step |
+| `T` | 16384 (model cap = train window) | bytes per sequence |
 | `D` | 1024 | core width (`d_model`) |
 | `M` | 8192 | skill/memory width (`memory_dim`) |
 | `N` | active slots | memory slots visible to a query |
@@ -45,8 +45,42 @@ h ← h + GatedSkillAdapter(RMSNorm(h), memory)   # §3, ALL 8 layers
 ```
 
 Attention: `q: D→D`, `k,v: D→H_kv·d_h = 256`, `o: D→D`; RoPE rotates q/k with
-θ=10000; causality via `scaled_dot_product_attention(is_causal=True)` — no
-`(B,H,T,T)` materialisation. SwiGLU: `3·D·F = 12,582,912` params/layer.
+θ=10000. The production preset selects **BigBird** (`attention_type: bigbird`);
+the legacy dense path still uses `scaled_dot_product_attention(is_causal=True)`.
+SwiGLU: `3·D·F = 12,582,912` params/layer. All 8 blocks are checkpointed.
+
+### 2b. Causal BigBird mask (`BigBirdSparseMask`) — mathematical contract
+
+For query row `i`, key column `j`, head `h`, with `L=16384`, `W=256`, `R=32`,
+`G=16`, the allowed set is
+
+```
+A_i^h = { j : j ≤ i AND [ (i-W+1 ≤ j ≤ i)       # local, inclusive, self included
+                         OR j < G              # prefix global columns
+                         OR i < G              # prefix global rows
+                         OR j ∈ R_i^h ] }      # random past keys
+R_i^h ~ sample_without_replacement({G, ..., i-W},
+                                   min(R, max(0, i-W-G+1)))
+```
+
+The causal intersection `j ≤ i` applies to **global columns too**: the first
+`G` rows cannot attend forward. Early rows have fewer than `R` eligible
+nonlocal/nonglobal keys; the count is exact only when the eligible set is large
+enough. Random sets are seeded per head (`seed + h·1000003`) and reproducible.
+
+`base` is a shared bool tensor `(1,1,L,L)` with **True = ATTEND** (SDPA boolean
+convention; the unused legacy dense `causal_mask` used True = FUTURE). Each
+head overlay is materialised lazily as `(1,1,L,L)` by scattering `R_i^h` into a
+clone of the base. Head attention is checkpointed, so backward recomputes one
+overlay at a time rather than retaining `(1,H,L,L)`.
+
+Late-row density is `(W+G+R)/L = 304/16384 ≈ 1.855%`. Storage: base
+`L² = 268,435,456 B`; one overlay another `L²`; random coordinates
+`H·L·R·8 = 33,554,432 B`. **Limit:** passing a boolean mask to SDPA prunes
+connectivity, not asymptotic FLOPs. CUDA forces the efficient-attention backend
+(no silent math fallback); CPU tests may use math as a reference. This is not a
+block-sparse BigBird kernel and does not provide literally infinite context.
+Reducing R/G does not necessarily shrink the dense mask allocation.
 
 ## 3. The Gated Skill Adapter (`GatedSkillAdapter`) — the Phase 24 core
 
@@ -81,38 +115,101 @@ projector receives zero gradient — the trainer therefore merges the
 persistent bank into training views so keys face distractors
 (`BatchBuilder.pop_batch`).
 
+**Context-to-memory cross-attention (Phase 25, every layer).** In parallel with
+the GLU bridge, the adapter now teleports information from the committed memory
+timeline across gaps longer than the 16k window:
+
+```
+Q = RMSNorm(W_q^x h)          W_q^x ∈ R^{1024×1024}     (B,T,1024)
+K = RMSNorm(W_k^x keys)       W_k^x ∈ R^{1024×1024}     (N,1024) or (B,N,1024)
+V = W_v^x values              W_v^x ∈ R^{1024×8192}     (N,1024) after projection
+heads = softmax(Q_h K_hᵀ / √d_h + slot_bias) V_h        (no causal mask over memory)
+δ_x = cross_scale · W_o^x(concat heads)                 (B,T,1024)
+h ← h + scale·GLU(retrieved) + δ_x
+```
+
+Values are read from the **8192-dim bank**; a shared `8192→1024` projection
+before the heads avoids expanding V per head. `cross_scale` is zero-init ReZero,
+so the new branch is identity at step 0 and opens by gradient. Inactive rows are
+zeroed after SDPA (never an all-masked softmax NaN). Persistent slots are
+committed only **after** their producing batch is assembled (`BatchBuilder`
+delayed writes), so cross-attention cannot retrieve same-batch futures;
+batch-local slots remain row-isolated.
+
 **Parameter census (measured, meta-device construction):**
 
 | Component | Params |
 |---|---|
-| Adapter per layer (`W_q` 1,048,576 + `W_g` 16,777,216 + scale 1) | 17,825,793 |
-| 8 adapters | 142,606,344 |
+| GLU adapter per layer (`W_q` 1,048,576 + `W_g` 16,777,216 + scale 1) | 17,825,793 |
+| Cross-attention per layer (Q/K/O 3,145,728 + V 8,388,608 + norms 2,048 + gate 1) | 11,536,385 |
+| Combined adapter per layer | 29,362,178 |
+| 8 combined adapters | 234,897,424 |
 | Core without adapters (pre-24.4) | 123,012,366 |
 | Latent thought buffer + thought-confidence (Phase 24.4, §6b) | 8,407,043 |
-| **Total** | **274,025,753** |
+| **Total** | **366,316,833** |
 
 The analytic count is asserted exactly by
 `tests/test_gated_adapter.py::test_injection_in_all_eight_production_layers`.
 
-**Latency (measured, CPU fp32, N=64 slots):** B=1,T=1: 4.18 ms; B=4,T=64:
-82.5 ms per adapter call. GPU numbers require the T4 run.
+The older GLU-only CPU latency figures are historical and do **not** include
+the Phase 25 cross-attention branch. GPU latency/VRAM require the T4 run.
 
-## 4. DualMemory (`models/memory_model.py`)
+## 4. Unified dynamic memory (`models/memory_model.py`)
 
-Two banks, one geometry: **keys `(capacity, 1024)`**, **values
-`(capacity, 8192)`**, `used/written_at/modality` bookkeeping. Production
-capacity 1024 + 1024 slots → **75.5 MB** of fp32 buffers (measured byte
-count: 2 × 1024 × (1024+8192) × 4 = 75,497,472 B).
+**One physical bank**, geometry unchanged: keys `(capacity,1024)`, values
+`(capacity,8192)`. Production `capacity: 2048`; `DualMemory.episodic` is a
+compatibility alias of `DualMemory.procedural`, not a second store. Key/value
+buffers are `2048·(1024+8192)·4 = 75,497,472 B`, plus bookkeeping and two
+learnable policy vectors (`importance_raw`, `decay_raw`, 2·2048 fp32 params).
 
-* `ProceduralSkillBank.write` is `@torch.no_grad()`: tensors are **detached**
-  on write; memory is a store, not a gradient update. Eviction is FIFO
-  (oldest `written_at`), deterministic and auditable.
-* `SkillBankView` is the read interface: global `(N, ·)` for persistent
-  banks, batch-local `(B, N, ·)` for freshly projected matrices that still
-  carry gradients. `stack_views` concatenates along slots, broadcasting
-  global→batched.
-* `DualMemory` = episodic events + procedural skills behind one `view()`.
-  Persistence: `save/load` with schema version, geometry check, metadata.
+For slot `i`, with clock tick `t`, last reinforcement `r_i`, capacity `C`:
+
+```
+age_i        a_i = (t - r_i) / C
+decay_i      d_i = 0                         if Forever_i
+             d_i = softplus(decay_raw_i)     otherwise
+importance_i I_i = 2 + sigmoid(importance_raw_i)   if Forever_i
+             I_i = sigmoid(importance_raw_i)       otherwise
+score_i      S_i = I_i - d_i · a_i
+evict        argmin { S_i : used_i AND NOT Forever_i }
+```
+
+Short importance lies in `(0,1)`; Forever importance lies in `(2,3)` and has
+exactly zero effective decay. Thus every Forever score exceeds every short
+score even at infinite age, and eviction additionally excludes Forever indices:
+permanence is a **hard guard**, not a hoped-for large score. An ordinary write
+to an all-Forever bank raises `MemoryError`, counts the attempt, and records a
+policy event; only explicit host curation (`write_forever`/`mark_forever`) pins
+or rewrites permanent slots.
+
+Writes remain `@torch.no_grad()` and detach keys/values. Raw policy parameters
+are initialised once and **never reset on replacement**, so eviction learning
+survives occupant changes. `reinforce(indices)` refreshes age only for slots
+actually used; exposing distractors to retrieval does not make the bank fresh.
+
+The auxiliary policy loss uses bounded softplus margins (no `exp(decay·age)`):
+
+```
+L_fresh   = mean_short softplus(d_i·a_i - margin)
+L_pair    = mean_event softplus(margin + S_victim - S_fresh_retained)
+L_stale   = mean_stale softplus(margin - d_victim·a_victim)
+L_forever = mean_forever softplus(decay_raw_i)
+            + relu(margin + max_short I - min_forever I)
+L_policy  = mean(active terms)
+```
+
+`L_stale` rewards efficient removal of stale short-term slots; `L_fresh`
+discourages premature decay; `L_pair` ranks the evicted victim below fresher
+retained slots; `L_forever` penalizes raw decay on permanent slots and any
+tier-margin violation (zero in a valid bank by the bounds above). Rejected
+Forever-overwrite attempts add a defensive victim-forever event. Events are
+transient, detached snapshots consumed each micro-batch; total training loss is
+`CE + 0.1·BCE_confidence + 0.01·L_policy`.
+
+`SkillBankView` remains global `(N,·)` or batch-local `(B,N,·)`; `stack_views`
+broadcasts/concatenates. Persistence schema **2** stores buffers, policy
+parameters, metadata, tick, and Forever flags; old two-bank/FIFO payloads are
+rejected rather than silently migrated.
 
 ## 5. Multimodal ingestion (`models/encoders.py`)
 
@@ -228,22 +325,41 @@ enter training as `kind="ids"` — no legacy synthetic generator involved.
 ## 8. Training (`training/train.py`)
 
 One loop: AdamW (β=0.9/0.95, wd 0.1), cosine LR 3e-4 with 500-step warmup,
-grad-clip 1.0, micro-batch 4 × accum 8 (effective 32 sequences), gradient
-checkpointing on blocks + refinement. Precision `auto`: bf16 on Ampere+,
-**fp16 + GradScaler on T4/sm_75** (bf16 autocast raises there), fp32 on CPU —
-resolved from `torch.cuda.is_bf16_supported()`, logged, never assumed.
-Measured VRAM probe (real forward+backward) shrinks micro-batch 4→2→1 above
-12 GB. Checkpoints: atomic tmp+rename, every 30 min **and** every 500 steps,
-model + projectors + banks + optimizer + scaler + RNG; frozen encoders are
-not persisted (rebuildable); resume recreates projector param groups in
-order. Hub upload/download via `huggingface_hub`, failures reported as
-`uploaded/downloaded: false` with a reason.
+grad-clip 1.0, **micro-batch 1 × accum 32**, **seq_len 16384**, gradient
+checkpointing strictly on all 8 blocks plus pure thought-step/cell checkpoints.
+Precision `auto`: bf16 on Ampere+, **fp16 + GradScaler on T4/sm_75**, fp32 on
+CPU — resolved from `torch.cuda.is_bf16_supported()`, logged, never assumed.
+Loss = causal-LM CE + confidence BCE + decay-policy loss (§4). Persistent memory
+writes are delayed until after batch assembly to prevent same-batch leakage.
 
-**Analytic T4 VRAM budget** (265.6M params; *not measured here*): fp16 weights
-0.53 GB + fp32 master 1.06 GB + fp16 grads 0.53 GB + Adam moments 2.12 GB =
-**4.25 GB** optimizer state; checkpointed activation boundaries ≈ 0.067 GB;
-one live retrieved `(4,1024,8192)` fp16 tensor ≈ 0.067 GB. Comfortably inside
-14 GB; the probe verifies on the real device.
+**Representative CUDA probe.** `Trainer.probe_vram` measures
+`torch.cuda.max_memory_allocated` over a synthetic step with the full unified
+bank, differentiable local slots from every projector, confidence path, policy
+loss, all-block checkpointing, and worst-case AdamW moment allocation (temporary
+lr=0 step; existing resumed moments are preserved, not double-counted). Configured
+frozen backbones are loaded so their persistent weights are present. CPU returns
+`measured=False`, never a fake peak.
+
+**Autotune / fail-closed.** Above **13.5 GB**, halve micro-batch to 1, then
+halve BigBird R toward 0 and G toward 1, rebuilding the mask and reprobing.
+Dense boolean-mask allocation may not shrink with R/G; if the measured peak is
+still above the ceiling, raise `MemoryError` and refuse to start.
+
+**Simulated T4 accounting (`--simulate-t4`, analytic, NOT measured).** The
+production preset estimates **13.073 GB / 13.5 GB** with fp32
+params/grads/Adam (16 B/trainable param), rounded-up frozen encoder weights,
+fp32 checkpoint boundaries, one live block, one lazy BigBird overlay + possible
+fp16 backend bias, pure thought-step checkpoints, streamed confidence logits,
+full bank + local slots, and a 0.5 GB allocator/backend reserve. Largest terms:
+optimizer residency 6.353 GB, frozen encoders 1.100 GB, block boundaries
+0.604 GB, BigBird base/overlay/bias 1.074 GB, refinement 1.191 GB. This is a
+conservative shape-based estimate; the CUDA probe is the authority.
+
+Checkpoints: atomic tmp+rename, every 30 min **and** every 500 steps, model +
+projectors + unified bank/policy + optimizer + scaler + RNG; trainer schema **6**,
+foundation schema **5**, memory schema **2**. Frozen encoders are rebuildable;
+resume recreates projector param groups in order. Hub upload/download failures
+are reported as `uploaded/downloaded: false` with a reason.
 
 ## 9. Data (`data/sources.py`) — PT-BR first, strictly streaming
 
@@ -313,10 +429,11 @@ total         100.0%     400   100.0%      61,038   100.0%
 verdict: PASS -- document share within +/-2.0 pp of target (quota window = 100)
 ```
 
-(Measured here on **synthetic streams** through the real `build_mixture` →
-`audit_mixture` path, seed 24, `batches=100`, `batch_size=4`, fake
-`_open_rows`; document counts are the sampler's real output, byte counts are
-fixture-dependent.) The trainer records the realised mix per log step in
+(Historical Phase 24 fixture measured on **synthetic streams** through the real
+`build_mixture` → `audit_mixture` path, seed 24, `batches=100`, `batch_size=4`,
+fake `_open_rows`; document counts are the sampler's real output, byte counts
+are fixture-dependent. Production Phase 25 uses `batch_size=1`, so 100 audit
+batches draw 100 documents.) The trainer records the realised mix per log step in
 `runs/metrics.jsonl["data_mix"]` and the final weights/counts/failures in the
 run summary.
 
@@ -340,19 +457,24 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **170 passed in ~7.8 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **191 passed in ~10 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
 query retrieves its value to 1e-3), all-8-layer injection + exact parameter
 count, masked/empty retrieval, projector gradient flow, bank
-FIFO/detach/persistence, frozen-encoder contract, codec bounds, matrix
+dynamic-score eviction/Forever guard/detach/persistence, frozen-encoder contract, codec bounds, matrix
 agnosticism, adaptive break/cap/targets, token-triggered sandboxed search +
 EDIT pass-through, bidirectional batches, accumulation equivalence,
 checkpoint/resume, time-based cadence, **quota-exact 50/25/15/10 windows**,
 renormalisation, mix-audit verdicts and truncation, **PAD masking/zero-loss
 invariants**, token-weighted CE and confidence BCE on a 50% PT-BR batch,
-trainer `data_mix` reporting, mixture fallbacks/packing, **strict streaming
+trainer `data_mix` reporting, mixture fallbacks/packing, **BigBird causal
+local/random/global reference math, production 16384 mask audit, lazy per-head
+overlays, all-8-block checkpointing, cross-attention gradients in every layer,
+decay-score/Forever permanence/policy-gradient stability, delayed memory commit,
+representative probe view, fail-closed autotune, labelled T4 simulator**,
+**strict streaming
 (`streaming=True` on every call, `IterableDataset` type verification,
 seeded `buffer_size` shuffle, single call site, step-based loop, sized-source
 rejection, end-to-end offline quota)**, **latent thought matrix (shape,
@@ -369,4 +491,6 @@ the mix; there is no fifth bucket. The codec is lossy (p99 ≈ 0.074 on unit-nor
 Single-slot views give the key projector zero gradient until distractors
 exist (the trainer merges the bank). Real `ddgs` search needs a networked
 runtime; training uses the deterministic mock. GPU throughput/VRAM remain
-analytic until the notebook runs.
+analytic until the notebook runs. Boolean-mask SDPA is connectivity-sparse, not
+FLOP-sparse; the 13.5 GB ceiling is enforced by the real probe, not by the
+simulator alone.

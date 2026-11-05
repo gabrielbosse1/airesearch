@@ -54,14 +54,17 @@ touches only the last position so no future byte leaks through the buffer.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import math
+import random
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
 import torch
 import torch.nn.functional as F
+from torch.nn.attention import SDPBackend, sdpa_kernel
 from torch import nn
 from torch.utils.checkpoint import checkpoint
 
@@ -101,6 +104,12 @@ class FoundationConfig:
     max_thought_steps: int = 4          # latent scratchpad slots (0 disables; 4 prod)
     confidence_threshold: float = 0.9   # early-break threshold at inference
     memory_dim: int = 0                 # 0 disables the adapter; 8192 in prod
+    memory_cross_attention: bool = True  # Q=hidden, K/V=bank teleportation hub
+    attention_type: str = "dense"       # "dense" | "bigbird"
+    bigbird_window: int = 256            # inclusive local span (self included)
+    bigbird_random_tokens: int = 32      # distinct random past keys per head
+    bigbird_global_tokens: int = 16      # causal-safe prefix globals
+    bigbird_seed: int = 24               # reproducible random coordinates
     rope_theta: float = 10000.0
     norm_eps: float = 1e-6
     gradient_checkpointing: bool = False
@@ -136,6 +145,17 @@ class FoundationConfig:
             raise ValueError("confidence_threshold must be in (0, 1]")
         if not isinstance(self.memory_dim, int) or self.memory_dim < 0:
             raise ValueError("memory_dim must be a non-negative integer (0 disables)")
+        if self.attention_type not in ("dense", "bigbird"):
+            raise ValueError("attention_type must be 'dense' or 'bigbird'")
+        if not isinstance(self.memory_cross_attention, bool):
+            raise ValueError("memory_cross_attention must be a bool")
+        for name in ("bigbird_window", "bigbird_random_tokens", "bigbird_seed"):
+            value = getattr(self, name)
+            minimum = 1 if name == "bigbird_window" else 0
+            if not isinstance(value, int) or value < minimum:
+                raise ValueError(f"{name} must be an integer >= {minimum}")
+        if not isinstance(self.bigbird_global_tokens, int) or self.bigbird_global_tokens < 1:
+            raise ValueError("bigbird_global_tokens must be a positive integer")
         if float(self.rope_theta) <= 0 or float(self.norm_eps) <= 0:
             raise ValueError("rope_theta and norm_eps must be positive")
         if self.position_type == "rope" and (self.d_model // self.n_heads) % 2:
@@ -227,6 +247,80 @@ def make_norm(config: FoundationConfig) -> nn.Module:
     return nn.LayerNorm(config.d_model, eps=config.norm_eps)
 
 
+class BigBirdSparseMask(nn.Module):
+    """Causal BigBird connectivity, with lazy per-head boolean overlays.
+
+    ``base`` is ``(1, 1, L, L)`` and True means ATTEND (the SDPA boolean
+    convention, NOT the legacy causal_mask's True=FORBIDDEN convention).
+    Local keys obey ``i-W+1 <= j <= i``. Prefix globals obey
+    ``j < G OR i < G``, intersected with ``j <= i``. Thus even the first G
+    rows cannot attend forward. Each head samples min(R, eligible_count)
+    distinct keys from the remaining causal past, without replacement.
+    Early rows necessarily have fewer than R eligible random keys.
+
+    The required shared base shape is retained; random sets differ per head.
+    ``head_mask(h, length)`` materialises ONE ``(1,1,length,length)`` overlay.
+    CausalSelfAttention checkpoints each head so backward does not retain H
+    dense overlays simultaneously. This is sparse CONNECTIVITY through SDPA,
+    not a block-sparse kernel: score computation can still be quadratic.
+    """
+
+    def __init__(self, length: int, n_heads: int, *, window: int = 256,
+                 random_tokens: int = 32, global_tokens: int = 16,
+                 seed: int = 24, device: torch.device | str = "cpu") -> None:
+        super().__init__()
+        if length < 1 or n_heads < 1 or window < 1 or global_tokens < 1:
+            raise ValueError("length, n_heads, window and global_tokens must be positive")
+        if random_tokens < 0 or seed < 0:
+            raise ValueError("random_tokens and seed must be non-negative")
+        self.length, self.n_heads = int(length), int(n_heads)
+        self.window, self.random_tokens = int(window), int(random_tokens)
+        self.global_tokens, self.seed = int(global_tokens), int(seed)
+        device = torch.device(device)
+        base = torch.empty(self.length, self.length, dtype=torch.bool, device=device)
+        coords = torch.full((n_heads, self.length, self.random_tokens), -1,
+                            dtype=torch.long, device=device)
+        if device.type != "meta":
+            columns = torch.arange(self.length, device=device)
+            for start in range(0, self.length, 512):
+                stop = min(start + 512, self.length)
+                rows = columns[start:stop, None]
+                cols = columns[None, :]
+                local = (cols <= rows) & (cols >= rows - self.window + 1)
+                glob = (cols < self.global_tokens) | (rows < self.global_tokens)
+                base[start:stop] = (cols <= rows) & (local | glob)
+            # CPU RNG is independent of training RNG and identical on CPU/CUDA.
+            # range sampling is O(R), not O(L); coordinates transfer once.
+            cpu_coords = torch.full(tuple(coords.shape), -1, dtype=torch.long)
+            for head in range(n_heads):
+                rng = random.Random(self.seed + head * 1_000_003)
+                for row in range(self.length):
+                    eligible = max(0, row - self.window - self.global_tokens + 1)
+                    count = min(self.random_tokens, eligible)
+                    if count:
+                        picks = rng.sample(range(eligible), count)
+                        cpu_coords[head, row, :count] = torch.tensor(
+                            picks, dtype=torch.long) + self.global_tokens
+            coords.copy_(cpu_coords)
+        self.register_buffer("base", base[None, None], persistent=False)
+        self.register_buffer("random_keys", coords, persistent=False)
+
+    def head_mask(self, head: int, length: int | None = None) -> torch.Tensor:
+        length = self.length if length is None else int(length)
+        if not 0 <= head < self.n_heads or not 1 <= length <= self.length:
+            raise ValueError("head or length outside the registered mask")
+        result = self.base[..., :length, :length].clone()
+        keys = self.random_keys[head, :length]
+        rows = torch.arange(length, device=keys.device)[:, None].expand_as(keys)
+        valid = keys >= 0
+        result[0, 0, rows[valid], keys[valid]] = True
+        return result
+
+    def extra_repr(self) -> str:
+        return (f"length={self.length}, heads={self.n_heads}, W={self.window}, "
+                f"R={self.random_tokens}, G={self.global_tokens}, seed={self.seed}")
+
+
 # ---------------------------------------------------------------------------
 # The Gated Skill Adapter: 1024 <-> 8192 bridge (Phase 24 core)
 # ---------------------------------------------------------------------------
@@ -251,16 +345,32 @@ class GatedSkillAdapter(nn.Module):
     no dense blending of 8192 concepts into mush.
     """
 
-    def __init__(self, d_model: int = 1024, memory_dim: int = 8192) -> None:
+    def __init__(self, d_model: int = 1024, memory_dim: int = 8192, *,
+                 n_heads: int = 8, cross_attention: bool = True) -> None:
         super().__init__()
         if d_model < 1 or memory_dim < 1:
             raise ValueError("d_model and memory_dim must be positive")
+        if n_heads < 1 or d_model % n_heads:
+            raise ValueError("n_heads must be positive and divide d_model")
         self.d_model = int(d_model)
         self.memory_dim = int(memory_dim)
         self.query = nn.Linear(d_model, d_model, bias=False)
         self.glu = nn.Linear(memory_dim, 2 * d_model, bias=False)
         self.scale = nn.Parameter(torch.zeros(1))
         self._query_scale = 1.0 / math.sqrt(d_model)
+        self.cross_attention_enabled = bool(cross_attention)
+        if cross_attention:
+            self.n_heads = int(n_heads)
+            self.cross_head_dim = d_model // n_heads
+            self.cross_q = nn.Linear(d_model, d_model, bias=False)
+            self.cross_k = nn.Linear(d_model, d_model, bias=False)
+            # Values remain the bank's full 8192 width until AFTER attention.
+            # Expanding them per head would cost H times more activation RAM.
+            self.cross_v = nn.Linear(memory_dim, d_model, bias=False)
+            self.cross_o = nn.Linear(d_model, d_model, bias=False)
+            self.cross_q_norm = RMSNorm(d_model)
+            self.cross_k_norm = RMSNorm(d_model)
+            self.cross_scale = nn.Parameter(torch.zeros(1))
 
     def retrieve(self, hidden: torch.Tensor, keys: torch.Tensor, values: torch.Tensor,
                  mask: torch.Tensor | None = None) -> torch.Tensor:
@@ -283,6 +393,51 @@ class GatedSkillAdapter(nn.Module):
             return weights @ values
         return torch.einsum("btn,bnm->btm", weights, values)
 
+    def cross_attend(self, hidden: torch.Tensor, keys: torch.Tensor,
+                     values: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+        """Context-to-memory teleportation: Q=hidden, K=bank keys, V=bank values.
+
+        K is 1024-dim; V is 8192-dim. Shared V projection keeps the wide
+        retrieval path memory-bounded. Heads read the SAME memory timeline
+        (no causal mask): persistent slots are committed only after their
+        producing batch, while batch-local slots are row-isolated. Empty
+        rows return zero, never the NaN from an all-masked softmax.
+        """
+        if not self.cross_attention_enabled:
+            raise ValueError("cross-attention is disabled")
+        if keys.shape[-1] != self.d_model or values.shape[-1] != self.memory_dim:
+            raise ValueError("cross-attention requires 1024-dim keys and 8192-dim bank values")
+        if keys.shape[:-1] != values.shape[:-1]:
+            raise ValueError("keys and values must agree on slot dimensions")
+        batch, length, _ = hidden.shape
+        slots = keys.shape[-2]
+        q = self.cross_q_norm(self.cross_q(hidden)).view(
+            batch, length, self.n_heads, self.cross_head_dim).transpose(1, 2)
+        k = self.cross_k_norm(self.cross_k(keys))
+        v = self.cross_v(values)
+        if keys.ndim == 2:
+            k = k.unsqueeze(0).expand(batch, slots, self.d_model)
+            v = v.unsqueeze(0).expand(batch, slots, self.d_model)
+        k = k.view(batch, slots, self.n_heads, self.cross_head_dim).transpose(1, 2)
+        v = v.view(batch, slots, self.n_heads, self.cross_head_dim).transpose(1, 2)
+        bias = None
+        any_active = None
+        if mask is not None:
+            mask_b = mask.unsqueeze(1).unsqueeze(1) if mask.ndim == 2 else mask[None, None, None, :]
+            # Broadcast across heads; do not allocate a (B,H,T,N) bool copy.
+            bias = torch.zeros(mask_b.shape, dtype=q.dtype, device=q.device)
+            bias.masked_fill_(~mask_b, torch.finfo(q.dtype).min)
+            any_active = mask_b.any(dim=-1)  # (B,1,1) or (1,1,1), broadcasts over T,D
+        backend = (sdpa_kernel(SDPBackend.EFFICIENT_ATTENTION)
+                   if hidden.device.type == "cuda" else contextlib.nullcontext())
+        with backend:
+            context = F.scaled_dot_product_attention(q, k, v, attn_mask=bias)
+        context = context.transpose(1, 2).contiguous().view(batch, length, self.d_model)
+        output = self.cross_o(context)
+        if any_active is not None:
+            output = output * any_active.to(output.dtype)
+        return self.cross_scale * output
+
     def glu_gate(self, retrieved: torch.Tensor) -> torch.Tensor:
         """The GLU: project memory_dim -> 2*d_model, split, gate, multiply."""
         if retrieved.shape[-1] != self.memory_dim:
@@ -295,8 +450,13 @@ class GatedSkillAdapter(nn.Module):
         """Return the delta to add to the residual stream (zero when empty)."""
         if memory is None or memory.empty:
             return torch.zeros_like(hidden)
+        if memory.key_dim != self.d_model or memory.value_dim != self.memory_dim:
+            raise ValueError("memory geometry does not match the adapter")
         retrieved = self.retrieve(hidden, memory.keys, memory.values, memory.mask)
-        return self.scale * self.glu_gate(retrieved)
+        delta = self.scale * self.glu_gate(retrieved)
+        if self.cross_attention_enabled:
+            delta = delta + self.cross_attend(hidden, memory.keys, memory.values, memory.mask)
+        return delta
 
 
 # ---------------------------------------------------------------------------
@@ -375,33 +535,57 @@ class LatentThoughtBuffer(nn.Module):
         self._slots = []
         self._state = None
 
-    def step(self, hidden: torch.Tensor, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        """One loop step: update slot ``index``, inject into the frontier.
+    def step_with_state(self, hidden: torch.Tensor, index: int, slots: torch.Tensor,
+                        state: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor,
+                                                       torch.Tensor, torch.Tensor]:
+        """Pure checkpointable thought step (no mutable autograd state).
 
-        Returns ``(hidden, pooled_thought)`` where ``pooled_thought`` (B, D)
-        is the mean of the written slots -- the combined-state signal the
-        confidence head reads.
+        ``slots`` is a fixed-capacity ``(B,S,D)`` tensor updated out-of-place;
+        ``state`` is the previous pooled recurrence. Passing both explicitly
+        lets each step be checkpointed without severing thought-to-thought
+        gradients or retaining every step's full context K/V activation.
         """
-        slot = min(index, self.capacity - 1)   # loop longer than capacity: roll last slot
-        if self._state is None:
-            prev = hidden.new_zeros(hidden.shape[0], hidden.shape[2])
-        else:
-            prev = self._state
-        query = (prev + self.slot_embeddings[:, slot]).unsqueeze(1)      # (B, 1, D)
-        context = self.norm_context_kv(hidden)                           # (B, T, D)
+        slot = min(index, self.capacity - 1)
+        query = (state + self.slot_embeddings[:, slot]).unsqueeze(1)
+        context = self.norm_context_kv(hidden)
         delta, _ = self.read_context(self.norm_thought_q(query), context, context,
                                      need_weights=False)
-        state = prev + self.buffer_gate * delta.squeeze(1)               # (B, D)
-        self._state = state
-        self._slots.append(state)
-        # Stack (never in-place): earlier slots stay version-stable for autograd.
-        written = torch.stack(self._slots, dim=1)                        # (B, t+1, D)
-        frontier = hidden[:, -1:, :]                                     # (B, 1, D)
+        state = state + self.buffer_gate * delta.squeeze(1)
+        # Out-of-place replacement keeps earlier checkpoint inputs version-stable.
+        pieces = [slots[:, :slot], state.unsqueeze(1)]
+        if slot + 1 < self.capacity:
+            pieces.append(slots[:, slot + 1:])
+        slots = torch.cat(pieces, dim=1)
+        written = slots[:, :min(index + 1, self.capacity)]
+        frontier = hidden[:, -1:, :]
         kv = self.norm_thought_kv(written)
         inject, _ = self.write_back(self.norm_context_q(frontier), kv, kv,
                                     need_weights=False)
         hidden = torch.cat([hidden[:, :-1], frontier + self.context_gate * inject], dim=1)
-        return hidden, written.mean(dim=1)
+        return hidden, written.mean(dim=1), slots, state
+
+    def step(self, hidden: torch.Tensor, index: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """Mutable convenience wrapper used by direct callers/tests."""
+        batch, _, width = hidden.shape
+        slots = hidden.new_zeros(batch, self.capacity, width)
+        if self._slots:
+            slots = torch.cat([torch.stack(self._slots, dim=1),
+                               slots[:, len(self._slots):]], dim=1)
+        state = self._state if self._state is not None else hidden.new_zeros(batch, width)
+        hidden, pool, slots, state = self.step_with_state(hidden, index, slots, state)
+        self._state = state
+        self._slots = [slots[:, i] for i in range(min(index + 1, self.capacity))]
+        return hidden, pool
+
+    def finalize_from_slots(self, slots: torch.Tensor, steps: int) -> torch.Tensor:
+        written = slots[:, :min(steps, self.capacity)]
+        if written.shape[1] < self.capacity:
+            rest = self.slot_embeddings[:, written.shape[1]:].expand(written.shape[0], -1, -1)
+            written = torch.cat([written, rest], dim=1)
+        self.last_buffer = written.detach()
+        self.last_norm = float(written.detach().float().norm().item())
+        self.last_steps = int(steps)
+        return self.last_buffer
 
     def finalize(self) -> torch.Tensor:
         """Expose the full ``(B, capacity, D)`` buffer (unwritten slots keep
@@ -486,16 +670,24 @@ class IterativeRefinement(nn.Module):
         steps_run = 0
         confidence_value: float | None = None
         thought_pools: list[torch.Tensor] = []
+        checkpoint_now = bool(use_checkpoint and self.training and torch.is_grad_enabled())
+        slots = state = None
         if self.thoughts is not None:
             self.thoughts.begin()
+            slots = hidden.new_zeros(hidden.shape[0], self.thoughts.capacity, hidden.shape[-1])
+            state = hidden.new_zeros(hidden.shape[0], hidden.shape[-1])
         for index in range(self.steps):
-            # Phase 24.4: the scratchpad reads the problem, the context
-            # frontier reads the scratchpad (both ReZero-gated, causal).
             if self.thoughts is not None:
-                hidden, pool = self.thoughts.step(hidden, index)
+                if checkpoint_now:
+                    hidden, pool, slots, state = checkpoint(
+                        self.thoughts.step_with_state, hidden, index, slots, state,
+                        use_reentrant=False)
+                else:
+                    hidden, pool, slots, state = self.thoughts.step_with_state(
+                        hidden, index, slots, state)
                 thought_pools.append(pool)
             alpha = self.step_scales[index]
-            if use_checkpoint and self.training and torch.is_grad_enabled():
+            if checkpoint_now:
                 delta = checkpoint(self.cell, hidden, use_reentrant=False)
             else:
                 delta = self.cell(hidden)
@@ -509,7 +701,7 @@ class IterativeRefinement(nn.Module):
                 if confidence_value > threshold:
                     break
         if self.thoughts is not None:
-            self.thoughts.finalize()
+            self.thoughts.finalize_from_slots(slots, steps_run)
         return hidden, {"steps_run": steps_run, "confidence": confidence_value,
                         "states": states,
                         "thought_states": thought_pools if thought_pools else None,
@@ -533,8 +725,25 @@ class CausalSelfAttention(nn.Module):
         self.dropout_p = float(config.dropout)
         self.position_type = config.position_type
         self.rope_theta = float(config.rope_theta)
+        self.attention_type = config.attention_type
 
-    def forward(self, hidden: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+    def _bigbird_head(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
+                      mask: BigBirdSparseMask, head: int, length: int) -> torch.Tensor:
+        # Build INSIDE the checkpoint: neither the block's original forward
+        # nor a head's checkpointed forward saves a dense overlay for backward.
+        attn_mask = mask.head_mask(head, length)
+        kv_head = head // self.repeats
+        backend = (sdpa_kernel(SDPBackend.EFFICIENT_ATTENTION)
+                   if q.device.type == "cuda" else contextlib.nullcontext())
+        # The CUDA efficient kernel accepts a boolean bias without the math
+        # backend's dense float score matrix. Never silently fall back to math.
+        with backend:
+            return F.scaled_dot_product_attention(
+                q[:, head:head + 1], k[:, kv_head:kv_head + 1],
+                v[:, kv_head:kv_head + 1], attn_mask=attn_mask,
+                is_causal=False, dropout_p=self.dropout_p if self.training else 0.0)
+
+    def forward(self, hidden: torch.Tensor, mask: torch.Tensor | BigBirdSparseMask | None = None) -> torch.Tensor:
         batch, length, _ = hidden.shape
         q = self.query(hidden).view(batch, length, self.n_heads, self.head_dim).transpose(1, 2)
         k = self.key(hidden).view(batch, length, self.n_kv_heads, self.head_dim).transpose(1, 2)
@@ -544,6 +753,26 @@ class CausalSelfAttention(nn.Module):
                                      hidden.device, q.dtype)
             q = apply_rotary(q, cos, sin)
             k = apply_rotary(k, cos, sin)
+        if self.attention_type == "bigbird":
+            if not isinstance(mask, BigBirdSparseMask):
+                raise ValueError("BigBird attention requires a BigBirdSparseMask")
+            if mask.n_heads != self.n_heads or length > mask.length:
+                raise ValueError("BigBird mask head count or length does not match attention")
+            heads = []
+            for head in range(self.n_heads):
+                if torch.is_grad_enabled():
+                    out = checkpoint(self._bigbird_head, q, k, v, mask, head, length,
+                                     use_reentrant=False, determinism_check="none")
+                else:
+                    out = self._bigbird_head(q, k, v, mask, head, length)
+                heads.append(out)
+            context = torch.cat(heads, dim=1)
+        else:
+            context = self._dense_sdpa(q, k, v)
+        context = context.transpose(1, 2).contiguous().view(batch, length, self.n_heads * self.head_dim)
+        return self.output(context)
+
+    def _dense_sdpa(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
         dropout = self.dropout_p if self.training else 0.0
         if self.repeats > 1:
             try:
@@ -556,8 +785,7 @@ class CausalSelfAttention(nn.Module):
         else:
             context = F.scaled_dot_product_attention(
                 q, k, v, is_causal=True, dropout_p=dropout)
-        context = context.transpose(1, 2).contiguous().view(batch, length, self.n_heads * self.head_dim)
-        return self.output(context)
+        return context
 
 
 class TransformerBlock(nn.Module):
@@ -584,7 +812,8 @@ class TransformerBlock(nn.Module):
         self.has_skills = config.memory_dim > 0
         if self.has_skills:
             self.skill_norm = make_norm(config)
-            self.skill_adapter = GatedSkillAdapter(config.d_model, config.memory_dim)
+            self.skill_adapter = GatedSkillAdapter(config.d_model, config.memory_dim, n_heads=config.n_heads,
+                                                    cross_attention=config.memory_cross_attention)
 
     def forward(self, hidden: torch.Tensor, mask: torch.Tensor | None = None,
                 memory: Any | None = None) -> torch.Tensor:
@@ -611,8 +840,20 @@ class CausalByteTransformer(nn.Module):
                            if config.refinement_steps > 0 else None)
         self.norm_final = make_norm(config)
         self.head = nn.Linear(config.d_model, config.vocab_size)
-        mask = torch.triu(torch.ones(config.max_seq_len, config.max_seq_len, dtype=torch.bool), diagonal=1)
-        self.register_buffer("causal_mask", mask, persistent=False)
+        self.attention_mask: BigBirdSparseMask | None = None
+        if config.attention_type == "bigbird":
+            device = self.token_embedding.weight.device
+            self.attention_mask = BigBirdSparseMask(
+                config.max_seq_len, config.n_heads, window=config.bigbird_window,
+                random_tokens=config.bigbird_random_tokens,
+                global_tokens=config.bigbird_global_tokens, seed=config.bigbird_seed,
+                device=device)
+            # Kept as an explicitly unused legacy attribute, not an L^2 buffer.
+            self.causal_mask = None
+        else:
+            mask = torch.triu(torch.ones(config.max_seq_len, config.max_seq_len,
+                                         dtype=torch.bool), diagonal=1)
+            self.register_buffer("causal_mask", mask, persistent=False)
         self.gradient_checkpointing = bool(config.gradient_checkpointing)
         self.apply(self._initialize)
         # Re-zero the confidence head after the blanket init: neutral 0.5.
@@ -660,9 +901,10 @@ class CausalByteTransformer(nn.Module):
                           and torch.is_grad_enabled())
         for block in self.blocks:
             if use_checkpoint:
-                hidden = checkpoint(block, hidden, self.causal_mask, memory, use_reentrant=False)
+                hidden = checkpoint(block, hidden, self.attention_mask or self.causal_mask,
+                                    memory, use_reentrant=False)
             else:
-                hidden = block(hidden, self.causal_mask, memory)
+                hidden = block(hidden, self.attention_mask or self.causal_mask, memory)
         info: dict[str, Any] = {"steps_run": 0, "confidence": None, "states": None}
         if self.refinement is not None:
             adaptive_flag = (not self.training) if adaptive is None else bool(adaptive)
@@ -723,12 +965,19 @@ class CausalByteTransformer(nn.Module):
             # BCE cannot be diluted by short (heavily padded) caption rows.
             states = info["states"]
             with torch.no_grad():
-                step_logits = torch.stack(
-                    [self.head(self.norm_final(state)) for state in states]).float()
-                log_probs = torch.log_softmax(step_logits, dim=-1)
-                entropy = -(log_probs.exp() * log_probs).sum(-1) / math.log(self.config.vocab_size)
-                conf_targets = (entropy < float(entropy_threshold)).float()
-                mean_entropy = float(entropy[..., valid].mean().item())
+                # Stream states: never stack S copies of (B,L,265) logits AND
+                # log-probs. At L=16384 that avoided roughly 0.5 GB of fp32
+                # temporaries without changing the entropy definition.
+                targets_by_state, entropies = [], []
+                for state in states:
+                    step_logits = self.head(self.norm_final(state)).float()
+                    log_probs = torch.log_softmax(step_logits, dim=-1)
+                    entropy = -(log_probs.exp() * log_probs).sum(-1) / math.log(self.config.vocab_size)
+                    targets_by_state.append((entropy < float(entropy_threshold)).float())
+                    entropies.append(float(entropy[..., valid].mean().item()))
+                    del step_logits, log_probs, entropy
+                conf_targets = torch.stack(targets_by_state)
+                mean_entropy = sum(entropies) / len(entropies)
             terms = []
             thought_states = info.get("thought_states") or [None] * len(states)
             for state, target_t, thought in zip(states, conf_targets, thought_states):
@@ -865,7 +1114,7 @@ def pad_batch(sequences: list[torch.Tensor], length: int) -> tuple[torch.Tensor,
     return ids, targets
 
 
-CHECKPOINT_SCHEMA = 4  # v4: latent thought buffer (Phase 24.4)
+CHECKPOINT_SCHEMA = 5  # v5: BigBird connectivity + memory cross-attention
 
 
 def save_foundation(model: CausalByteTransformer, path: str | Path, *,
@@ -889,7 +1138,7 @@ def save_foundation(model: CausalByteTransformer, path: str | Path, *,
 def load_foundation(path: str | Path, *, device: torch.device | str = "cpu") -> CausalByteTransformer:
     state = torch.load(path, map_location=device, weights_only=True)
     if not isinstance(state, dict) or state.get("schema_version") != CHECKPOINT_SCHEMA:
-        raise ValueError("not a ByteCore v4 foundation checkpoint")
+        raise ValueError("not a ByteCore v5 foundation checkpoint")
     model = CausalByteTransformer(FoundationConfig(**state["config"]))
     model.load_state_dict(state["state_dict"], strict=True)
     return model.to(device)

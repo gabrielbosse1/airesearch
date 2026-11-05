@@ -1,10 +1,11 @@
 # ByteCore-DualMemory
 
-A byte-level causal Transformer (**274,025,753 parameters** in its production
-preset) that reads an **8192-dim skill/memory space** through a **Gated Skill
-Adapter** in every layer, decides its own "thinking" budget with a confidence
-head over a **latent thought matrix**, and ingests images/audio/video as
-frozen-encoder skill matrices.
+A byte-level causal Transformer (**366,316,833 parameters** in its production
+preset) with a **16,384-byte causal BigBird window**, an **8192-dim unified
+skill/memory space** read through a **Gated Skill Adapter + context-to-memory
+cross-attention in every layer**, a confidence-headed **latent thought matrix**,
+learnable per-slot **decay/Forever eviction**, and frozen-encoder multimodal
+ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
@@ -28,24 +29,32 @@ cross-entropy. The authoritative math is in
 [ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md); operating rules are in
 [AGENTS.md](AGENTS.md).
 
-## The four ideas
+## Core ideas
 
-1. **Gated Skill Adapter (1024 ↔ 8192).** The 1024-dim hidden state queries
+1. **Causal BigBird at 16k.** Each byte attends to a local W=256 window,
+   R=32 seeded random past keys per head, and G=16 prefix globals, always
+   intersected with `j ≤ i`. A shared `(1,1,L,L)` boolean base plus lazy
+   per-head overlays is passed to SDPA. This prunes connectivity, **not**
+   asymptotic FLOPs; it is not a block-sparse kernel or infinite context.
+2. **Gated Skill Adapter + teleportation hub (1024 ↔ 8192).** The 1024-dim hidden state queries
    1024-dim memory keys (high-fidelity matching), retrieves the 8192-dim skill
    value, and compresses it with a **GLU, not a linear blend**:
    `8192 → 2048 → split → Information ⊙ sigmoid(Filter) → 1024`.
    The sigmoid gate is a sharp bouncer: channels are passed or vetoed, not
-   averaged into mush. Injected residually in **all 8 layers**.
-2. **Multimodal matrices.** Frozen encoders (ViT/ResNet for images/video,
+   averaged into mush. In parallel, every layer runs context-to-memory
+   cross-attention (Q=1024 hidden, K=1024 bank keys, V=8192 bank values,
+   zero-init ReZero gate) to bridge gaps beyond the 16k window. Injected
+   residually in **all 8 layers**.
+3. **Multimodal matrices.** Frozen encoders (ViT/ResNet for images/video,
    Wav2Vec2 for audio) feed trainable `Linear(encoder_dim, 8192)` projectors.
    The core model only ever sees the 8192-dim vector — swap the encoder, keep
    the core. Training is **bidirectional**: caption bytes conditioned on the
    media matrix, and media codec bytes conditioned on a text matrix.
-3. **Model-decided adaptive loop.** A weight-tied refinement cell runs up to
+4. **Model-decided adaptive loop.** A weight-tied refinement cell runs up to
    4 passes; a `Linear(1024, 1) → sigmoid` confidence head breaks early above
    0.9 at inference. An auxiliary BCE loss teaches it to recognise low-entropy
    (decided) states.
-4. **Latent Thought Matrix (Phase 24.4).** Inside the loop, an isolated
+5. **Latent Thought Matrix (Phase 24.4).** Inside the loop, an isolated
    `(B, 4, 1024)` scratchpad thinks without emitting bytes: bidirectional
    cross-attention lets the buffer read the context and the context frontier
    read the buffer (slot `t` updates from slot `t-1` + context). The
@@ -53,18 +62,24 @@ cross-entropy. The authoritative math is in
    keeps the loop running. The buffer **never** passes through the byte
    head, and only the frontier position reads it back — no future byte
    leaks through the scratchpad (both contracts are test-asserted).
+6. **Unified dynamic memory.** One physical 2048-slot bank scores
+   `importance − decay·age`; short-term slots decay and are evictable, Forever
+   slots have exactly zero effective decay, higher importance, and a hard
+   overwrite guard. A policy loss rewards stale eviction and penalizes Forever
+   overwrite attempts. Writes are detached and delayed until after the current
+   batch, so cross-attention cannot retrieve same-batch futures.
 
 ## Repository map
 
 | Path | Contents |
 |---|---|
-| `models/foundation.py` | Byte Transformer, GatedSkillAdapter, confidence-headed refinement, LatentThoughtBuffer scratchpad, token-id tool generation, checkpoint I/O |
-| `models/memory_model.py` | DualMemory: episodic + procedural banks, 1024-dim keys / 8192-dim values, FIFO, gradient-free writes |
+| `models/foundation.py` | Byte Transformer, causal BigBird mask, GatedSkillAdapter + memory cross-attention, confidence loop, LatentThoughtBuffer, token-id tools, checkpoint I/O |
+| `models/memory_model.py` | Unified DualMemory alias: one 1024-key/8192-value bank, learnable decay/importance, Forever guard, detached delayed writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
-| `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
+| `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
-| `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 170 tests (fully offline): GLU math, memory, projection, adaptive loop, latent thought matrix, tooling, trainer, quota mix, masking, streaming enforcement, notebook, hygiene |
+| `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 BigBird context, 8192 memory, batch 1×32, 13.5 GB ceiling |
+| `tests/` | 191 tests (fully offline): BigBird causality/mask math, cross-attention, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 
@@ -73,7 +88,7 @@ cross-entropy. The authoritative math is in
 ```bash
 pip install -r requirements.txt
 
-# Full regression suite (CPU, ~6 s, fully offline: the HF Hub is mocked).
+# Full regression suite (CPU, ~10 s, fully offline: the HF Hub is mocked).
 python -m pytest tests/ -q
 
 # Full-pipeline plumbing validation on CPU (tiny model, synthetic fixtures).
@@ -82,6 +97,9 @@ python -m training.train --smoke
 # Smoke + coherence probe: also prints the latent thought-buffer activation
 # norms (proof the scratchpad is used) and a greedy byte continuation.
 python smoke_test_coherence.py --steps 4
+
+# Analytic T4 VRAM preflight (SIMULATION, not a CUDA measurement).
+python -m training.train --simulate-t4 --config configs/t4_scaled.yaml
 
 # Real pre-training (GPU machine; streams HF datasets, checkpoints to the Hub).
 python -m training.train --config configs/t4_scaled.yaml \
@@ -113,7 +131,7 @@ prints the realised mix before training starts. Both quantities are shown and
 they are not the same thing:
 
 ```
-PT-BR-first data mix audit  |  100 batches x 4 = 400 documents  (0.0 s)
+PT-BR-first data mix audit  |  100 batches x 1 = 100 documents  (0.0 s)
 source        target    docs    doc %       bytes   byte %   status
 -----------------------------------------------------------------------
 PT-BR          50.0%     200    50.0%      27,156    44.5%   ok
@@ -181,10 +199,14 @@ to end, and the guarantee is tested, not assumed:
   instead of `0/0` NaN. CE and the auxiliary confidence BCE are means over
   non-PAD tokens, so a 50% PT-BR batch is the token-weighted blend of its
   parts — asserted in `tests/test_train.py`.
-- **4 hours is a small token budget** for 265M parameters (order 10⁸ tokens).
+- **4 hours is a small token budget** for 366M parameters (order 10⁸ tokens).
   Expect falling loss and byte-level structure, not a finished assistant.
 - **Media bytes** in the text→media direction are the deterministic uint8
   codec of the encoder representation (tanh-companded), not raw pixels —
   that is the matrix approach: the model predicts representations.
 - VRAM figures in the audit are **analytic** unless explicitly marked
-  measured; this repository's CI environment has no GPU.
+  measured; this repository's CI environment has no GPU. The production
+  simulator estimates 13.073 GB / 13.5 GB; the real CUDA probe enforces the
+  ceiling and fails closed if batch/R/G autotune cannot fit.
+- **BigBird masks are connectivity-sparse, not FLOP-sparse.** SDPA still faces
+  an L² score problem; lowering R/G may not shrink dense mask allocation.

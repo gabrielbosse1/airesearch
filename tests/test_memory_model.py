@@ -1,4 +1,4 @@
-"""DualMemory: 1024 keys / 8192 values, FIFO, detachment, persistence."""
+"""DualMemory: 1024 keys / 8192 values, dynamic eviction, detachment, persistence."""
 import pytest
 import torch
 
@@ -35,11 +35,11 @@ def test_writes_are_detached_storage_events():
     assert bank.values.grad_fn is None
 
 
-def test_fifo_eviction_is_deterministic():
+def test_equal_policy_eviction_is_deterministic():
     bank = ProceduralSkillBank(capacity=2, key_dim=4, value_dim=4)
     bank.write(torch.zeros(4), torch.full((4,), 1.0))
     bank.write(torch.zeros(4), torch.full((4,), 2.0))
-    bank.write(torch.zeros(4), torch.full((4,), 3.0))  # evicts slot 0 (oldest)
+    bank.write(torch.zeros(4), torch.full((4,), 3.0))  # equal policy: lowest slot index breaks the tie (former slot 0)
     assert len(bank) == 2
     values = {float(v[0]) for v in bank.values}
     assert values == {2.0, 3.0}
