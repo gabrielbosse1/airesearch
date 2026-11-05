@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24.1)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 24.2)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -31,6 +31,23 @@ and `README.md` (how to run it).
   `TextSkillProjector` train. Swapping encoders must never touch the core.
 - **One architecture at every scale.** The CPU tests and the T4 run use the
   same classes; only the integers change (`configs/t4_scaled.yaml`).
+- **100% streaming, zero disk (Phase 24.2).** `data/sources.open_stream` is
+  the ONLY `load_dataset` call site: it forces `streaming=True`, verifies the
+  result is an `IterableDataset` (`assert_streaming` raises `TypeError` on a
+  disk-backed `Dataset`/`DatasetDict` or an `IterableDatasetDict`), and
+  shuffles with `.shuffle(seed=..., buffer_size=10000)` — a RAM-only
+  reservoir. Map-style `.shuffle(seed=...)` without a buffer is forbidden on
+  streams. `build_mixture` rejects `data.streaming: false`. The trainer loop
+  is strictly **step-based** (`while step < max_steps`): no epochs, no
+  `len(dataset)`, and sized sample sources are rejected with `TypeError`.
+  There is no multi-process DataLoader — `MixtureSampler` + `BatchBuilder`
+  are the custom single-process iterable wrapper (`num_workers=0` semantics;
+  HF streaming must never run in worker subprocesses). The notebook's
+  Zero-Disk cell (right after the mix audit, before training) prints every
+  stream's type and asserts ≤ 32 MB disk growth over 10 streamed batches.
+  Tests mock `datasets.load_dataset` with tiny in-memory `IterableDataset`s
+  (`mock_streaming_hub`); a session guard makes any REAL Hub load raise.
+  `tests/test_streaming.py` enforces all of this — do not weaken it.
 - **PT-BR is the primary language.** The streaming mix is exactly
   50% `ptbr` / 25% `code` / 15% `multimodal` / 10% `english` documents and it
   is enforced **per 100-draw window** (largest-remainder quota + seeded
@@ -69,10 +86,12 @@ models/memory_model.py   DualMemory (episodic + procedural), 1024/8192 banks
 models/encoders.py       frozen encoders, skill projectors, uint8 codec
 training/train.py        the ONE training script (+ sandboxed search runtime)
 data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
+                         + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 4096 ctx, 8192 memory)
-tests/                   142-test regression suite (CPU, ~3 s)
-pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints)
+tests/                   160-test regression suite (CPU, ~6 s, fully offline)
+pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
+                         mix audit + Zero-Disk verification before training)
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
 requirements.txt  .gitignore  package __init__.py files
 ```
@@ -104,6 +123,13 @@ python -m training.train --config configs/t4_scaled.yaml \
   `GROUP_WEIGHTS` and `configs/t4_scaled.yaml` must move together.
 - The notebook's mix-audit cell must run **before** `training.train` and must
   assert `report["quotas_ok"]`. A run that starts without a PASS is a bug.
+  The Zero-Disk verification cell must sit **between** the audit and the
+  training launch and must assert both the `IterableDataset` types and the
+  negligible disk growth (`tests/test_notebook.py` enforces the order).
+- New dataset-loading code must go through `data/sources.open_stream` (or
+  extend it); a second `load_dataset` call site fails
+  `tests/test_streaming.py`. Keep the suite offline: mock the Hub with
+  `mock_streaming_hub`, never stream from CI.
 - Every behavioural claim needs a test. The suite is the contract.
 - Checkpoints: atomic writes, resumable, projector-only encoder persistence.
   Never break `load_checkpoint` compatibility without a schema bump.

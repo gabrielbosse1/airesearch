@@ -106,7 +106,7 @@ def test_strict_utf8_drops_surrogates():
 def test_text_source_protocol(monkeypatch):
     spec = SourceSpec("fake/text", text_field="text")
     monkeypatch.setattr(sources, "_open_rows",
-                        lambda s: iter([{"text": "olá"}, {"text": ""}, {"text": 5},
+                        lambda s, **kwargs: iter([{"text": "olá"}, {"text": ""}, {"text": 5},
                                         {"text": "world"}]))
     samples = list(source_samples(spec))
     assert samples == [{"kind": "text", "data": b"ol\xc3\xa1"},
@@ -118,7 +118,7 @@ def test_image_embedded_protocol(monkeypatch):
     image = Image.new("RGB", (16, 16), color=(120, 30, 200))
     spec = SourceSpec("fake/img", kind="image_embedded", caption_field="caption")
     monkeypatch.setattr(sources, "_open_rows",
-                        lambda s: iter([{"caption": ["a purple square"], "image": image}]))
+                        lambda s, **kwargs: iter([{"caption": ["a purple square"], "image": image}]))
     samples = list(source_samples(spec))
     assert len(samples) == 1
     sample = samples[0]
@@ -131,7 +131,7 @@ def test_audio_protocol(monkeypatch):
     spec = SourceSpec("fake/audio", kind="audio", text_field="text")
     waveform = [0.1] * 3200
     monkeypatch.setattr(sources, "_open_rows",
-                        lambda s: iter([{"audio": {"array": waveform, "sampling_rate": 16000},
+                        lambda s, **kwargs: iter([{"audio": {"array": waveform, "sampling_rate": 16000},
                                          "text": "hello speech"}]))
     samples = list(source_samples(spec))
     assert len(samples) == 1
@@ -144,7 +144,7 @@ def test_fallback_chain_skips_dead_sources(monkeypatch):
     good = SourceSpec("fake/good", text_field="text")
     bad = SourceSpec("fake/bad", text_field="text")
 
-    def fake_open(spec):
+    def fake_open(spec, **kwargs):
         if spec.id == "fake/bad":
             raise ConnectionError("hub down")
         return iter([{"text": "alive"}])
@@ -155,7 +155,7 @@ def test_fallback_chain_skips_dead_sources(monkeypatch):
 
 
 def test_all_sources_dead_raises(monkeypatch):
-    def fake_open(spec):
+    def fake_open(spec, **kwargs):
         raise ConnectionError("hub down")
     monkeypatch.setattr(sources, "_open_rows", fake_open)
     with pytest.raises(SourceUnavailable):
@@ -181,7 +181,7 @@ def test_build_mixture_rejects_unknown_group_and_uses_config_weights(monkeypatch
     with pytest.raises(ValueError):
         build_mixture({"weights": {"ptbr": 0.5, "logic": 0.5}})
 
-    def ptbr_is_dead(group, specs, *, limit=0):
+    def ptbr_is_dead(group, specs, *, limit=0, **kwargs):
         if group == "ptbr":
             raise SourceUnavailable(f"group {group!r}: all sources failed")
         return _infinite({"kind": "text", "data": group.encode()})
@@ -194,7 +194,7 @@ def test_build_mixture_rejects_unknown_group_and_uses_config_weights(monkeypatch
     assert len(survivors.next_batch(10)) == 10          # still streams
 
     monkeypatch.setattr(sources, "_group_iterator",
-                        lambda group, specs, *, limit=0: _infinite(
+                        lambda group, specs, *, limit=0, **kwargs: _infinite(
                             {"kind": "text", "data": b"x"}))
     sampler = build_mixture({"weights": {"ptbr": 0.6, "english": 0.4}})
     assert sampler.weights == {"ptbr": 0.6, "english": 0.4}

@@ -1,4 +1,4 @@
-"""Streaming data mix for the 4-hour T4 pre-training run (Phase 24.1).
+"""Streaming data mix for the 4-hour T4 pre-training run (Phase 24.2).
 
 PT-BR-FIRST distribution (fractions of *drawn documents*, not bytes):
 
@@ -21,10 +21,19 @@ share of the stream is reported alongside the document share by
 neither is hidden. Multimodal documents additionally expand into two training
 rows (caption and media codec).
 
-Everything streams (``load_dataset(..., streaming=True)``): nothing is
-downloaded wholesale. Each source has a fallback chain; a group whose every
-source fails is dropped and its weight renormalised over the survivors
-(logged, never silent). The mixture is deterministic given a seed.
+STRICT STREAMING (Phase 24.2): ``open_stream`` is the ONLY place that calls
+``load_dataset``. It (1) forces ``streaming=True`` in the kwargs, (2) verifies
+the returned object is a ``datasets.IterableDataset`` (a disk-backed
+``Dataset``/``DatasetDict`` or an unresolved ``IterableDatasetDict`` raises
+``TypeError`` immediately -- the Colab disk must never fill up), and
+(3) shuffles with ``.shuffle(seed=..., buffer_size=SHUFFLE_BUFFER_SIZE)``:
+a RAM-only reservoir, never the map-style ``.shuffle(seed=...)`` that
+``IterableDataset`` does not accept without a buffer. The training loop is
+step-based (``while step < max_steps``); ``len(dataset)`` is never called.
+
+Each source has a fallback chain; a group whose every source fails is dropped
+and its weight renormalised over the survivors (logged, never silent). The
+mixture is deterministic given a seed.
 
 Sample protocol yielded by the mixture:
     text:       {"kind": "text", "data": bytes}
@@ -58,6 +67,12 @@ GROUP_WEIGHTS: dict[str, float] = {"ptbr": 0.50, "code": 0.25,
 #: Draws per quota window. 100 keeps 50/25/15/10 integral, so a full window is
 #: exactly on target instead of merely on average.
 MIX_WINDOW: int = 100
+
+#: Reservoir size for ``IterableDataset.shuffle(seed=..., buffer_size=...)``.
+#: 10k documents is a RAM-only buffer (tens of MB for text, low hundreds for
+#: code files) -- large enough to break source ordering, small enough for a
+#: free Colab instance. Nothing is ever written to disk.
+SHUFFLE_BUFFER_SIZE: int = 10_000
 
 #: Human-readable labels for the audit table (and the trainer's summary).
 GROUP_LABELS: dict[str, str] = {"ptbr": "PT-BR", "code": "Code",
@@ -128,10 +143,57 @@ def strict_utf8(text: str) -> bytes | None:
         return cleaned if cleaned else None
 
 
-def _open_rows(spec: SourceSpec) -> Iterator[Mapping[str, Any]]:
+def assert_streaming(dataset: Any, *, context: str = "") -> Any:
+    """Verify ``dataset`` is a ``datasets.IterableDataset`` -- fail loudly otherwise.
+
+    A map-style ``Dataset``/``DatasetDict`` means the whole corpus was (or is
+    about to be) downloaded to the Colab disk: that is the Phase 24.2 crash
+    this guard exists to prevent. An ``IterableDatasetDict`` means ``split``
+    was not resolved. Both raise ``TypeError`` instead of training silently.
+    """
+    from datasets import IterableDataset  # lazy: CPU tests never need it
+    if not isinstance(dataset, IterableDataset):
+        raise TypeError(
+            f"{context or 'dataset'}: expected a streaming IterableDataset, got "
+            f"{type(dataset).__name__}. load_dataset must be called with "
+            f"streaming=True and a concrete split; disk-backed loading is forbidden.")
+    return dataset
+
+
+def open_stream(spec: SourceSpec, *, seed: int = 24,
+                shuffle_buffer: int = SHUFFLE_BUFFER_SIZE) -> Any:
+    """Open ONE source as a verified, buffered-shuffle ``IterableDataset``.
+
+    This is the ONLY ``load_dataset`` call site in the repository. It enforces
+    the Phase 24.2 streaming contract end to end:
+
+    1. ``streaming=True`` must be in the kwargs (``SourceSpec.load_kwargs``
+       hardcodes it; a tampered spec raises before any download starts);
+    2. the returned object must be an ``IterableDataset`` (``assert_streaming``);
+    3. shuffling uses the iterable-safe ``.shuffle(seed=..., buffer_size=...)``
+       reservoir -- RAM-only, seeded, never the map-style ``.shuffle(seed=...)``
+       that would raise on a stream. ``shuffle_buffer=0`` disables shuffling
+       (debugging only); the default is ``SHUFFLE_BUFFER_SIZE``.
+    """
     from datasets import load_dataset  # lazy: CPU tests never need it
-    dataset = load_dataset(**spec.load_kwargs())
-    return iter(dataset)
+    if shuffle_buffer < 0:
+        raise ValueError("shuffle_buffer must be >= 0")
+    kwargs = spec.load_kwargs()
+    if kwargs.get("streaming") is not True:
+        raise ValueError(f"{spec.id}: streaming=True is mandatory (Phase 24.2); "
+                         f"got streaming={kwargs.get('streaming')!r}")
+    if not isinstance(kwargs.get("split"), str) or not kwargs["split"]:
+        raise ValueError(f"{spec.id}: a concrete split is required so load_dataset "
+                         f"returns an IterableDataset, not an IterableDatasetDict")
+    dataset = assert_streaming(load_dataset(**kwargs), context=spec.id)
+    if shuffle_buffer > 0:
+        dataset = dataset.shuffle(seed=seed, buffer_size=int(shuffle_buffer))
+    return dataset
+
+
+def _open_rows(spec: SourceSpec, *, seed: int = 24,
+               shuffle_buffer: int = SHUFFLE_BUFFER_SIZE) -> Iterator[Mapping[str, Any]]:
+    return iter(open_stream(spec, seed=seed, shuffle_buffer=shuffle_buffer))
 
 
 def _fetch_url(url: str, *, timeout: float = 8.0, max_bytes: int = 4_000_000) -> bytes | None:
@@ -157,11 +219,12 @@ def _image_payload(raw: bytes) -> bytes | None:
         return None
 
 
-def source_samples(spec: SourceSpec, *, limit: int = 0) -> Iterator[dict[str, Any]]:
+def source_samples(spec: SourceSpec, *, limit: int = 0, seed: int = 24,
+                   shuffle_buffer: int = SHUFFLE_BUFFER_SIZE) -> Iterator[dict[str, Any]]:
     """Turn one source into the sample protocol. Skips bad rows, never raises
     mid-stream (a dead URL is data loss, not a crash)."""
     emitted = 0
-    for row in _open_rows(spec):
+    for row in _open_rows(spec, seed=seed, shuffle_buffer=shuffle_buffer):
         if limit and emitted >= limit:
             return
         try:
@@ -230,13 +293,15 @@ def source_samples(spec: SourceSpec, *, limit: int = 0) -> Iterator[dict[str, An
             continue  # a malformed row is skipped, the stream survives
 
 
-def _group_iterator(group: str, specs: Iterable[SourceSpec], *, limit: int = 0
+def _group_iterator(group: str, specs: Iterable[SourceSpec], *, limit: int = 0,
+                    seed: int = 24, shuffle_buffer: int = SHUFFLE_BUFFER_SIZE
                     ) -> Iterator[dict[str, Any]]:
     """First source that opens and yields at least one sample wins."""
     errors: list[str] = []
     for spec in specs:
         try:
-            stream = source_samples(spec, limit=limit)
+            stream = source_samples(spec, limit=limit, seed=seed,
+                                    shuffle_buffer=shuffle_buffer)
             first = next(stream)
         except StopIteration:
             errors.append(f"{spec.id}: empty")
@@ -365,7 +430,20 @@ class MixtureSampler:
 def build_mixture(config: Mapping[str, Any] | None = None, *, seed: int = 24,
                   limit_per_source: int = 0,
                   window: int = MIX_WINDOW) -> MixtureSampler:
-    """Open the default streaming mix. Groups whose chains fail are dropped."""
+    """Open the default streaming mix. Groups whose chains fail are dropped.
+
+    Phase 24.2: ``config["streaming"]`` may only be true (or absent) -- a
+    config that asks for disk-backed loading is rejected, not honoured.
+    ``config["shuffle_buffer_size"]`` controls the RAM-only shuffle reservoir.
+    """
+    if config and config.get("streaming", True) is not True:
+        raise ValueError("data.streaming must be true: disk-backed dataset loading "
+                         "is forbidden (Phase 24.2 strict streaming)")
+    shuffle_buffer = SHUFFLE_BUFFER_SIZE
+    if config and "shuffle_buffer_size" in config:
+        shuffle_buffer = int(config["shuffle_buffer_size"])
+        if shuffle_buffer < 0:
+            raise ValueError("data.shuffle_buffer_size must be >= 0")
     weights = dict(GROUP_WEIGHTS)
     if config and "weights" in config:
         requested = {name: float(value) for name, value in config["weights"].items()}
@@ -382,7 +460,8 @@ def build_mixture(config: Mapping[str, Any] | None = None, *, seed: int = 24,
         if group not in weights or weights[group] <= 0:
             continue
         try:
-            groups[group] = _group_iterator(group, specs, limit=limit_per_source)
+            groups[group] = _group_iterator(group, specs, limit=limit_per_source,
+                                            seed=seed, shuffle_buffer=shuffle_buffer)
         except SourceUnavailable as exc:
             failures[group] = str(exc)
     if not groups:

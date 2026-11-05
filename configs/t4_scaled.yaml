@@ -74,7 +74,14 @@ vram:
   target_max_gb: 12.0              # measured probe shrinks batch 4->2->1 above
 
 data:
+  # Phase 24.2 STRICT streaming: build_mixture REJECTS streaming: false.
+  # Every load_dataset call uses streaming=True and the returned object is
+  # verified to be an IterableDataset (never a disk-backed Dataset).
   streaming: true
+  # RAM-only reservoir for IterableDataset.shuffle(seed=..., buffer_size=...).
+  # 10k documents ~ tens-to-hundreds of MB of RAM, zero disk. Map-style
+  # .shuffle(seed=...) without a buffer is forbidden on streams.
+  shuffle_buffer_size: 10000
   # PT-BR-FIRST mix (Phase 24.1). Fractions of DRAWN DOCUMENTS, enforced
   # quota-exactly per 100-draw window by data/sources.MixtureSampler
   # (largest-remainder allocation + seeded shuffle). Must sum to 1.0.

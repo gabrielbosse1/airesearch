@@ -202,10 +202,25 @@ order. Hub upload/download via `huggingface_hub`, failures reported as
 one live retrieved `(4,1024,8192)` fp16 tensor ≈ 0.067 GB. Comfortably inside
 14 GB; the probe verifies on the real device.
 
-## 9. Data (`data/sources.py`) — PT-BR first
+## 9. Data (`data/sources.py`) — PT-BR first, strictly streaming
 
-Streaming only (`load_dataset(..., streaming=True)`), four groups and no fifth
-bucket:
+**Strict streaming (Phase 24.2).** `open_stream` is the single `load_dataset`
+call site (AST-enforced by `tests/test_streaming.py`). It (1) forces
+`streaming=True` and a concrete split, (2) verifies the result with
+`assert_streaming` — a map-style `Dataset`/`DatasetDict` (disk download) or an
+`IterableDatasetDict` (unresolved split) raises `TypeError` before any
+training — and (3) shuffles with the iterable-safe
+`.shuffle(seed=..., buffer_size=10000)`: a seeded RAM-only reservoir
+(`SHUFFLE_BUFFER_SIZE`, configurable via `data.shuffle_buffer_size`), never
+the map-style `.shuffle(seed=...)` that an `IterableDataset` rejects.
+`build_mixture` rejects `data.streaming: false`. The trainer loop is
+step-based (`while step < max_steps`), never calls `len()` on data, and
+rejects sized sample sources; `MixtureSampler` + `BatchBuilder` form the
+custom single-process iterable wrapper (DataLoader `num_workers=0`
+semantics — no worker subprocesses, no disk prefetch). The notebook's
+Zero-Disk cell prints every group's stream type and asserts ≤ 32 MB disk
+growth over 10 streamed batches, between the mix audit and the training
+launch. Four groups and no fifth bucket:
 
 | Group | Weight | Chain |
 |---|---|---|
@@ -278,18 +293,23 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **142 passed in ~3.3 s** (CPU). Coverage:
-exact GLU math at production widths, key-matching fidelity (aligned query
-retrieves its value to 1e-3), all-8-layer injection + exact parameter count,
-masked/empty retrieval, projector gradient flow, bank FIFO/detach/persistence,
-frozen-encoder contract, codec bounds, matrix agnosticism, adaptive
-break/cap/targets, token-triggered sandboxed search + EDIT pass-through,
-bidirectional batches, accumulation equivalence, checkpoint/resume,
-time-based cadence, **quota-exact 50/25/15/10 windows**, renormalisation,
-mix-audit verdicts and truncation, **PAD masking/zero-loss invariants**,
-token-weighted CE and confidence BCE on a 50% PT-BR batch, trainer `data_mix`
-reporting, mixture fallbacks/packing, notebook validity (audit precedes the
-run), and the cleanup contract itself.
+`python -m pytest tests/ -q` → **160 passed in ~5.8 s** (CPU, fully offline:
+a session guard replaces the real `datasets.load_dataset` with a loud
+failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
+Coverage: exact GLU math at production widths, key-matching fidelity (aligned
+query retrieves its value to 1e-3), all-8-layer injection + exact parameter
+count, masked/empty retrieval, projector gradient flow, bank
+FIFO/detach/persistence, frozen-encoder contract, codec bounds, matrix
+agnosticism, adaptive break/cap/targets, token-triggered sandboxed search +
+EDIT pass-through, bidirectional batches, accumulation equivalence,
+checkpoint/resume, time-based cadence, **quota-exact 50/25/15/10 windows**,
+renormalisation, mix-audit verdicts and truncation, **PAD masking/zero-loss
+invariants**, token-weighted CE and confidence BCE on a 50% PT-BR batch,
+trainer `data_mix` reporting, mixture fallbacks/packing, **strict streaming
+(`streaming=True` on every call, `IterableDataset` type verification,
+seeded `buffer_size` shuffle, single call site, step-based loop, sized-source
+rejection, end-to-end offline quota)**, notebook validity (audit + Zero-Disk
+cell precede the run), and the cleanup contract itself.
 
 **Known limits.** 4 h ≈ order 10⁸ tokens: a pre-training start, not a
 finished model. The mix is a document quota, so the *byte* share of PT-BR is

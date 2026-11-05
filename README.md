@@ -13,6 +13,13 @@ skills. The quota is enforced per 100-draw window and audited in the notebook
 before the GPU budget is spent — see
 [Data mix (PT-BR first)](#data-mix-pt-br-first).
 
+**100% streaming, zero disk (Phase 24.2):** the corpora (the-stack, GigaVerbo,
+fineweb) are far larger than a Colab disk. Every `load_dataset` call is forced
+to `streaming=True` and type-checked to return an `IterableDataset`; shuffling
+uses a RAM-only `buffer_size=10000` reservoir; the training loop is strictly
+step-based; and a **Zero-Disk verification cell** proves negligible disk growth
+before any training starts — see [Strict streaming](#strict-streaming-phase-242).
+
 There is no tokenizer: the model reads and writes raw bytes `0..255`. There
 is no regex tool parsing: `[TOOL_SEARCH]` is a vocabulary id that triggers a
 sandboxed subprocess, and `[EDIT]` is ordinary vocabulary learned by
@@ -46,9 +53,9 @@ cross-entropy. The authoritative math is in
 | `models/memory_model.py` | DualMemory: episodic + procedural banks, 1024-dim keys / 8192-dim values, FIFO, gradient-free writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
 | `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
-| `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, mix audit, byte packing |
+| `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 142 tests: GLU math, memory, projection, adaptive loop, tooling, trainer, quorum mix, masking, notebook, hygiene |
+| `tests/` | 160 tests (fully offline): GLU math, memory, projection, adaptive loop, tooling, trainer, quota mix, masking, streaming enforcement, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 
 ## Quickstart
@@ -56,7 +63,7 @@ cross-entropy. The authoritative math is in
 ```bash
 pip install -r requirements.txt
 
-# Full regression suite (CPU, ~3 s).
+# Full regression suite (CPU, ~6 s, fully offline: the HF Hub is mocked).
 python -m pytest tests/ -q
 
 # Full-pipeline plumbing validation on CPU (tiny model, synthetic fixtures).
@@ -112,6 +119,39 @@ two training rows (caption + media codec). Tool/edit trajectories are injected
 *on top* at `tool_trajectory_rate=0.02` and are outside the quota by design.
 The trainer logs the realised mix in `runs/metrics.jsonl` (`data_mix`) and in
 the run summary.
+
+## Strict streaming (Phase 24.2)
+
+The corpora above are **massive** — a wholesale download would fill the Colab
+disk and crash the instance. The pipeline therefore guarantees streaming end
+to end, and the guarantee is tested, not assumed:
+
+- **One call site.** `data/sources.open_stream` is the only place that calls
+  `load_dataset`. It forces `streaming=True` (a tampered spec raises before
+  any load) and requires a concrete split.
+- **Type verification.** `assert_streaming` checks the returned object is a
+  `datasets.IterableDataset`. A disk-backed `Dataset`/`DatasetDict` or an
+  unresolved `IterableDatasetDict` raises `TypeError` immediately.
+  `build_mixture` also rejects `data.streaming: false` in the config.
+- **Iterable-safe shuffling.** Streams are shuffled with
+  `.shuffle(seed=..., buffer_size=10000)` — a seeded, RAM-only reservoir
+  (`data.shuffle_buffer_size` in the config). The map-style
+  `.shuffle(seed=...)` that fails on an `IterableDataset` is never used.
+- **Step-based training.** The loop is `while step < max_steps` — no epochs,
+  no `len(dataset)` (streams have no length). Sized sample sources are
+  rejected with `TypeError`. There is no multi-process DataLoader:
+  `MixtureSampler` + `BatchBuilder` are a custom single-process iterable
+  wrapper (the `num_workers=0` configuration HF recommends for streaming),
+  so worker deadlocks and disk prefetch are structurally impossible.
+- **Zero-Disk verification cell.** Right after data initialization (and
+  before the 4-hour launch), the notebook prints each group's stream type,
+  asserts `IterableDataset`, then measures disk usage before/after the first
+  **10 streamed batches** and asserts growth ≤ 32 MB (streaming metadata is
+  KB-scale; a real download would be GB-scale).
+- **Offline tests.** `tests/test_streaming.py` mocks `datasets.load_dataset`
+  with tiny in-memory `IterableDataset`s (`mock_streaming_hub`), so the
+  enforcement path runs for real with zero network and zero disk; a
+  session-wide guard makes any *real* Hub load raise during the suite.
 
 ## Honest notes
 

@@ -9,6 +9,14 @@ Everything the 4-hour Colab run needs lives here:
   resolves to fp16 + GradScaler there, bf16 on Ampere+, fp32 on CPU;
 * the streaming PT-BR-first 50/25/15/10 data mix (``data/sources.py``),
   quota-exact per 100-draw window (50% PT-BR docs), packed to bytes;
+* STRICT streaming (Phase 24.2): every source is a verified
+  ``IterableDataset`` opened with ``streaming=True`` and shuffled with a
+  RAM-only ``buffer_size`` reservoir. The loop is STEP-based
+  (``while step < max_steps``) -- never epochs, never ``len(dataset)``.
+  There is deliberately no multi-process DataLoader: ``MixtureSampler`` +
+  ``BatchBuilder`` are the custom single-process iterable wrapper (the
+  ``num_workers=0`` configuration HF recommends for streaming), so worker
+  deadlocks and disk caching are structurally impossible;
 * bidirectional multimodal batches: caption bytes conditioned on a media
   skill matrix AND media codec bytes conditioned on a text skill matrix;
 * causal-LM cross-entropy + auxiliary confidence BCE (adaptive loop);
@@ -625,6 +633,13 @@ class Trainer:
 
     # -- batches ----------------------------------------------------------
     def _next_batch(self) -> dict[str, Any] | None:
+        """Pull the next micro-batch from the stream (single process).
+
+        This is the custom iterable wrapper that replaces a PyTorch
+        DataLoader: ``num_workers=0`` semantics by construction, so HF
+        streaming never deadlocks in worker subprocesses and nothing is
+        prefetched to disk. ``StopIteration`` ends the run cleanly.
+        """
         assert self.builder is not None and self.samples is not None
         while not self.builder.ready(self.micro_batch):
             try:
@@ -709,6 +724,15 @@ class Trainer:
             self.mixture = build_mixture(data_cfg, seed=int(
                 self.config.get("training", {}).get("seed", 24)))
             self.samples = iter(self.mixture)
+        # Phase 24.2 streaming contract: the sample source must be a len-less
+        # iterator. A sized object (list, map-style Dataset, ...) means
+        # epoch-style training over materialised data -- reject it loudly
+        # instead of silently downloading a corpus to the Colab disk.
+        if hasattr(self.samples, "__len__"):
+            raise TypeError(
+                "Trainer samples must be a streaming iterator without __len__ "
+                f"(got {type(self.samples).__name__}); epoch-based training over "
+                "sized datasets is forbidden (Phase 24.2 strict streaming)")
         tool_rate = float(self.config.get("training", {}).get("tool_trajectory_rate", 0.02))
         if tool_rate > 0:
             self.samples = inject_tool_trajectories(self.samples, rate=tool_rate,
@@ -732,6 +756,13 @@ class Trainer:
         tokens = 0
         last_metrics: dict[str, Any] = {}
         stop_reason = "max_steps"
+        # STEP-BASED loop (Phase 24.2): equivalent to
+        #   for step, batch in enumerate(dataloader):
+        #       if step >= max_steps: break
+        # but counting OPTIMIZER steps (grad_accum micro-batches each).
+        # Streams have no len() and no epochs: we pull one micro-batch at a
+        # time from the single-process iterable pipeline and stop on
+        # max_steps, the wall-clock budget, or stream exhaustion.
         while self.step < max_steps:
             if deadline is not None and time.monotonic() >= deadline:
                 stop_reason = "time_budget"

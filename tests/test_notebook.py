@@ -55,6 +55,30 @@ def test_notebook_audits_the_ptbr_mix_before_training():
     assert "40/30/20/10" not in source                 # legacy mix is gone
 
 
+def test_notebook_verifies_zero_disk_streaming_before_training():
+    """24.2.3: the Zero-Disk cell runs right after data init, before training."""
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
+    audit = next(src for src in code if "audit_mixture" in src)
+    zero = next(src for src in code if "disk_usage" in src)
+    train = next(src for src in code if "training.train" in src)
+    # Right after data initialization (the audit cell builds the mixture)...
+    assert code.index(zero) == code.index(audit) + 1
+    # ...and strictly before the 4-hour launch.
+    assert code.index(zero) < code.index(train)
+    # 1) prints + asserts the dataset TYPE (must be IterableDataset)
+    assert "IterableDataset" in zero and "isinstance" in zero
+    assert "open_stream" in zero and "type(stream)" in zero
+    # 2) disk usage before/after the first 10 streamed batches
+    assert "range(10)" in zero and "next_batch" in zero
+    assert "before_mb" in zero and "after_mb" in zero
+    # 3) asserts the growth is negligible
+    assert "growth_mb" in zero and "MAX_GROWTH_MB" in zero
+    assert "assert growth_mb <= MAX_GROWTH_MB" in zero
+    # the iterable-safe shuffle contract is visible in the cell output
+    assert "buffer_size" in zero
+
+
 def test_notebook_has_no_legacy_phase_references():
     source = NOTEBOOK.read_text(encoding="utf8")
     for legacy in ("phase22", "phase1_", "01_setup", "02_distill", "03_rl"):
