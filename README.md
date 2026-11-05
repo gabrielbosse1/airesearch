@@ -42,7 +42,7 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming 40/30/20/10 mix with fallback chains, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 127 tests: GLU math, memory, projection, adaptive loop, tooling, trainer, sources, notebook, hygiene |
+| `tests/` | 129 tests: GLU math, memory, projection, adaptive loop, tooling, trainer, sources, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 
 ## Quickstart

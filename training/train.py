@@ -36,6 +36,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterator, Mapping
 
@@ -217,7 +218,17 @@ def inject_tool_trajectories(samples: Iterator[tuple[str, dict[str, Any]]], *,
     without a legacy synthetic-data generator.
     """
     rng = random.Random(seed)
-    search = search_fn or make_search_fn("mock")
+    if search_fn is None:
+        # The built-in mock is deterministic, so memoise it: a sandbox spawn
+        # costs ~17 ms and corpus-derived queries repeat heavily. Never cache
+        # a caller-supplied search_fn (it may be live/stateful).
+        base_search = make_search_fn("mock")
+
+        @lru_cache(maxsize=4096)
+        def search(query: bytes) -> bytes:
+            return base_search(query)
+    else:
+        search = search_fn
     for group, sample in samples:
         yield group, sample
         if sample.get("kind") != "text" or rng.random() >= rate:

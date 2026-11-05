@@ -213,7 +213,7 @@ packs to fixed-length shifted pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **127 passed in ~3.1 s** (CPU). Coverage:
+`python -m pytest tests/ -q` → **129 passed in ~3.3 s** (CPU). Coverage:
 exact GLU math at production widths, key-matching fidelity (aligned query
 retrieves its value to 1e-3), all-8-layer injection + exact parameter count,
 masked/empty retrieval, projector gradient flow, bank FIFO/detach/persistence,

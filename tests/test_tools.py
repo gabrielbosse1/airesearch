@@ -126,6 +126,27 @@ def test_trajectory_injector_trains_control_ids():
     assert list(inject_tool_trajectories(iter(base[:3]), rate=0.0)) == base[:3]
 
 
+def test_injector_caches_repeated_mock_queries(monkeypatch):
+    import training.train as tt
+    calls = []
+    real = tt.run_search
+
+    def counting(query, **kwargs):
+        calls.append(query)
+        return real(query, **kwargs)
+
+    monkeypatch.setattr(tt, "run_search", counting)
+    # Identical documents -> identical query -> exactly ONE sandbox spawn.
+    base = [("code", {"kind": "text",
+                      "data": b"alpha beta gamma delta epsilon zeta"})] * 40
+    out = list(tt.inject_tool_trajectories(iter(base), rate=1.0, seed=7))
+    search_trajs = [s for g, s in out if g == "tools" and TOOL_SEARCH in s["ids"]]
+    assert search_trajs, "expected at least one search trajectory"
+    assert len(calls) == 1  # memoised: one spawn for the repeated query
+    # Results are still the real deterministic mock output.
+    assert b"mock ddgs" in bytes(i for i in search_trajs[0]["ids"] if i < 256)
+
+
 def test_no_regex_hacks_in_runtime():
     # The Phase 24 contract: no host-side regex parsing of model text.
     import re as regex  # the TEST may use regex; the runtime may not

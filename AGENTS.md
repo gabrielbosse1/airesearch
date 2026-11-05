@@ -55,7 +55,7 @@ models/encoders.py       frozen encoders, skill projectors, uint8 codec
 training/train.py        the ONE training script (+ sandboxed search runtime)
 data/sources.py          streaming 40/30/20/10 mix + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 4096 ctx, 8192 memory)
-tests/                   127-test regression suite (CPU, ~3 s)
+tests/                   129-test regression suite (CPU, ~3 s)
 pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints)
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
 requirements.txt  .gitignore  package __init__.py files
