@@ -1,8 +1,0 @@
-{
-  "command": "python -m pytest tests/ -q",
-  "tests_passed": 281,
-  "subtests_passed": 39,
-  "elapsed_s": 166.88,
-  "phase17_tests": 23,
-  "note": "258 Phase <=16 tests plus 23 Phase 17 tests"
-}

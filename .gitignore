@@ -2,18 +2,14 @@ __pycache__/
 .venv/
 *.pyc
 *.log
-
-# Local data caches and streamed shards (never committed).
-data/processed/
-data_cache/
-data_cache_phase22/
-
-# Phase 22 training artefacts: checkpoints, streamed shards and telemetry.
-runs/phase22/checkpoints/
-runs/phase22/*.pt
-runs/phase22/metrics.jsonl
-runs/phase22/vram.jsonl
 *.tmp
 
-# Local conversation memories may contain private user data.
-runs/user_memory/
+# Training artefacts: checkpoints, streamed shards, telemetry (never committed).
+runs/
+data_cache/
+data_cache_phase22/
+*.pt
+*.npz
+
+# Local user memory may contain private data.
+user_memory/

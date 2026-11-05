@@ -1,14 +1,19 @@
-# ByteCore-DualMemory — Phase 22/23 runtime requirements.
-# CPU-only verification works with these pins; a Colab T4 run needs no extras.
-torch>=2.5.1            # enable_gqa / SDPA fused kernels, torch.amp.GradScaler
+# ByteCore-DualMemory -- Phase 24 runtime (CPU tests + Colab T4 run).
+torch>=2.5.1            # SDPA / enable_gqa, torch.amp.GradScaler
+torchvision             # frozen ResNet/ViT image encoders
+torchaudio              # frozen Wav2Vec2 audio encoder
 numpy
-pyyaml                  # configs/*.yaml
+pyyaml                  # configs/t4_scaled.yaml
+pillow                  # image decoding for ingestion
 
-# Real streaming Hugging Face datasets, Hub checkpoints, notebook validation.
-datasets>=3,<5
-huggingface_hub>=0.25,<2
+# Streaming Hugging Face data + Hub checkpoints.
+datasets>=3,<6
+huggingface_hub>=0.25
 tqdm
-nbformat>=5
 
-# Regression suite.
+# True tooling: real DuckDuckGo search at inference (mock needs nothing).
+ddgs
+
+# Notebook validation + regression suite.
+nbformat>=5
 pytest

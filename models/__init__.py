@@ -1,57 +1,40 @@
-"""ByteCore-DualMemory: byte-level foundation + hierarchical external memory.
+"""ByteCore-DualMemory (Phase 24): byte foundation + gated 8192-dim memory.
 
-Phase 22 / 23 surface only. Everything importable here is on the runtime path
-of the current architecture:
+* :mod:`models.foundation` -- causal byte Transformer with the Gated Skill
+  Adapter (1024 <-> 8192 GLU bridge) in every layer, the confidence-headed
+  adaptive refinement loop, and token-id tool generation.
+* :mod:`models.memory_model` -- DualMemory: episodic + procedural banks,
+  1024-dim keys / 8192-dim values, gradient-free writes, differentiable reads.
+* :mod:`models.encoders` -- frozen multimodal encoders + trainable skill
+  projectors + the uint8 matrix codec for bidirectional byte prediction.
 
-* :mod:`models.foundation` -- the causal byte-level Transformer (RMSNorm,
-  SwiGLU, RoPE, GQA, weight-tied iterative refinement).
-* :mod:`models.memory_model` -- episodic / semantic-exemplar / procedural
-  hierarchical memory with differentiable top-K reads.
-* :mod:`models.foundation_memory` -- memory injected into the byte stream as a
-  ``[MEM] topic = value`` prefix.
-* :mod:`models.react` and :mod:`models.sandbox` -- ``Thought/Action/Observation``
-  tool use as ordinary bytes, executed in a sandbox.
-* :mod:`models.holdout`, :mod:`models.procedural`, :mod:`models.contradiction_graph`
-  -- provenance guard, byte-exact procedure replay and temporal fact graphs.
-
-No tokenizers, no diffusion core, no pointer-generator copy head and no
-conversation stack remain in the tree; see ``ARCHITECTURE_AUDIT.md``.
+No tokenizer, no regex tool parsing, no host-side text hacks.
 """
 
-from .contradiction_graph import Fact, ContradictionReport
-from .foundation import (BOS, EOS, PAD, REF_END, REF_START, VOCAB_SIZE,
+from .foundation import (BOS, EOS, PAD, TOOL_SEARCH, TOOL_SEARCH_END,
+                         OBS_START, OBS_END, EDIT, EDIT_END, VOCAB_SIZE,
                          CausalByteTransformer, FoundationConfig,
-                         IterativeRefinement, RMSNorm, SwiGLUFFN, apply_rotary,
-                         decode_ids, encode_bytes, load_foundation, make_norm,
-                         pad_batch, repeat_kv, rotary_tables, rotate_half,
-                         save_foundation)
-from .foundation_memory import MemoryEntry, PrefixMemory, ScriptedRetriever
-from .holdout import HoldoutGuard, HoldoutViolation, content_hash, pair_hash
-from .memory_model import (ALL_TIERS, TIER_EPISODIC, TIER_PROCEDURAL,
-                           TIER_SEMANTIC, EpisodicMemoryBank, ImportanceScorer,
-                           MemoryModel, ProceduralSkillBank, SemanticExemplarBank)
-from .procedural import Procedure, ProcedureExecution
-from .react import (ActionCall, ReactLoop, ReactRun, format_action,
-                    format_observation, last_action, observation_line,
-                    parse_action, render_prompt, render_trajectory,
-                    sandbox_observation)
-from .sandbox import ByteSandbox, SandboxViolation
+                         GatedSkillAdapter, IterativeRefinement, RMSNorm,
+                         SwiGLUFFN, decode_ids, encode_bytes, load_foundation,
+                         make_norm, pad_batch, save_foundation)
+from .memory_model import (KEY_DIM, VALUE_DIM, MODALITIES, DualMemory,
+                           EpisodicEventBank, ProceduralSkillBank,
+                           SkillBankView, stack_views)
+from .encoders import (FrozenEncoder, MultimodalIngestor, SkillKeyProjector,
+                       SkillProjector, TextSkillProjector, build_encoder,
+                       bytes_to_matrix, matrix_to_bytes,
+                       pooled_text_embedding, preprocess_image,
+                       sample_video_frames)
 
 __all__ = [
-    "Fact", "ContradictionReport",
-    "BOS", "EOS", "PAD", "REF_START", "REF_END", "VOCAB_SIZE",
-    "CausalByteTransformer", "FoundationConfig", "IterativeRefinement",
-    "RMSNorm", "SwiGLUFFN", "apply_rotary", "decode_ids", "encode_bytes",
-    "load_foundation", "make_norm", "pad_batch", "repeat_kv", "rotary_tables",
-    "rotate_half", "save_foundation",
-    "MemoryEntry", "PrefixMemory", "ScriptedRetriever",
-    "HoldoutGuard", "HoldoutViolation", "content_hash", "pair_hash",
-    "ALL_TIERS", "TIER_EPISODIC", "TIER_PROCEDURAL", "TIER_SEMANTIC",
-    "EpisodicMemoryBank", "ImportanceScorer", "MemoryModel",
-    "ProceduralSkillBank", "SemanticExemplarBank",
-    "Procedure", "ProcedureExecution",
-    "ActionCall", "ReactLoop", "ReactRun", "format_action",
-    "format_observation", "last_action", "observation_line", "parse_action",
-    "render_prompt", "render_trajectory", "sandbox_observation",
-    "ByteSandbox", "SandboxViolation",
+    "BOS", "EOS", "PAD", "TOOL_SEARCH", "TOOL_SEARCH_END", "OBS_START",
+    "OBS_END", "EDIT", "EDIT_END", "VOCAB_SIZE",
+    "CausalByteTransformer", "FoundationConfig", "GatedSkillAdapter",
+    "IterativeRefinement", "RMSNorm", "SwiGLUFFN", "decode_ids", "encode_bytes",
+    "load_foundation", "make_norm", "pad_batch", "save_foundation",
+    "KEY_DIM", "VALUE_DIM", "MODALITIES", "DualMemory", "EpisodicEventBank",
+    "ProceduralSkillBank", "SkillBankView", "stack_views",
+    "FrozenEncoder", "MultimodalIngestor", "SkillKeyProjector", "SkillProjector",
+    "TextSkillProjector", "build_encoder", "bytes_to_matrix", "matrix_to_bytes",
+    "pooled_text_embedding", "preprocess_image", "sample_video_frames",
 ]
