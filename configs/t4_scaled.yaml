@@ -1,4 +1,6 @@
-# Phase 24 -- ByteCore-DualMemory, the 4-hour T4 pre-training preset.
+# Phase 24.1 -- ByteCore-DualMemory, the 4-hour T4 pre-training preset.
+# PT-BR-first: 50% Portuguese (Brazil) documents, 25% code, 15% multimodal,
+# 10% English (data/sources.py enforces the quota, not just the expectation).
 #
 # Load with:  yaml.safe_load(open("configs/t4_scaled.yaml"))
 # Model with: FoundationConfig.from_mapping(cfg["model"])
@@ -65,17 +67,24 @@ training:
   entropy_threshold: 0.35          # normalised byte-entropy target cutoff
   ingest_to_memory: true           # write ingested matrices to the bank
   tool_trajectory_rate: 0.02       # mock-sandbox tool/edit trajectories (CE)
+  mix_audit_batches: 100           # notebook pre-flight mix audit (100 x micro_batch)
+  mix_audit_tolerance: 0.02        # allowed |doc share - target| per group (2 pp)
 
 vram:
   target_max_gb: 12.0              # measured probe shrinks batch 4->2->1 above
 
 data:
   streaming: true
-  weights:                         # token-budget mix (data/sources.py)
-    code: 0.40                     # bigcode/the-stack (Python + JavaScript)
-    language: 0.30                 # TucanoBR/GigaVerbo (PT-BR) + fineweb (EN)
-    multimodal: 0.20               # COYO captions/images + LibriSpeech audio
-    logic: 0.10                    # open-web-math
+  # PT-BR-FIRST mix (Phase 24.1). Fractions of DRAWN DOCUMENTS, enforced
+  # quota-exactly per 100-draw window by data/sources.MixtureSampler
+  # (largest-remainder allocation + seeded shuffle). Must sum to 1.0.
+  # The byte/token share is a different quantity and is reported separately by
+  # data/sources.audit_mixture() -- never confuse the two.
+  weights:
+    ptbr: 0.50                     # TucanoBR/GigaVerbo -> fineweb-2 por_Latn
+    code: 0.25                     # bigcode/the-stack (Python + JavaScript)
+    multimodal: 0.15               # COYO captions/images + LibriSpeech audio
+    english: 0.10                  # HuggingFaceFW/fineweb (secondary language)
 
 checkpoints:
   local_dir: runs/checkpoints

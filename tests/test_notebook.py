@@ -39,6 +39,22 @@ def test_notebook_targets_the_right_run():
     assert "HF_TOKEN" in source
 
 
+def test_notebook_audits_the_ptbr_mix_before_training():
+    """24.1.2: the mix verification cell must run BEFORE the 4-hour launch."""
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
+    audit = next(src for src in code if "audit_mixture" in src)
+    train = next(src for src in code if "training.train" in src)
+    assert code.index(audit) < code.index(train), "audit must precede the run"
+    assert "format_mixture_report" in audit
+    assert "mix_audit_batches" in audit and "mix_audit_tolerance" in audit
+    assert "max_seconds" in audit                      # cannot hang the notebook
+    assert "quotas_ok" in audit and "ptbr" in audit    # hard gate on 50% PT-BR
+    source = NOTEBOOK.read_text(encoding="utf8")
+    assert "50/25/15/10" in source and "PT-BR" in source
+    assert "40/30/20/10" not in source                 # legacy mix is gone
+
+
 def test_notebook_has_no_legacy_phase_references():
     source = NOTEBOOK.read_text(encoding="utf8")
     for legacy in ("phase22", "phase1_", "01_setup", "02_distill", "03_rl"):

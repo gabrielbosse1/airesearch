@@ -1,12 +1,15 @@
-"""Unified trainer: batches, precision, accumulation, checkpoints, resume."""
+"""Unified trainer: batches, precision, masking, mix, checkpoints, resume."""
 import pytest
 import torch
 
+from data.sources import MixtureSampler
 from models.encoders import MultimodalIngestor, TextSkillProjector
-from models.foundation import PAD, FoundationConfig
+from models.foundation import PAD, FoundationConfig, encode_bytes
 from training.train import (BatchBuilder, Trainer, load_config,
                             make_grad_scaler, resolve_precision, run_smoke,
                             smoke_config, smoke_samples)
+
+PTBR_TARGETS = {"ptbr": 0.50, "code": 0.25, "multimodal": 0.15, "english": 0.10}
 
 
 def test_production_config_loads():
@@ -17,7 +20,11 @@ def test_production_config_loads():
     assert config["training"]["micro_batch_size"] == 4
     assert config["training"]["grad_accum"] == 8
     weights = config["data"]["weights"]
-    assert weights == {"code": 0.4, "language": 0.3, "multimodal": 0.2, "logic": 0.1}
+    # PT-BR-first: 50% Portuguese documents, then code, multimodal, English.
+    assert weights == PTBR_TARGETS
+    assert abs(sum(weights.values()) - 1.0) < 1e-12
+    assert config["training"]["mix_audit_batches"] == 100
+    assert config["training"]["mix_audit_tolerance"] == 0.02
 
 
 def test_precision_resolution_cpu():
@@ -89,6 +96,170 @@ def test_ids_samples_train_control_tokens():
     loss = model.loss(batch["ids"], batch["targets"], confidence_weight=0.0)
     loss.backward()
     assert model.head.weight.grad[TOOL_SEARCH].abs().sum().item() > 0
+
+
+def _masked_rows(lines, length=64):
+    """Right-pad per-row byte sequences; targets are PAD wherever there is no
+    next byte. This is exactly what BatchBuilder does via pad_batch."""
+    ids = torch.full((len(lines), length), PAD, dtype=torch.long)
+    targets = torch.full((len(lines), length), PAD, dtype=torch.long)
+    for index, line in enumerate(lines):
+        row = encode_bytes(line)[:length]
+        ids[index, : row.numel()] = row
+        targets[index, : row.numel() - 1] = row[1:]
+    return ids, targets
+
+
+def _drain_rows(builder):
+    """Pop every complete row currently buffered (feed-then-drain pattern)."""
+    rows = []
+    while builder.ready(1):
+        rows.append(builder.pop_batch(1))
+    return rows
+
+
+def test_pad_masking_holds_for_all_four_ptbr_mix_sources():
+    """ignore_index=PAD is source-agnostic: PT-BR text, code and English rows are
+    packed full (no padding), while multimodal rows mask their prompt prefix."""
+    model, builder = _builder()
+    documents = {
+        "ptbr": "O Brasil é um país da América do Sul, e o português é a língua oficial. ".encode("utf8") * 6,
+        "code": b"def add(a, b):\n    return a + b\n" * 8,
+        "english": b"The quick brown fox jumps over the lazy dog. " * 6,
+    }
+    for name, data in documents.items():
+        builder.feed({"kind": "text", "data": data})
+        batches = _drain_rows(builder)
+        assert batches, name
+        for batch in batches:
+            assert batch["targets"].min().item() >= 0
+            assert batch["targets"].max().item() <= PAD
+            # Text rows are packed full: any mask is a right-hand pad tail.
+            masked = batch["targets"][0] == PAD
+            if bool(masked.any()):
+                assert bool(masked[int(masked.nonzero()[0]):].all())
+
+    # Multimodal: prompt targets are masked (prefix), the caption is learned.
+    builder.feed({"kind": "multimodal", "modality": "image",
+                  "caption": b"um gato laranja", "features": torch.randn(32)})
+    media_to_text, text_to_media = _drain_rows(builder)[:2]
+    assert bool(media_to_text["memory"].mask.all()) and bool(text_to_media["memory"].mask.all())
+    prompt = len(b"caption: ")
+    assert bool((media_to_text["targets"][0, :prompt] == PAD).all())
+    assert int((media_to_text["targets"][0] != PAD).sum()) == len(b"um gato laranja") + 1
+    assert bool((text_to_media["targets"][0, : len(b"matrix: um gato laranja\n")] == PAD).all())
+    loss = model.loss(media_to_text["ids"], media_to_text["targets"],
+                      media_to_text["memory"], confidence_weight=0.1)
+    assert torch.isfinite(loss)
+    loss.backward()
+    grads = builder.ingestors["image"].value_projector.projection.weight.grad
+    assert grads is not None and torch.isfinite(grads).all()
+
+
+def test_pad_masking_excludes_padding_and_prompt_prefixes():
+    """PAD targets are ignored exactly: CE equals the mean over the *unmasked*
+    positions, truncating the pad tail changes nothing, and a fully masked
+    batch is a zero loss instead of CE's 0/0 NaN."""
+    import torch.nn.functional as F
+    model, builder = _builder()
+    builder.feed({"kind": "multimodal", "modality": "audio",
+                  "caption": b"fala curta em portugues", "features": torch.randn(32)})
+    caption, codec = _drain_rows(builder)[:2]
+    ids, targets = caption["ids"], caption["targets"]
+    valid = targets != PAD
+    assert int(valid.sum()) == len(b"fala curta em portugues") + 1
+
+    with torch.no_grad():
+        logits = model(ids)
+    masked_mean = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
+                                  targets.reshape(-1), ignore_index=PAD)
+    only_valid = F.cross_entropy(logits[valid], targets[valid])
+    assert torch.allclose(masked_mean, only_valid, atol=1e-6)
+
+    ce = model.loss(ids, targets, confidence_weight=0.0)
+    assert torch.allclose(ce, only_valid, atol=1e-5)
+
+    # Dropping the PAD tail shortens the sequence without changing the loss.
+    keep = int(valid.nonzero().max().item()) + 1
+    ce_truncated = model.loss(ids[:, :keep], targets[:, :keep], confidence_weight=0.0)
+    assert torch.allclose(ce, ce_truncated, atol=1e-5)
+
+    def truncation_is_inert(batch):
+        live = batch["targets"] != PAD
+        cut = int(live.nonzero().max().item()) + 1
+        return torch.allclose(
+            model.loss(batch["ids"], batch["targets"], confidence_weight=0.0),
+            model.loss(batch["ids"][:, :cut], batch["targets"][:, :cut],
+                       confidence_weight=0.0), atol=1e-5)
+
+    assert truncation_is_inert(caption) and truncation_is_inert(codec)
+
+    # All-PAD filler rows and fully masked batches contribute zero tokens.
+    pad_row = torch.full((1, ids.shape[1]), PAD, dtype=ids.dtype)
+    padded, _ = model.loss(torch.cat([ids, pad_row]), torch.cat([targets, pad_row]),
+                           confidence_weight=0.1, return_metrics=True)
+    assert torch.allclose(padded, model.loss(ids, targets, confidence_weight=0.1), atol=1e-6)
+    empty_loss, empty_metrics = model.loss(pad_row, pad_row, confidence_weight=0.1,
+                                           return_metrics=True)
+    assert torch.isfinite(empty_loss) and empty_loss.item() == 0.0
+    assert empty_metrics["ce"] == 0.0 and empty_metrics["confidence_bce"] == 0.0
+    empty_loss.backward()   # zero gradient, never NaN
+    for parameter in model.parameters():
+        if parameter.grad is not None:
+            assert torch.isfinite(parameter.grad).all()
+
+
+def test_loss_is_token_weighted_so_50pct_ptbr_does_not_skew_it():
+    """CE and the auxiliary confidence BCE are means over non-PAD tokens, so a
+    batch that is 50% PT-BR is exactly the token-weighted blend of its parts."""
+    cfg = FoundationConfig(d_model=64, n_layers=2, n_heads=4, d_ff=128,
+                           max_seq_len=128, dropout=0.0, memory_dim=128,
+                           refinement_steps=4, refinement_rank=32)
+    from models.foundation import CausalByteTransformer
+    torch.manual_seed(0)
+    model = CausalByteTransformer(cfg)
+    model.train()
+    ptbr = "O Brasil é um país da América do Sul, e o português é a língua oficial. ".encode("utf8")[:64]
+    caption = b"um gato laranja"                      # short, heavily padded row
+    half = [ptbr, ptbr, caption, caption]
+    half_ids, half_targets = _masked_rows(half)
+    ptbr_ids, ptbr_targets = _masked_rows([ptbr, ptbr])
+    cap_ids, cap_targets = _masked_rows([caption, caption])
+
+    _, mixed = model.loss(half_ids, half_targets, confidence_weight=0.1,
+                          return_metrics=True)
+    _, only_ptbr = model.loss(ptbr_ids, ptbr_targets, confidence_weight=0.1,
+                              return_metrics=True)
+    _, only_cap = model.loss(cap_ids, cap_targets, confidence_weight=0.1,
+                             return_metrics=True)
+    n_ptbr = int((ptbr_targets != PAD).sum())
+    n_cap = int((cap_targets != PAD).sum())
+    assert n_ptbr > n_cap
+    for key in ("ce", "confidence_bce", "total"):
+        expected = (n_ptbr * only_ptbr[key] + n_cap * only_cap[key]) / (n_ptbr + n_cap)
+        assert mixed[key] == pytest.approx(expected, rel=1e-4, abs=1e-6), key
+    assert 0.0 <= mixed["confidence_bce"] <= 0.6932
+
+
+def test_trainer_reports_the_effective_mix(tmp_path):
+    config = smoke_config()
+    config["training"]["tool_trajectory_rate"] = 0.0
+    config["checkpoints"]["local_dir"] = str(tmp_path / "ckpt")
+    config["output"]["metrics_jsonl"] = str(tmp_path / "metrics.jsonl")
+
+    def group(name):
+        while True:
+            yield {"kind": "text", "data": f"amostra {name} do mix pt-br".encode()}
+
+    sampler = MixtureSampler({name: group(name) for name in PTBR_TARGETS}, seed=24)
+    trainer = Trainer(config, device="cpu", samples=sampler, resume=False)
+    summary = trainer.run(max_steps=2)
+    mix = summary["data_mix"]
+    assert mix["targets"] == PTBR_TARGETS
+    assert mix["window"] == 100
+    assert sum(mix["counts"].values()) > 0
+    assert 0.2 <= mix["observed_share"]["ptbr"] <= 0.8   # few draws, quota window
+    assert sum(mix["observed_share"].values()) == pytest.approx(1.0, abs=1e-12)
 
 
 def test_gradient_accumulation_equivalence():

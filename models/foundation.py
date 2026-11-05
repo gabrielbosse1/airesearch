@@ -515,6 +515,13 @@ class CausalByteTransformer(nn.Module):
         ``entropy_threshold`` (a "decided" state), else ``0``. Targets are
         detached: the confidence head learns to READ certainty, it must not
         change the byte distribution to manufacture it.
+
+        One masking contract for every data group (PT-BR text, code, English,
+        multimodal captions/codecs): both ``ce`` and the auxiliary BCE are
+        means over positions where ``targets != PAD``, so the loss is
+        token-weighted and a 50% PT-BR batch is the exact blend of its parts.
+        A batch with no unmasked target returns a graph-carrying zero loss
+        (cross-entropy would be ``0/0 = NaN``).
         """
         if targets is None:
             targets = ids[:, 1:]
@@ -524,26 +531,38 @@ class CausalByteTransformer(nn.Module):
         want_conf = (self.refinement is not None and confidence_weight > 0.0
                      and self.training)
         logits, info = self.forward(ids, memory, collect_states=want_conf, return_info=True)
+        valid = targets != PAD
+        if not bool(valid.any()):
+            # A fully masked batch has no supervision: cross_entropy would
+            # return 0/0 = NaN and poison every weight. Return a zero loss that
+            # still carries the graph (backward is a no-op, never NaN).
+            total = logits.sum() * 0.0
+            if return_metrics:
+                return total, {"ce": 0.0, "confidence_bce": 0.0, "total": 0.0,
+                               "mean_entropy": None,
+                               "steps_run": int(info["steps_run"])}
+            return total
         ce = F.cross_entropy(logits.reshape(-1, logits.shape[-1]),
                              targets.reshape(-1), ignore_index=PAD)
         aux = torch.zeros((), device=ce.device, dtype=ce.dtype)
         mean_entropy = None
         if want_conf:
-            valid = targets != PAD
-            if bool(valid.any()):
-                states = info["states"]
-                with torch.no_grad():
-                    step_logits = torch.stack(
-                        [self.head(self.norm_final(state)) for state in states]).float()
-                    log_probs = torch.log_softmax(step_logits, dim=-1)
-                    entropy = -(log_probs.exp() * log_probs).sum(-1) / math.log(self.config.vocab_size)
-                    conf_targets = (entropy < float(entropy_threshold)).float()
-                    mean_entropy = float(entropy[..., valid].mean().item())
-                terms = []
-                for state, target_t in zip(states, conf_targets):
-                    conf = self.refinement.confidence(state).float().clamp(1e-6, 1.0 - 1e-6)
-                    terms.append(F.binary_cross_entropy(conf[valid], target_t[valid]))
-                aux = torch.stack(terms).mean().to(ce.dtype)
+            # Both terms are means over NON-PAD positions: a batch that is 50%
+            # PT-BR is the token-weighted blend of its parts, so the auxiliary
+            # BCE cannot be diluted by short (heavily padded) caption rows.
+            states = info["states"]
+            with torch.no_grad():
+                step_logits = torch.stack(
+                    [self.head(self.norm_final(state)) for state in states]).float()
+                log_probs = torch.log_softmax(step_logits, dim=-1)
+                entropy = -(log_probs.exp() * log_probs).sum(-1) / math.log(self.config.vocab_size)
+                conf_targets = (entropy < float(entropy_threshold)).float()
+                mean_entropy = float(entropy[..., valid].mean().item())
+            terms = []
+            for state, target_t in zip(states, conf_targets):
+                conf = self.refinement.confidence(state).float().clamp(1e-6, 1.0 - 1e-6)
+                terms.append(F.binary_cross_entropy(conf[valid], target_t[valid]))
+            aux = torch.stack(terms).mean().to(ce.dtype)
         total = ce + float(confidence_weight) * aux
         if return_metrics:
             return total, {"ce": float(ce.item()), "confidence_bce": float(aux.item()),
