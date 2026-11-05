@@ -74,6 +74,14 @@ MIX_WINDOW: int = 100
 #: free Colab instance. Nothing is ever written to disk.
 SHUFFLE_BUFFER_SIZE: int = 10_000
 
+#: Media rows are 100-1000x larger than text rows: the reservoir holds DECODED
+#: rows (PIL images / float waveforms), so 10k embedded MSCOCO images would be
+#: ~1 GB and 10k LibriSpeech clips ~2 GB of RAM -- an OOM risk next to the
+#: model. ``image_embedded``/``audio`` sources therefore cap the reservoir at
+#: 1k rows (~100-200 MB). ``image_url`` rows (COYO) stay uncapped: they buffer
+#: only url+caption strings; the image bytes are fetched downstream.
+MEDIA_SHUFFLE_BUFFER_CAP: int = 1_000
+
 #: Human-readable labels for the audit table (and the trainer's summary).
 GROUP_LABELS: dict[str, str] = {"ptbr": "PT-BR", "code": "Code",
                                 "multimodal": "Multimodal", "english": "English",
@@ -160,6 +168,17 @@ def assert_streaming(dataset: Any, *, context: str = "") -> Any:
     return dataset
 
 
+def effective_shuffle_buffer(spec: SourceSpec, shuffle_buffer: int) -> int:
+    """Reservoir size actually used for ``spec`` (media kinds are RAM-capped).
+
+    Kept public so the notebook's Zero-Disk cell prints the REAL buffer size,
+    not the requested one.
+    """
+    if shuffle_buffer > 0 and spec.kind in ("image_embedded", "audio"):
+        return min(int(shuffle_buffer), MEDIA_SHUFFLE_BUFFER_CAP)
+    return int(shuffle_buffer)
+
+
 def open_stream(spec: SourceSpec, *, seed: int = 24,
                 shuffle_buffer: int = SHUFFLE_BUFFER_SIZE) -> Any:
     """Open ONE source as a verified, buffered-shuffle ``IterableDataset``.
@@ -173,7 +192,9 @@ def open_stream(spec: SourceSpec, *, seed: int = 24,
     3. shuffling uses the iterable-safe ``.shuffle(seed=..., buffer_size=...)``
        reservoir -- RAM-only, seeded, never the map-style ``.shuffle(seed=...)``
        that would raise on a stream. ``shuffle_buffer=0`` disables shuffling
-       (debugging only); the default is ``SHUFFLE_BUFFER_SIZE``.
+       (debugging only); the default is ``SHUFFLE_BUFFER_SIZE``. Media kinds
+       (``image_embedded``/``audio``) are capped at ``MEDIA_SHUFFLE_BUFFER_CAP``
+       rows so decoded images/waveforms cannot OOM the instance.
     """
     from datasets import load_dataset  # lazy: CPU tests never need it
     if shuffle_buffer < 0:
@@ -186,8 +207,9 @@ def open_stream(spec: SourceSpec, *, seed: int = 24,
         raise ValueError(f"{spec.id}: a concrete split is required so load_dataset "
                          f"returns an IterableDataset, not an IterableDatasetDict")
     dataset = assert_streaming(load_dataset(**kwargs), context=spec.id)
-    if shuffle_buffer > 0:
-        dataset = dataset.shuffle(seed=seed, buffer_size=int(shuffle_buffer))
+    buffer_size = effective_shuffle_buffer(spec, shuffle_buffer)
+    if buffer_size > 0:
+        dataset = dataset.shuffle(seed=seed, buffer_size=buffer_size)
     return dataset
 
 

@@ -79,8 +79,10 @@ data:
   # verified to be an IterableDataset (never a disk-backed Dataset).
   streaming: true
   # RAM-only reservoir for IterableDataset.shuffle(seed=..., buffer_size=...).
-  # 10k documents ~ tens-to-hundreds of MB of RAM, zero disk. Map-style
-  # .shuffle(seed=...) without a buffer is forbidden on streams.
+  # 10k documents ~ tens-to-hundreds of MB of RAM, zero disk. Media fallbacks
+  # (embedded images / decoded audio) are capped at 1000 rows in open_stream:
+  # decoded media rows are 100-1000x larger than text and 10k of them could
+  # OOM the instance. Map-style .shuffle(seed=...) is forbidden on streams.
   shuffle_buffer_size: 10000
   # PT-BR-FIRST mix (Phase 24.1). Fractions of DRAWN DOCUMENTS, enforced
   # quota-exactly per 100-draw window by data/sources.MixtureSampler

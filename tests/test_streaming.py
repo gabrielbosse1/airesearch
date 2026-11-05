@@ -142,6 +142,41 @@ def test_default_buffer_is_10000_and_config_drives_it(mock_streaming_hub, monkey
         build_mixture({"shuffle_buffer_size": -1})
 
 
+def test_media_reservoir_is_ram_capped(mock_streaming_hub, monkeypatch):
+    """Decoded image/waveform rows are 100-1000x larger than text: the
+    reservoir is capped so a media fallback cannot OOM the Colab instance."""
+    from datasets import IterableDataset
+    from data.sources import MEDIA_SHUFFLE_BUFFER_CAP, effective_shuffle_buffer
+    assert MEDIA_SHUFFLE_BUFFER_CAP == 1_000
+    seen = []
+    original = IterableDataset.shuffle
+
+    def spy(self, *args, **kwargs):
+        seen.append(kwargs)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(IterableDataset, "shuffle", spy)
+    by_kind = {spec.kind: spec for specs in DEFAULT_SOURCES.values() for spec in specs}
+    # Embedded images + audio: capped at 1k rows.
+    for kind in ("image_embedded", "audio"):
+        open_stream(by_kind[kind], seed=1, shuffle_buffer=SHUFFLE_BUFFER_SIZE)
+        assert seen[-1]["buffer_size"] == MEDIA_SHUFFLE_BUFFER_CAP, kind
+    # Text and URL-only rows (COYO buffers url+caption strings): uncapped.
+    # Synthetic specs: the mocked coyo chain is deliberately empty (fallback
+    # test), and from_list([]) cannot build a stream at all.
+    for kind in ("text", "image_url"):
+        open_stream(SourceSpec("fake/rows", kind=kind), seed=1,
+                    shuffle_buffer=SHUFFLE_BUFFER_SIZE)
+        assert seen[-1]["buffer_size"] == SHUFFLE_BUFFER_SIZE, kind
+    assert effective_shuffle_buffer(by_kind["image_url"], SHUFFLE_BUFFER_SIZE) == SHUFFLE_BUFFER_SIZE
+    # A smaller requested buffer is never inflated, and the helper agrees.
+    spec = by_kind["audio"]
+    assert effective_shuffle_buffer(spec, 8) == 8
+    assert effective_shuffle_buffer(spec, SHUFFLE_BUFFER_SIZE) == MEDIA_SHUFFLE_BUFFER_CAP
+    open_stream(spec, seed=1, shuffle_buffer=8)
+    assert seen[-1]["buffer_size"] == 8
+
+
 def test_zero_buffer_disables_shuffle_for_debugging(mock_streaming_hub, monkeypatch):
     from datasets import IterableDataset
 

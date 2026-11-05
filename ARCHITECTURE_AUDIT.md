@@ -213,6 +213,10 @@ training — and (3) shuffles with the iterable-safe
 `.shuffle(seed=..., buffer_size=10000)`: a seeded RAM-only reservoir
 (`SHUFFLE_BUFFER_SIZE`, configurable via `data.shuffle_buffer_size`), never
 the map-style `.shuffle(seed=...)` that an `IterableDataset` rejects.
+`image_embedded`/`audio` kinds are capped at `MEDIA_SHUFFLE_BUFFER_CAP=1000`
+rows (`effective_shuffle_buffer`): the reservoir holds decoded PIL images /
+waveforms, so 10k media rows would be 1–2 GB of RAM; `image_url` rows buffer
+only url+caption strings and stay at 10k.
 `build_mixture` rejects `data.streaming: false`. The trainer loop is
 step-based (`while step < max_steps`), never calls `len()` on data, and
 rejects sized sample sources; `MixtureSampler` + `BatchBuilder` form the
@@ -293,7 +297,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **160 passed in ~5.8 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **161 passed in ~5.6 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned

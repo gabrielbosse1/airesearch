@@ -55,7 +55,7 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 160 tests (fully offline): GLU math, memory, projection, adaptive loop, tooling, trainer, quota mix, masking, streaming enforcement, notebook, hygiene |
+| `tests/` | 161 tests (fully offline): GLU math, memory, projection, adaptive loop, tooling, trainer, quota mix, masking, streaming enforcement, notebook, hygiene |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 
 ## Quickstart
@@ -135,8 +135,12 @@ to end, and the guarantee is tested, not assumed:
   `build_mixture` also rejects `data.streaming: false` in the config.
 - **Iterable-safe shuffling.** Streams are shuffled with
   `.shuffle(seed=..., buffer_size=10000)` — a seeded, RAM-only reservoir
-  (`data.shuffle_buffer_size` in the config). The map-style
-  `.shuffle(seed=...)` that fails on an `IterableDataset` is never used.
+  (`data.shuffle_buffer_size` in the config). Embedded-image/audio fallbacks
+  are capped at **1,000 rows** (`MEDIA_SHUFFLE_BUFFER_CAP`): the reservoir
+  holds *decoded* media rows, and 10k images/waveforms would be 1–2 GB of RAM
+  next to the model. COYO (`image_url`) stays at 10k — it buffers only
+  url+caption strings. The map-style `.shuffle(seed=...)` that fails on an
+  `IterableDataset` is never used.
 - **Step-based training.** The loop is `while step < max_steps` — no epochs,
   no `len(dataset)` (streams have no length). Sized sample sources are
   rejected with `TypeError`. There is no multi-process DataLoader:

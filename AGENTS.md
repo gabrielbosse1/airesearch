@@ -36,8 +36,11 @@ and `README.md` (how to run it).
   result is an `IterableDataset` (`assert_streaming` raises `TypeError` on a
   disk-backed `Dataset`/`DatasetDict` or an `IterableDatasetDict`), and
   shuffles with `.shuffle(seed=..., buffer_size=10000)` — a RAM-only
-  reservoir. Map-style `.shuffle(seed=...)` without a buffer is forbidden on
-  streams. `build_mixture` rejects `data.streaming: false`. The trainer loop
+  reservoir, capped at `MEDIA_SHUFFLE_BUFFER_CAP=1000` rows for
+  `image_embedded`/`audio` kinds (decoded media rows are 100–1000× larger
+  than text; 10k of them could OOM the instance). Map-style
+  `.shuffle(seed=...)` without a buffer is forbidden on streams.
+  `build_mixture` rejects `data.streaming: false`. The trainer loop
   is strictly **step-based** (`while step < max_steps`): no epochs, no
   `len(dataset)`, and sized sample sources are rejected with `TypeError`.
   There is no multi-process DataLoader — `MixtureSampler` + `BatchBuilder`
@@ -89,7 +92,7 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 4096 ctx, 8192 memory)
-tests/                   160-test regression suite (CPU, ~6 s, fully offline)
+tests/                   161-test regression suite (CPU, ~6 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
                          mix audit + Zero-Disk verification before training)
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
