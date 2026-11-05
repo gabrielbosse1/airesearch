@@ -114,8 +114,11 @@ def preflight_config(*, steps: int = 500, workdir: str | Path = "runs/coherence_
         "ingest_to_memory": True,
     })
     config["encoders"] = {"image": None, "audio": None, "video": None}
-    config["checkpoints"] = {"local_dir": str(Path(workdir) / "checkpoints")}
-    config["output"] = {"metrics_jsonl": str(Path(workdir) / "metrics.jsonl")}
+    config["checkpoints"] = {"local_dir": str(Path(workdir) / "checkpoints"),
+                             "hf_repo": None}
+    config["output"] = {"run_dir": str(workdir),
+                        "metrics_jsonl": str(Path(workdir) / "metrics.jsonl"),
+                        "evaluate_final": False}
     if not production:
         # Same architecture path, CPU-feasible width. Window stays 1024.
         config["model"] = dict(config["model"])

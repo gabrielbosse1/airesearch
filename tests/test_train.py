@@ -299,7 +299,7 @@ def test_time_based_checkpoint_cadence(tmp_path):
     config = smoke_config()
     config["checkpoints"]["local_dir"] = str(tmp_path / "ckpt")
     config["output"]["metrics_jsonl"] = str(tmp_path / "metrics.jsonl")
-    config["training"]["checkpoint_minutes"] = 0.0  # due every optimizer step
+    config["training"]["checkpoint_minutes"] = 1e-9  # due every optimizer step
     trainer = Trainer(config, device="cpu", samples=smoke_samples(128), resume=False)
     trainer.run(max_steps=2)
     events = [h for h in trainer.history if "checkpoint_event" in h]

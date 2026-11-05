@@ -1,4 +1,4 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.2 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.3 code as it exists
 
 **Status: Ready for 4-Hour Colab Run.** Phase 25.2 coherence pre-flight passed
 (500 steps, strict PT-BR/code assertions). The repository is merged-ready and
@@ -367,11 +367,17 @@ boundaries ~0.60 GB, max live sub-checkpoint + within-layer boundaries ~0.97 GB,
 refinement ~0.92 GB. This is a conservative shape-based estimate; the CUDA
 probe is the authority.
 
-Checkpoints: atomic tmp+rename, every 30 min **and** every 500 steps, model +
-projectors + unified bank/policy + optimizer + scaler + RNG; trainer schema **7**,
-foundation schema **6**, memory schema **2**. Frozen encoders are rebuildable;
-resume recreates projector param groups in order. Hub upload/download failures
-are reported as `uploaded/downloaded: false` with a reason.
+Checkpoints: atomic tmp+rename, every **10 min** or **100 optimizer steps**,
+model + projectors + unified bank/policy + optimizer + scaler + CPU/CUDA RNG +
+counters/last metrics; trainer schema **7**, foundation schema **6**, memory
+schema **2**. Frozen encoders are rebuildable; resume recreates projector param
+groups in order and validates the saved architecture before loading. One local
+previous checkpoint is retained; the Hub keeps commit history. Uploads retry and
+fail closed by default. Logs/config/source/provenance/VRAM/evaluation sync every
+**5 min** and on exit/cooperative crash, with a checkpoint-free debug ZIP.
+Secrets are read from `HF_TOKEN`/Colab Secrets, redacted from console/JSON, and
+never written to config/checkpoints. Resume is exact for saved training state,
+not for live HF stream cursors; incomplete accumulation is discarded.
 
 ## 9. Data (`data/sources.py`) — PT-BR first, strictly streaming
 
@@ -446,7 +452,7 @@ verdict: PASS -- document share within +/-2.0 pp of target (quota window = 100)
 fake `_open_rows`; document counts are the sampler's real output, byte counts
 are fixture-dependent. Production Phase 25 uses `batch_size=1`, so 100 audit
 batches draw 100 documents.) The trainer records the realised mix per log step in
-`runs/metrics.jsonl["data_mix"]` and the final weights/counts/failures in the
+`runs/colab_latest/metrics.jsonl["data_mix"]` and the final weights/counts/failures in the
 run summary.
 
 **Loss and masking (24.1.3).** All four groups flow through one
@@ -469,7 +475,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **199 passed in ~11 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **212 passed in ~11 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -494,7 +500,9 @@ slot recurrence, lm-head isolation, frontier-only causality, zero-init
 legacy equivalence, combined-state confidence, gate bootstrap against the
 double-zero deadlock)**, the coherence smoke script, notebook validity
 (audit + Zero-Disk cell precede the run), the Phase 25.2 pre-flight assertion
-contract, and the cleanup contract itself.
+contract, durable HF persistence (secret redaction, retry/fail-closed uploads,
+checkpoint-free debug bundles, crash artifacts, independent telemetry sync,
+optimizer/token resume), and the cleanup contract itself.
 
 
 ### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)
