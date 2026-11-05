@@ -1,8 +1,0 @@
-{
-  "random_baseline": 0.00390625,
-  "results": {
-    "text": 0.59375,
-    "image": 0.5,
-    "audio": 0.5
-  }
-}
