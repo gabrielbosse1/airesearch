@@ -1,4 +1,4 @@
-"""Unified training script (Phase 24). One script, one pipeline.
+"""Unified training script (Phase 25). One script, one pipeline.
 
     python -m training.train --config configs/t4_scaled.yaml \
         --hf-repo gabrielbosse9/airesearch --max-minutes 240
@@ -9,11 +9,20 @@ Everything the 4-hour Colab run needs lives here:
   resolves to fp16 + GradScaler there, bf16 on Ampere+, fp32 on CPU;
 * the streaming PT-BR-first 50/25/15/10 data mix (``data/sources.py``),
   quota-exact per 100-draw window (50% PT-BR docs), packed to bytes;
+* STRICT streaming (Phase 24.2): every source is a verified
+  ``IterableDataset`` opened with ``streaming=True`` and shuffled with a
+  RAM-only ``buffer_size`` reservoir. The loop is STEP-based
+  (``while step < max_steps``) -- never epochs, never ``len(dataset)``.
+  There is deliberately no multi-process DataLoader: ``MixtureSampler`` +
+  ``BatchBuilder`` are the custom single-process iterable wrapper (the
+  ``num_workers=0`` configuration HF recommends for streaming), so worker
+  deadlocks and disk caching are structurally impossible;
 * bidirectional multimodal batches: caption bytes conditioned on a media
   skill matrix AND media codec bytes conditioned on a text skill matrix;
-* causal-LM cross-entropy + auxiliary confidence BCE (adaptive loop);
+* causal-LM cross-entropy + confidence BCE + dynamic-memory policy loss;
 * gradient checkpointing, grad accumulation, cosine LR with warmup;
-* measured VRAM probe + micro-batch autotune (never an invented number);
+* representative measured VRAM probe + batch autotune; the separate
+  ``--simulate-t4`` accounting mode is explicitly labelled as an estimate;
 * atomic checkpoints every 30 minutes (and every N steps), resumable locally
   or from the Hugging Face Hub;
 * the TRUE tool runtime: ``[TOOL_SEARCH]`` token ids trigger a sandboxed
@@ -36,25 +45,29 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterator, Mapping
 
 import torch
+import torch.nn.functional as F
 import yaml
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
-from models.foundation import (BOS, EOS, PAD, TOOL_SEARCH, TOOL_SEARCH_END,
+from models.foundation import (BOS, EOS, PAD, TOOL_SEARCH, TOOL_SEARCH_END, VOCAB_SIZE,
                                OBS_START, OBS_END, EDIT, EDIT_END,
                                CausalByteTransformer, FoundationConfig,
-                               encode_bytes, pad_batch)
-from models.memory_model import DualMemory, SkillBankView, stack_views
+                               decode_ids, encode_bytes, pad_batch)
+from models.memory_model import (KEY_DIM, VALUE_DIM, DualMemory, EvictionEvent,
+                                 SkillBankView, stack_views)
 from models.encoders import (MultimodalIngestor, TextSkillProjector,
                              build_encoder, matrix_to_bytes,
                              pooled_text_embedding, preprocess_image)
 from data.sources import BytePacker, MixtureSampler, build_mixture, mixture_snapshot
 
-CHECKPOINT_SCHEMA = 4
+CHECKPOINT_SCHEMA = 7  # v7: sliding-window attention + memory long-range hand-off
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +80,159 @@ def load_config(path: str | Path = "configs/t4_scaled.yaml") -> dict[str, Any]:
         raise ValueError(f"{path}: expected a mapping with a 'model' section")
     FoundationConfig.from_mapping(config["model"])  # fail fast on typos
     return config
+
+
+# ---------------------------------------------------------------------------
+# Simulated T4 accounting (ESTIMATE, never a CUDA measurement)
+# ---------------------------------------------------------------------------
+GB = 1_000_000_000
+# Deliberately rounded UP, not presented as exact model-card counts. Each
+# configured modality owns a separate frozen backbone in the ingestor registry.
+FROZEN_ENCODER_PARAM_ESTIMATE = {"vit_b_16": 90_000_000, "wav2vec2": 95_000_000}
+
+
+def _trainable_parameters(config: Mapping[str, Any], model_cfg: FoundationConfig) -> tuple[int, int]:
+    """Exact trainable count on meta + conservative frozen-backbone count."""
+    mem = dict(config.get("memory", {}))
+    enc = dict(config.get("encoders", {}))
+    key_dim = int(mem.get("key_dim", model_cfg.d_model))
+    value_dim = int(mem.get("value_dim", model_cfg.memory_dim or VALUE_DIM))
+    capacity = int(mem.get("capacity", int(mem.get("procedural_capacity", 1024))
+                           + int(mem.get("episodic_capacity", 1024))))
+    with torch.device("meta"):
+        model = CausalByteTransformer(model_cfg)
+        text = TextSkillProjector(model_cfg.d_model, value_dim, key_dim)
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        trainable += sum(p.numel() for p in text.parameters() if p.requires_grad)
+        frozen = 0
+        for name in enc.values():
+            if name is None:
+                continue
+            ingestor = MultimodalIngestor(None, memory_dim=value_dim, key_dim=key_dim,
+                                          encoder_dim=768)
+            trainable += sum(p.numel() for p in ingestor.parameters() if p.requires_grad)
+            frozen += FROZEN_ENCODER_PARAM_ESTIMATE.get(str(name), 100_000_000)
+        trainable += 2 * capacity  # importance_raw + decay_raw
+    return int(trainable), int(frozen)
+
+
+def simulate_t4_vram(config: Mapping[str, Any], *, micro_batch: int | None = None,
+                     seq_len: int | None = None, window_size: int | None = None,
+                     chunk_size: int | None = None) -> dict[str, Any]:
+    """Conservative simulated T4 peak for the sliding-window training path.
+
+    This is an ESTIMATE, not a CUDA measurement. It assumes fp32 trainable
+    weights/grads/AdamW moments, fp16 autocast, fp32 residual boundaries,
+    all-block PLUS sub-block checkpointing, chunk-local sliding-window SDPA
+    (one small mask/workspace live at a time), inline confidence auxiliary
+    loss, and the configured frozen-encoder storage dtype. T4/sm_75 uses the
+    memory-efficient SDPA backend; PyTorch Flash/cuDNN SDPA require sm_80+.
+    """
+    model_cfg = FoundationConfig.from_mapping(config["model"])
+    train = dict(config.get("training", {}))
+    mem = dict(config.get("memory", {}))
+    vram = dict(config.get("vram", {}))
+    batch = int(micro_batch if micro_batch is not None else train.get("micro_batch_size", 1))
+    length = int(seq_len if seq_len is not None else train.get("seq_len", model_cfg.max_seq_len))
+    window = int(window_size if window_size is not None else model_cfg.window_size)
+    chunk = int(chunk_size if chunk_size is not None else model_cfg.sliding_chunk_size)
+    if batch < 1 or length < 1 or length > model_cfg.max_seq_len or window < 1 or chunk < 1:
+        raise ValueError("invalid simulated batch/length/window/chunk")
+    if model_cfg.attention_type == "sliding_window" and not model_cfg.gradient_checkpointing:
+        raise ValueError("sliding-window T4 simulation requires gradient_checkpointing=True")
+    d = model_cfg.d_model
+    h = model_cfg.n_heads
+    kv = model_cfg.n_kv_heads or h
+    ff = model_cfg.d_ff
+    head_dim = d // h
+    memory_dim = model_cfg.memory_dim or int(mem.get("value_dim", VALUE_DIM))
+    key_dim = int(mem.get("key_dim", d))
+    capacity = int(mem.get("capacity", int(mem.get("procedural_capacity", 1024))
+                           + int(mem.get("episodic_capacity", 1024))))
+    slots = capacity + sum(1 for name in config.get("encoders", {}).values() if name) + 1
+    steps = max(1, model_cfg.refinement_steps)
+    trainable, frozen = _trainable_parameters(config, model_cfg)
+    act = batch * length * d
+    frozen_dtype = str(vram.get("frozen_encoder_dtype", "float32")).lower()
+    if frozen_dtype not in ("float32", "float16", "bfloat16", "auto"):
+        raise ValueError("frozen_encoder_dtype must be float32, float16, bfloat16, or auto")
+    frozen_bytes = 2 if frozen_dtype in ("float16", "bfloat16", "auto") else 4
+
+    # One chunk-local SWA call: small bool mask + possible backend bias,
+    # repeated GQA K/V for the local span, Q/output, and logsumexp workspace.
+    local_chunk = min(chunk, length)
+    key_span = min(length, window + local_chunk)
+    sliding_workspace = (5 * local_chunk * key_span
+                         + 2 * batch * h * key_span * head_dim * 2
+                         + 2 * batch * h * local_chunk * head_dim * 2
+                         + 4 * batch * h * local_chunk)
+    norm_temp = 4 * act
+    residual = 4 * act
+    block_groups = {
+        "attention": 2 * act * (4 + 2 * kv / h) + sliding_workspace + 2 * norm_temp + residual,
+        "ffn": 2 * 4 * batch * length * ff + 2 * norm_temp + residual,
+        "adapter_glu": (2 * batch * length * memory_dim + 2 * 3 * act
+                        + 8 * batch * length * slots + norm_temp + residual),
+        "adapter_cross": (2 * (6 * act + 2 * slots * d + batch * length * slots)
+                          + norm_temp + residual),
+    }
+    components: dict[str, int] = {
+        "fp32_params_grads_adam": 16 * trainable,
+        "frozen_encoder_weights": frozen_bytes * frozen,
+        "unified_memory_buffers": 4 * capacity * (key_dim + memory_dim + 8),
+        "block_checkpoint_boundaries": 4 * (model_cfg.n_layers + 1) * act,
+        # Sub-block checkpoints retain a few within-layer boundaries, but only
+        # the largest recomputed branch is live during backward.
+        "live_block_sub_boundaries": 3 * 4 * act,
+        "live_block_max_subcheckpoint": max(block_groups.values()),
+        # Inline confidence BCE avoids a second retained list of full states.
+        "refinement_step_boundaries": 4 * steps * act,
+        "refinement_live_thought_step": 2 * 4 * act + 6 * 2 * act,
+        "refinement_live_cell": 2 * 6 * batch * length * model_cfg.refinement_rank + 4 * 4 * act,
+        "confidence_and_ce_logits": 4 * 4 * batch * length * VOCAB_SIZE,
+        "ids_targets_embeddings": 8 * 2 * batch * length + 4 * act,
+    }
+    if model_cfg.attention_type != "sliding_window":
+        components["dense_sdpa_workspace"] = 2 * batch * h * length * length
+    safety_gb = float(vram.get("simulator_safety_gb", 0.5))
+    if safety_gb < 0:
+        raise ValueError("simulator_safety_gb must be non-negative")
+    components["allocator_backend_safety_reserve"] = int(safety_gb * GB)
+    peak_bytes = sum(components.values())
+    target = float(vram.get("target_max_gb", 13.5))
+    return {
+        "measured": False,
+        "simulated": True,
+        "device": "Tesla T4 16GB (simulated; no CUDA measurement)",
+        "peak_gb": round(peak_bytes / GB, 3),
+        "target_max_gb": target,
+        "design_target_gb": 10.0,
+        "fits": bool(peak_bytes / GB <= target),
+        "meets_design_target": bool(peak_bytes / GB < 10.0),
+        "micro_batch": batch,
+        "seq_len": length,
+        "attention_type": model_cfg.attention_type,
+        "window_size": window,
+        "sliding_chunk_size": chunk,
+        "sdpa_backend_required": "memory_efficient (T4/sm_75); flash/cudnn require sm_80+",
+        "trainable_parameters": trainable,
+        "frozen_encoder_parameters_estimate": frozen,
+        "frozen_encoder_bytes_per_parameter": frozen_bytes,
+        "components_gb": {name: round(value / GB, 4) for name, value in components.items()},
+        "block_group_estimates_gb": {name: round(value / GB, 4) for name, value in block_groups.items()},
+        "assumptions": [
+            "decimal GB; fp32 trainable weights/grads/AdamW moments (16 B/parameter)",
+            "fp16 autocast inside blocks; fp32 residual/checkpoint boundaries",
+            "all transformer blocks and attention/FFN/adapter branches checkpointed",
+            "exact chunk-local sliding window; no (L,L) mask; one chunk workspace live",
+            "T4 uses memory-efficient SDPA, not Flash/cuDNN (sm_80+ only)",
+            "inline confidence BCE avoids retaining a second full refinement-state list",
+            "full unified bank plus batch-local projector slots in cross-attention",
+            "frozen encoder counts rounded up; storage dtype from vram.frozen_encoder_dtype",
+            "safety reserve is an estimate, not observed allocator fragmentation",
+        ],
+    }
+
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +449,7 @@ class BatchBuilder:
         self.memory = memory
         self.ingest_to_memory = ingest_to_memory
         self._rows: list[_Row] = []
+        self._pending_writes: list[tuple[torch.Tensor, torch.Tensor, str, dict[str, Any]]] = []
         self.stats = {"text_rows": 0, "media_to_text": 0, "text_to_media": 0,
                       "skipped": 0, "ingested": 0}
 
@@ -321,9 +488,11 @@ class BatchBuilder:
         caption = bytes(sample["caption"])[: self.seq_len // 4]
 
         if self.ingest_to_memory and self.memory is not None:
-            self.memory.write_skill(key[0], value[0], modality=modality,
-                                    metadata={"caption": caption[:64].decode("utf8", "replace")})
-            self.stats["ingested"] += 1
+            # Delay commitment until AFTER the current batch is assembled.
+            # Otherwise a sample fed to fill this batch could be retrieved by
+            # that same batch (future/self leakage through the teleportation hub).
+            self._pending_writes.append((key[0].detach(), value[0].detach(), modality,
+                                         {"caption": caption[:64].decode("utf8", "replace")}))
 
         # Direction A: media matrix -> caption bytes.
         prompt = b"caption: "
@@ -397,7 +566,21 @@ class BatchBuilder:
         # would receive zero gradient; bank slots make matching learnable.)
         if self.memory is not None and len(self.memory) > 0:
             memory = stack_views(memory, self.memory.view(), batch_size=batch_size)
+        # The returned batch sees only the PRIOR committed timeline. Pending
+        # writes become visible to subsequent micro-batches, never this one.
+        self.commit_pending_writes()
         return {"ids": ids, "targets": targets, "memory": memory}
+
+    def commit_pending_writes(self) -> int:
+        if self.memory is None or not self._pending_writes:
+            return 0
+        count = 0
+        for key, value, modality, metadata in self._pending_writes:
+            self.memory.write_skill(key, value, modality=modality, metadata=metadata)
+            count += 1
+        self._pending_writes.clear()
+        self.stats["ingested"] += count
+        return count
 
 
 # ---------------------------------------------------------------------------
@@ -420,8 +603,7 @@ def save_checkpoint(path: str | Path, *, model: CausalByteTransformer,
                              "value_projector": ing.value_projector.projection.state_dict()}
                       for name, ing in ingestors.items()},
         "text_projector": text_projector.state_dict(),
-        "memory": ({"procedural": memory.procedural.state_payload(),
-                    "episodic": memory.episodic.state_payload()} if memory is not None else None),
+        "memory": ({"bank": memory.procedural.state_payload()} if memory is not None else None),
         "optimizer": optimizer.state_dict(),
         "scaler": scaler.state_dict(),
         "step": int(step),
@@ -443,7 +625,7 @@ def load_checkpoint(path: str | Path, *, model: CausalByteTransformer,
                     device: str | torch.device = "cpu") -> int:
     payload = torch.load(path, map_location=device, weights_only=False)
     if payload.get("schema_version") != CHECKPOINT_SCHEMA:
-        raise ValueError("not a Phase 24 unified checkpoint")
+        raise ValueError("not a Phase 25.1 unified checkpoint (schema 7)")
     model.load_state_dict(payload["model"])
     device = next(model.parameters()).device
     for name, state in payload["ingestors"].items():
@@ -463,8 +645,9 @@ def load_checkpoint(path: str | Path, *, model: CausalByteTransformer,
         ingestors[name].value_projector.projection.load_state_dict(state["value_projector"])
     text_projector.load_state_dict(payload["text_projector"])
     if memory is not None and payload.get("memory") is not None:
-        memory.procedural.load_payload(payload["memory"]["procedural"])
-        memory.episodic.load_payload(payload["memory"]["episodic"])
+        if "bank" not in payload["memory"]:
+            raise ValueError("unified checkpoint requires a single bank payload")
+        memory.procedural.load_payload(payload["memory"]["bank"])
     if optimizer is not None and "optimizer" in payload:
         optimizer.load_state_dict(payload["optimizer"])
     if scaler is not None and "scaler" in payload:
@@ -539,6 +722,24 @@ class Trainer:
         self.grad_accum = int(train_cfg.get("grad_accum", 8))
         self.confidence_weight = float(train_cfg.get("confidence_loss_weight", 0.1))
         self.entropy_threshold = float(train_cfg.get("entropy_threshold", 0.35))
+        self.decay_reg_weight = float(train_cfg.get("decay_reg_weight", 0.01))
+        self.decay_margin = float(mem_cfg.get("decay_margin", 0.25))
+        if self.decay_reg_weight < 0 or self.decay_margin <= 0:
+            raise ValueError("decay_reg_weight must be >= 0 and decay_margin must be > 0")
+        vram_cfg = dict(config.get("vram", {}))
+        self._frozen_encoder_dtype = str(vram_cfg.get("frozen_encoder_dtype", "float32")).lower()
+        if self._frozen_encoder_dtype not in ("float32", "float16", "bfloat16", "auto"):
+            raise ValueError("frozen_encoder_dtype must be float32, float16, bfloat16, or auto")
+        if self.device.type != "cuda":
+            self._frozen_encoder_dtype = "float32"
+        elif self._frozen_encoder_dtype == "auto":
+            self._frozen_encoder_dtype = self.plan.resolved
+        require_checkpoint = bool(vram_cfg.get("require_gradient_checkpointing",
+                                               self.model_config.attention_type == "sliding_window"))
+        if require_checkpoint and not self.model_config.gradient_checkpointing:
+            raise ValueError("this preset requires gradient_checkpointing=True for all blocks")
+        self.model.set_gradient_checkpointing(self.model_config.gradient_checkpointing)
+        self.vram_report: dict[str, Any] | None = None
         self.log_every = int(train_cfg.get("log_every", 10))
         self.checkpoint_every = int(train_cfg.get("checkpoint_every", 500))
         self.checkpoint_minutes = float(train_cfg.get("checkpoint_minutes", 30))
@@ -556,12 +757,17 @@ class Trainer:
             mem_cfg.get("key_dim", self.model_config.d_model)).to(self.device)
         self._enc_cfg = enc_cfg
         self._mem_cfg = mem_cfg
+        capacity = mem_cfg.get("capacity")
         self.memory = DualMemory(
             procedural_capacity=int(mem_cfg.get("procedural_capacity", 1024)),
             episodic_capacity=int(mem_cfg.get("episodic_capacity", 1024)),
             key_dim=int(mem_cfg.get("key_dim", self.model_config.d_model)),
             value_dim=int(mem_cfg.get("value_dim", self.model_config.memory_dim or 8192)),
+            capacity=int(capacity) if capacity is not None else None,
         ).to(self.device)
+        self.memory.procedural.eviction_events = deque(
+            self.memory.procedural.eviction_events,
+            maxlen=int(mem_cfg.get("max_eviction_events", 256)))
 
         self.samples = samples
         self.mixture: MixtureSampler | None = (
@@ -577,6 +783,12 @@ class Trainer:
         self.history: list[dict[str, Any]] = []
 
     # -- lazy pieces ------------------------------------------------------
+    def _prepare_frozen_encoder(self, encoder: Any) -> Any:
+        encoder = encoder.to(self.device)
+        if self.device.type == "cuda" and self._frozen_encoder_dtype != "float32":
+            encoder = encoder.to(dtype=getattr(torch, self._frozen_encoder_dtype))
+        return encoder
+
     def ensure_ingestor(self, modality: str, *, feature_dim: int | None = None
                         ) -> MultimodalIngestor | None:
         if modality in self.ingestors:
@@ -585,13 +797,13 @@ class Trainer:
             if existing.encoder is None and name:
                 # Upgrade a resumed projector-only ingestor with its frozen
                 # encoder so raw media can keep flowing.
-                existing.encoder = build_encoder(name, pretrained=True).to(self.device)
+                existing.encoder = self._prepare_frozen_encoder(build_encoder(name, pretrained=True))
             return existing
         name = self._enc_cfg.get(modality)
         memory_dim = int(self._mem_cfg.get("value_dim", self.model_config.memory_dim or 8192))
         key_dim = int(self._mem_cfg.get("key_dim", self.model_config.d_model))
         if name:
-            encoder = build_encoder(name, pretrained=True).to(self.device)
+            encoder = self._prepare_frozen_encoder(build_encoder(name, pretrained=True))
             ingestor = MultimodalIngestor(encoder, memory_dim=memory_dim, key_dim=key_dim)
         elif feature_dim is not None:
             # Matrix-agnostic path: pre-computed features, projector only.
@@ -608,7 +820,7 @@ class Trainer:
 
     def _build_optimizer(self) -> torch.optim.Optimizer:
         train_cfg = self.config.get("training", {})
-        params = [p for module in [self.model, self.text_projector, *self.ingestors.values()]
+        params = [p for module in [self.model, self.text_projector, self.memory, *self.ingestors.values()]
                   for p in module.parameters() if p.requires_grad]
         return torch.optim.AdamW(params, lr=float(train_cfg.get("learning_rate", 3e-4)),
                                  weight_decay=float(train_cfg.get("weight_decay", 0.1)),
@@ -625,6 +837,13 @@ class Trainer:
 
     # -- batches ----------------------------------------------------------
     def _next_batch(self) -> dict[str, Any] | None:
+        """Pull the next micro-batch from the stream (single process).
+
+        This is the custom iterable wrapper that replaces a PyTorch
+        DataLoader: ``num_workers=0`` semantics by construction, so HF
+        streaming never deadlocks in worker subprocesses and nothing is
+        prefetched to disk. ``StopIteration`` ends the run cleanly.
+        """
         assert self.builder is not None and self.samples is not None
         while not self.builder.ready(self.micro_batch):
             try:
@@ -649,28 +868,149 @@ class Trainer:
         return batch
 
     # -- VRAM ---------------------------------------------------------------
-    def probe_vram(self) -> dict[str, Any]:
-        """MEASURED forward+backward peak. CPU reports measured=False."""
-        if self.device.type != "cuda":
-            return {"measured": False, "reason": "CPU device"}
-        torch.cuda.reset_peak_memory_stats(self.device)
-        ids = torch.randint(0, 256, (self.micro_batch, self.seq_len), device=self.device)
-        with self.plan.autocast_context():
-            loss = self.model.loss(ids, confidence_weight=self.confidence_weight,
-                                   entropy_threshold=self.entropy_threshold)
-        self.scaler.scale(loss).backward()
-        self.model.zero_grad(set_to_none=True)
-        self.scaler.update()
-        peak_gb = torch.cuda.max_memory_allocated(self.device) / 1e9
-        return {"measured": True, "peak_gb": round(peak_gb, 3),
-                "micro_batch": self.micro_batch, "seq_len": self.seq_len}
+    def _probe_memory_view(self, batch: int) -> SkillBankView:
+        """Full detached bank + differentiable local slots from every projector."""
+        key_dim = int(self._mem_cfg.get("key_dim", self.model_config.d_model))
+        value_dim = int(self._mem_cfg.get("value_dim", self.model_config.memory_dim or 8192))
+        capacity = self.memory.procedural.capacity
+        keys = torch.randn(capacity, key_dim, device=self.device)
+        values = torch.randn(capacity, value_dim, device=self.device)
+        mask = torch.ones(capacity, dtype=torch.bool, device=self.device)
+        global_view = SkillBankView(keys, values, mask)
+        local_keys, local_values = [], []
+        pooled = torch.randn(batch, self.model_config.d_model, device=self.device)
+        key, value = self.text_projector(pooled)
+        local_keys.append(key), local_values.append(value)
+        for ingestor in self.ingestors.values():
+            width = ingestor.key_projector.projection.in_features
+            features = torch.randn(batch, width, device=self.device)
+            key, value = ingestor.project_features(features)
+            local_keys.append(key), local_values.append(value)
+        local = SkillBankView(torch.stack(local_keys, dim=1), torch.stack(local_values, dim=1),
+                              torch.ones(batch, len(local_keys), dtype=torch.bool, device=self.device))
+        return stack_views(global_view, local, batch_size=batch)
 
-    def autotune_batch(self, target_max_gb: float = 12.0) -> dict[str, Any]:
+    def probe_vram(self) -> dict[str, Any]:
+        """MEASURED representative forward+backward+Adam-state peak on CUDA.
+
+        Includes the full unified bank, batch-local projector slots, confidence
+        path, policy loss, all-block checkpointing, and worst-case AdamW moment
+        allocation. Existing optimizer moments are temporarily detached from
+        the optimizer object so a resumed probe does not double-count them or
+        corrupt them (lr=0 step). CPU reports measured=False, never a fake peak.
+        """
+        if self.device.type != "cuda":
+            return {"measured": False, "simulated": False, "reason": "CPU device; run --simulate-t4 for an estimate"}
+        if self.optimizer is None:
+            self.optimizer = self._build_optimizer()
+        # Load configured frozen backbones/projectors so their persistent weights
+        # are present. Encoder transient activations occur before the transformer
+        # backward and are covered separately by the simulator safety reserve.
+        for modality, name in self._enc_cfg.items():
+            if name:
+                self.ensure_ingestor(modality)
+        assert self.optimizer is not None
+        old_state = self.optimizer.state
+        old_lrs = [group["lr"] for group in self.optimizer.param_groups]
+        self.optimizer.state = defaultdict(dict)
+        for group in self.optimizer.param_groups:
+            group["lr"] = 0.0
+        probe_scaler = make_grad_scaler(self.plan)
+        self.model.zero_grad(set_to_none=True)
+        self.text_projector.zero_grad(set_to_none=True)
+        self.memory.zero_grad(set_to_none=True)
+        for ingestor in self.ingestors.values():
+            ingestor.zero_grad(set_to_none=True)
+        bank = self.memory.procedural
+        saved_events = list(bank.eviction_events)
+        bank.eviction_events.clear()
+        retained = torch.arange(1, min(bank.capacity, 9), device=self.device)
+        ages = torch.linspace(0.0, 1.0, bank.capacity, device=self.device)
+        bank.eviction_events.append(EvictionEvent(0, retained, ages, 1.0, False))
+        # Verify the actual T4-safe backend before the expensive probe. A
+        # silent math fallback would invalidate the memory estimate.
+        backend_width = self.model_config.d_model // self.model_config.n_heads
+        probe_q = torch.randn(1, 1, 128, backend_width, device=self.device, dtype=self.plan.dtype)
+        probe_k = torch.randn(1, 1, 192, backend_width, device=self.device, dtype=self.plan.dtype)
+        chunk_mask = torch.ones(128, 192, device=self.device, dtype=torch.bool)
+        cross_mask = torch.ones(1, 1, 1, 17, device=self.device, dtype=torch.bool)
+        with sdpa_kernel(SDPBackend.EFFICIENT_ATTENTION):
+            F.scaled_dot_product_attention(probe_q, probe_q, probe_q)
+            F.scaled_dot_product_attention(probe_q, probe_k, probe_k,
+                                           attn_mask=chunk_mask[None, None], is_causal=False)
+            F.scaled_dot_product_attention(probe_q, probe_q[:, :, :17], probe_q[:, :, :17],
+                                           attn_mask=cross_mask, is_causal=False)
+        del probe_q, probe_k, chunk_mask, cross_mask
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats(self.device)
+        ids = memory_view = loss = total = policy = None
+        try:
+            ids = torch.randint(0, 256, (self.micro_batch, self.seq_len), device=self.device)
+            memory_view = self._probe_memory_view(self.micro_batch)
+            with self.plan.autocast_context():
+                loss, metrics = self.model.loss(
+                    ids, memory=memory_view, confidence_weight=self.confidence_weight,
+                    entropy_threshold=self.entropy_threshold, return_metrics=True)
+                policy = self.memory.policy_loss(margin=self.decay_margin)
+                total = loss + self.decay_reg_weight * policy.to(loss.dtype)
+            probe_scaler.scale(total / max(1, self.grad_accum)).backward()
+            # Allocate moments even for parameters whose synthetic probe path did
+            # not touch them; this is the worst-case optimizer residency.
+            for group in self.optimizer.param_groups:
+                for parameter in group["params"]:
+                    if parameter.requires_grad and parameter.grad is None:
+                        parameter.grad = torch.zeros_like(parameter)
+            probe_scaler.unscale_(self.optimizer)
+            probe_scaler.step(self.optimizer)  # lr=0: weights unchanged, moments allocated
+            probe_scaler.update()
+            peak_gb = torch.cuda.max_memory_allocated(self.device) / 1e9
+            return {"measured": True, "simulated": False, "peak_gb": round(peak_gb, 3),
+                    "micro_batch": self.micro_batch, "seq_len": self.seq_len,
+                    "attention_type": self.model_config.attention_type,
+                    "window_size": self.model_config.window_size,
+                    "sliding_chunk_size": self.model_config.sliding_chunk_size,
+                    "sdpa_backend_verified": "memory_efficient (self + chunk-local mask + cross mask)",
+                    "optimizer_state_allocated": True,
+                    "paths": ["ce", "confidence", "memory_cross_attention", "policy", "adamw"]}
+        finally:
+            bank.eviction_events.clear()
+            bank.eviction_events.extend(saved_events)
+            self.optimizer.state = old_state
+            for group, lr in zip(self.optimizer.param_groups, old_lrs):
+                group["lr"] = lr
+            self.model.zero_grad(set_to_none=True)
+            self.text_projector.zero_grad(set_to_none=True)
+            self.memory.zero_grad(set_to_none=True)
+            for ingestor in self.ingestors.values():
+                ingestor.zero_grad(set_to_none=True)
+            del ids, memory_view, loss, total, policy
+            torch.cuda.empty_cache()
+
+    def autotune_batch(self, target_max_gb: float = 13.5) -> dict[str, Any]:
+        """Probe and halve micro-batch; fail closed above the hard ceiling.
+
+        The sliding window is part of the architecture contract (W=1024), so
+        autotune does not silently shrink long-range connectivity. Chunk-local
+        masks already avoid quadratic allocation; if batch 1 still exceeds the
+        ceiling, the run must stop rather than claim a fit.
+        """
+        if target_max_gb <= 0:
+            raise ValueError("target_max_gb must be positive")
         probe = self.probe_vram()
-        while (probe.get("measured") and probe["peak_gb"] > target_max_gb
-               and self.micro_batch > 1):
-            self.micro_batch //= 2
+        while probe.get("measured") and probe["peak_gb"] > target_max_gb and self.micro_batch > 1:
+            self.micro_batch = max(1, self.micro_batch // 2)
             probe = self.probe_vram()
+        if probe.get("measured") and probe["peak_gb"] > target_max_gb:
+            raise MemoryError(
+                f"measured T4 peak {probe['peak_gb']:.3f} GB exceeds {target_max_gb:.3f} GB "
+                "at micro_batch=1; refusing to start. Use a smaller model/context, "
+                "optimizer offload, or a lower-memory attention kernel.")
+        if not probe.get("measured"):
+            probe["simulated"] = simulate_t4_vram(
+                self.config, micro_batch=self.micro_batch, seq_len=self.seq_len,
+                window_size=self.model_config.window_size,
+                chunk_size=self.model_config.sliding_chunk_size)
+        self.vram_report = probe
         return probe
 
     # -- checkpoint / resume ------------------------------------------------
@@ -709,6 +1049,15 @@ class Trainer:
             self.mixture = build_mixture(data_cfg, seed=int(
                 self.config.get("training", {}).get("seed", 24)))
             self.samples = iter(self.mixture)
+        # Phase 24.2 streaming contract: the sample source must be a len-less
+        # iterator. A sized object (list, map-style Dataset, ...) means
+        # epoch-style training over materialised data -- reject it loudly
+        # instead of silently downloading a corpus to the Colab disk.
+        if hasattr(self.samples, "__len__"):
+            raise TypeError(
+                "Trainer samples must be a streaming iterator without __len__ "
+                f"(got {type(self.samples).__name__}); epoch-based training over "
+                "sized datasets is forbidden (Phase 24.2 strict streaming)")
         tool_rate = float(self.config.get("training", {}).get("tool_trajectory_rate", 0.02))
         if tool_rate > 0:
             self.samples = inject_tool_trajectories(self.samples, rate=tool_rate,
@@ -724,7 +1073,7 @@ class Trainer:
         if self.optimizer is None:
             self.optimizer = self._build_optimizer()
         self._maybe_resume()
-        vram = self.autotune_batch(float(self.config.get("vram", {}).get("target_max_gb", 12.0)))
+        vram = self.autotune_batch(float(self.config.get("vram", {}).get("target_max_gb", 13.5)))
         self.model.train()
         self._start_time = time.monotonic()
         self._last_ckpt_time = time.monotonic()
@@ -732,6 +1081,13 @@ class Trainer:
         tokens = 0
         last_metrics: dict[str, Any] = {}
         stop_reason = "max_steps"
+        # STEP-BASED loop (Phase 24.2): equivalent to
+        #   for step, batch in enumerate(dataloader):
+        #       if step >= max_steps: break
+        # but counting OPTIMIZER steps (grad_accum micro-batches each).
+        # Streams have no len() and no epochs: we pull one micro-batch at a
+        # time from the single-process iterable pipeline and stop on
+        # max_steps, the wall-clock budget, or stream exhaustion.
         while self.step < max_steps:
             if deadline is not None and time.monotonic() >= deadline:
                 stop_reason = "time_budget"
@@ -745,7 +1101,12 @@ class Trainer:
                     batch["ids"], batch["targets"], batch["memory"],
                     confidence_weight=self.confidence_weight,
                     entropy_threshold=self.entropy_threshold, return_metrics=True)
-            self.scaler.scale(loss / self.grad_accum).backward()
+                policy = self.memory.policy_loss(margin=self.decay_margin)
+                total = loss + self.decay_reg_weight * policy.to(loss.dtype)
+            metrics["policy_loss"] = float(policy.detach().item())
+            metrics["total"] = float(total.detach().item())
+            self.scaler.scale(total / self.grad_accum).backward()
+            self.memory.procedural.clear_policy_events()
             self._micro += 1
             tokens += int((batch["targets"] != PAD).sum().item())
             if self._micro % self.grad_accum == 0:
@@ -796,14 +1157,17 @@ def smoke_config() -> dict[str, Any]:
     return {
         "model": {"d_model": 64, "n_layers": 2, "n_heads": 4, "n_kv_heads": 2,
                   "d_ff": 128, "max_seq_len": 256, "dropout": 0.0,
+                  "attention_type": "sliding_window", "window_size": 64,
+                  "sliding_chunk_size": 16,
                   "refinement_steps": 4, "refinement_rank": 32,
                   "memory_dim": 128, "gradient_checkpointing": True},
         "memory": {"key_dim": 64, "value_dim": 128,
-                   "procedural_capacity": 16, "episodic_capacity": 16},
+                   "capacity": 32},
         "training": {"micro_batch_size": 2, "grad_accum": 2, "seq_len": 128,
                      "learning_rate": 3e-4, "warmup_steps": 2, "log_every": 1,
                      "checkpoint_every": 0, "checkpoint_minutes": 30,
                      "confidence_loss_weight": 0.1, "entropy_threshold": 0.35,
+                     "decay_reg_weight": 0.01,
                      "seed": 24, "precision": "auto", "ingest_to_memory": True},
         "checkpoints": {"local_dir": "runs/smoke/checkpoints"},
         "output": {"metrics_jsonl": "runs/smoke/metrics.jsonl"},
@@ -859,6 +1223,27 @@ def run_smoke(*, steps: int = 4, workdir: str | Path = "runs/smoke") -> dict[str
     prompt = encode_bytes(b"question: what are python bytes?\n")
     ids, stats = trainer.model.generate_with_tools(prompt, search, max_new_bytes=48)
     summary["tool_demo"] = {"generated_ids": int(ids.numel()), **stats}
+    # Coherence eyeball: a greedy PT-BR continuation from the trained model.
+    with torch.no_grad():
+        continuation = trainer.model.generate(encode_bytes(b"O Brasil e um pais"),
+                                              max_new_bytes=48)
+    summary["sample_continuation"] = decode_ids(continuation).decode("utf8", "replace")
+    # Phase 24.4: latent scratchpad telemetry (activation norm proves usage).
+    refinement = trainer.model.refinement
+    if refinement is not None and refinement.thoughts is not None:
+        trainer.model.eval()
+        with torch.no_grad():
+            trainer.model(encode_bytes(b"O Brasil e um pais da America do Sul.").unsqueeze(0))
+        thoughts = refinement.thoughts
+        summary["thought"] = {
+            "buffer_shape": list(thoughts.last_buffer.shape),
+            "thought_steps": int(thoughts.last_steps),
+            "activation_norm": float(thoughts.last_norm),
+            "buffer_gate": float(thoughts.buffer_gate.detach()),
+            "context_gate": float(thoughts.context_gate.detach()),
+            "thought_confidence_weight_norm": float(
+                refinement.thought_confidence.weight.detach().norm()),
+        }
     return summary
 
 
@@ -877,7 +1262,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--smoke", action="store_true",
                         help="CPU plumbing validation with synthetic fixtures")
     parser.add_argument("--report", default=None)
+    parser.add_argument("--simulate-t4", action="store_true",
+                        help="print conservative analytic T4 VRAM estimate and exit (no GPU needed)")
     args = parser.parse_args(argv)
+
+    if args.simulate_t4:
+        report = simulate_t4_vram(load_config(args.config))
+        text = json.dumps(report, indent=2)
+        print(text)
+        if args.report:
+            Path(args.report).parent.mkdir(parents=True, exist_ok=True)
+            Path(args.report).write_text(text, encoding="utf8")
+        raise SystemExit(0 if report["fits"] else 1)
 
     if args.smoke:
         summary = run_smoke(steps=args.max_steps or 4)

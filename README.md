@@ -1,17 +1,34 @@
 # ByteCore-DualMemory
 
-A byte-level causal Transformer (**265,618,710 parameters** in its production
-preset) that reads an **8192-dim skill/memory space** through a **Gated Skill
-Adapter** in every layer, decides its own "thinking" budget with a confidence
-head, and ingests images/audio/video as frozen-encoder skill matrices.
+A byte-level causal Transformer (**366,316,833 parameters** in its production
+preset) with a **16,384-byte packed row** and **causal sliding-window attention
+(self + up to 1024 previous bytes)**, an **8192-dim unified
+skill/memory space** read through a **Gated Skill Adapter + context-to-memory
+cross-attention in every layer**, a confidence-headed **latent thought matrix**,
+learnable per-slot **decay/Forever eviction**, and frozen-encoder multimodal
+ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
+
+**Status: Ready for 4-Hour Colab Run (Phase 25.2).** The 500-step coherence
+pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
+gibberish, and step-500 continuations were recognizable PT-BR plus Python that
+compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
+cross-attention path at CPU-feasible scale; production fluency still requires
+the 4-hour T4 run.
 
 **Portuguese (Brazil) is the primary language** (Phase 24.1): 50% of every
 training window is PT-BR text, with code, multimodal and English as support
 skills. The quota is enforced per 100-draw window and audited in the notebook
 before the GPU budget is spent — see
 [Data mix (PT-BR first)](#data-mix-pt-br-first).
+
+**100% streaming, zero disk (Phase 24.2):** the corpora (the-stack, GigaVerbo,
+fineweb) are far larger than a Colab disk. Every `load_dataset` call is forced
+to `streaming=True` and type-checked to return an `IterableDataset`; shuffling
+uses a RAM-only `buffer_size=10000` reservoir; the training loop is strictly
+step-based; and a **Zero-Disk verification cell** proves negligible disk growth
+before any training starts — see [Strict streaming](#strict-streaming-phase-242).
 
 There is no tokenizer: the model reads and writes raw bytes `0..255`. There
 is no regex tool parsing: `[TOOL_SEARCH]` is a vocabulary id that triggers a
@@ -20,47 +37,83 @@ cross-entropy. The authoritative math is in
 [ARCHITECTURE_AUDIT.md](ARCHITECTURE_AUDIT.md); operating rules are in
 [AGENTS.md](AGENTS.md).
 
-## The three ideas
+## Core ideas
 
-1. **Gated Skill Adapter (1024 ↔ 8192).** The 1024-dim hidden state queries
+1. **Causal sliding window at 16k rows.** Each byte attends to itself plus up
+   to `window_size=1024` previous bytes (`i-1024 ≤ j ≤ i`). Exact chunk-local
+   SDPA calls use small masks and never allocate an `(L,L)` tensor. On T4 the
+   forced backend is memory-efficient attention; PyTorch Flash/cuDNN SDPA
+   require sm_80+. The 16k row is not a 16k dense self-attention window.
+2. **Gated Skill Adapter + teleportation hub (1024 ↔ 8192).** The 1024-dim hidden state queries
    1024-dim memory keys (high-fidelity matching), retrieves the 8192-dim skill
    value, and compresses it with a **GLU, not a linear blend**:
    `8192 → 2048 → split → Information ⊙ sigmoid(Filter) → 1024`.
    The sigmoid gate is a sharp bouncer: channels are passed or vetoed, not
-   averaged into mush. Injected residually in **all 8 layers**.
-2. **Multimodal matrices.** Frozen encoders (ViT/ResNet for images/video,
+   averaged into mush. In parallel, every layer runs context-to-memory
+   cross-attention (Q=1024 hidden, K=1024 bank keys, V=8192 bank values,
+   zero-init ReZero gate). With random/global edges removed, this committed
+   memory hub is the explicit long-range path beyond the 1024-byte local
+   window. Injected residually in **all 8 layers**.
+3. **Multimodal matrices.** Frozen encoders (ViT/ResNet for images/video,
    Wav2Vec2 for audio) feed trainable `Linear(encoder_dim, 8192)` projectors.
    The core model only ever sees the 8192-dim vector — swap the encoder, keep
    the core. Training is **bidirectional**: caption bytes conditioned on the
    media matrix, and media codec bytes conditioned on a text matrix.
-3. **Model-decided adaptive loop.** A weight-tied refinement cell runs up to
+4. **Model-decided adaptive loop.** A weight-tied refinement cell runs up to
    4 passes; a `Linear(1024, 1) → sigmoid` confidence head breaks early above
    0.9 at inference. An auxiliary BCE loss teaches it to recognise low-entropy
    (decided) states.
+5. **Latent Thought Matrix (Phase 24.4).** Inside the loop, an isolated
+   `(B, 4, 1024)` scratchpad thinks without emitting bytes: bidirectional
+   cross-attention lets the buffer read the context and the context frontier
+   read the buffer (slot `t` updates from slot `t-1` + context). The
+   confidence head evaluates the **combined** state, so an uncertain buffer
+   keeps the loop running. The buffer **never** passes through the byte
+   head, and only the frontier position reads it back — no future byte
+   leaks through the scratchpad (both contracts are test-asserted).
+6. **Unified dynamic memory.** One physical 2048-slot bank scores
+   `importance − decay·age`; short-term slots decay and are evictable, Forever
+   slots have exactly zero effective decay, higher importance, and a hard
+   overwrite guard. A policy loss rewards stale eviction and penalizes Forever
+   overwrite attempts. Writes are detached and delayed until after the current
+   batch, so cross-attention cannot retrieve same-batch futures.
 
 ## Repository map
 
 | Path | Contents |
 |---|---|
-| `models/foundation.py` | Byte Transformer, GatedSkillAdapter, confidence-headed refinement, token-id tool generation, checkpoint I/O |
-| `models/memory_model.py` | DualMemory: episodic + procedural banks, 1024-dim keys / 8192-dim values, FIFO, gradient-free writes |
+| `models/foundation.py` | Byte Transformer, chunk-local causal sliding-window SDPA, GatedSkillAdapter + memory cross-attention, confidence loop, LatentThoughtBuffer, token-id tools, checkpoint I/O |
+| `models/memory_model.py` | Unified DualMemory alias: one 1024-key/8192-value bank, learnable decay/importance, Forever guard, detached delayed writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
-| `training/train.py` | The ONE training script: precision/VRAM, bidirectional batches, CE + confidence BCE, 30-min HF checkpoints, sandboxed search |
-| `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, mix audit, byte packing |
-| `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 4096 context, 8192 memory |
-| `tests/` | 142 tests: GLU math, memory, projection, adaptive loop, tooling, trainer, quorum mix, masking, notebook, hygiene |
+| `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
+| `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
+| `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
+| `tests/` | 199 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
+| `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
+| `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
 
 ## Quickstart
 
 ```bash
 pip install -r requirements.txt
 
-# Full regression suite (CPU, ~3 s).
+# Full regression suite (CPU, ~10 s, fully offline: the HF Hub is mocked).
 python -m pytest tests/ -q
 
 # Full-pipeline plumbing validation on CPU (tiny model, synthetic fixtures).
 python -m training.train --smoke
+
+# Smoke + coherence probe: also prints the latent thought-buffer activation
+# norms (proof the scratchpad is used) and a greedy byte continuation.
+python smoke_test_coherence.py --steps 4
+
+# Phase 25.2 coherence pre-flight: exactly 500 steps, PT-BR + code, strict
+# assertions (loss decrease, recognizable PT-BR, valid Python syntax).
+python coherence_preflight.py
+
+# Analytic T4 VRAM preflight (SIMULATION, not a CUDA measurement).
+python -m training.train --simulate-t4 --config configs/t4_scaled.yaml
 
 # Real pre-training (GPU machine; streams HF datasets, checkpoints to the Hub).
 python -m training.train --config configs/t4_scaled.yaml \
@@ -92,7 +145,7 @@ prints the realised mix before training starts. Both quantities are shown and
 they are not the same thing:
 
 ```
-PT-BR-first data mix audit  |  100 batches x 4 = 400 documents  (0.0 s)
+PT-BR-first data mix audit  |  100 batches x 1 = 100 documents  (0.0 s)
 source        target    docs    doc %       bytes   byte %   status
 -----------------------------------------------------------------------
 PT-BR          50.0%     200    50.0%      27,156    44.5%   ok
@@ -113,6 +166,43 @@ two training rows (caption + media codec). Tool/edit trajectories are injected
 The trainer logs the realised mix in `runs/metrics.jsonl` (`data_mix`) and in
 the run summary.
 
+## Strict streaming (Phase 24.2)
+
+The corpora above are **massive** — a wholesale download would fill the Colab
+disk and crash the instance. The pipeline therefore guarantees streaming end
+to end, and the guarantee is tested, not assumed:
+
+- **One call site.** `data/sources.open_stream` is the only place that calls
+  `load_dataset`. It forces `streaming=True` (a tampered spec raises before
+  any load) and requires a concrete split.
+- **Type verification.** `assert_streaming` checks the returned object is a
+  `datasets.IterableDataset`. A disk-backed `Dataset`/`DatasetDict` or an
+  unresolved `IterableDatasetDict` raises `TypeError` immediately.
+  `build_mixture` also rejects `data.streaming: false` in the config.
+- **Iterable-safe shuffling.** Streams are shuffled with
+  `.shuffle(seed=..., buffer_size=10000)` — a seeded, RAM-only reservoir
+  (`data.shuffle_buffer_size` in the config). Embedded-image/audio fallbacks
+  are capped at **1,000 rows** (`MEDIA_SHUFFLE_BUFFER_CAP`): the reservoir
+  holds *decoded* media rows, and 10k images/waveforms would be 1–2 GB of RAM
+  next to the model. COYO (`image_url`) stays at 10k — it buffers only
+  url+caption strings. The map-style `.shuffle(seed=...)` that fails on an
+  `IterableDataset` is never used.
+- **Step-based training.** The loop is `while step < max_steps` — no epochs,
+  no `len(dataset)` (streams have no length). Sized sample sources are
+  rejected with `TypeError`. There is no multi-process DataLoader:
+  `MixtureSampler` + `BatchBuilder` are a custom single-process iterable
+  wrapper (the `num_workers=0` configuration HF recommends for streaming),
+  so worker deadlocks and disk prefetch are structurally impossible.
+- **Zero-Disk verification cell.** Right after data initialization (and
+  before the 4-hour launch), the notebook prints each group's stream type,
+  asserts `IterableDataset`, then measures disk usage before/after the first
+  **10 streamed batches** and asserts growth ≤ 32 MB (streaming metadata is
+  KB-scale; a real download would be GB-scale).
+- **Offline tests.** `tests/test_streaming.py` mocks `datasets.load_dataset`
+  with tiny in-memory `IterableDataset`s (`mock_streaming_hub`), so the
+  enforcement path runs for real with zero network and zero disk; a
+  session-wide guard makes any *real* Hub load raise during the suite.
+
 ## Honest notes
 
 - **T4 precision:** sm_75 cannot run bf16 autocast. The trainer resolves
@@ -123,10 +213,23 @@ the run summary.
   instead of `0/0` NaN. CE and the auxiliary confidence BCE are means over
   non-PAD tokens, so a 50% PT-BR batch is the token-weighted blend of its
   parts — asserted in `tests/test_train.py`.
-- **4 hours is a small token budget** for 265M parameters (order 10⁸ tokens).
+- **4 hours is a small token budget** for 366M parameters (order 10⁸ tokens).
   Expect falling loss and byte-level structure, not a finished assistant.
 - **Media bytes** in the text→media direction are the deterministic uint8
   codec of the encoder representation (tanh-companded), not raw pixels —
   that is the matrix approach: the model predicts representations.
 - VRAM figures in the audit are **analytic** unless explicitly marked
-  measured; this repository's CI environment has no GPU.
+  measured; this repository's CI environment has no GPU. The production
+  simulator estimates 9.822 GB (<10 GB design target) / 13.5 GB hard ceiling;
+  the real CUDA probe enforces the ceiling and fails closed if batch autotune
+  cannot fit. The window is not silently shrunk.
+- **T4 kernel reality:** sm_75 uses memory-efficient SDPA. PyTorch Flash/cuDNN
+  SDPA require sm_80+; the probe verifies the efficient backend (self, chunk-local mask, cross mask) before measuring.
+- **Long-range hand-off:** self-attention is local. Information older than the
+  window must be retrieved from committed memory through the adapter hub.
+- **Coherence pre-flight is measured, but sandbox-scale:** `coherence_preflight.py`
+  ran 500 optimizer steps on a deterministic offline 1000-example PT-BR/code
+  slice using the Phase 25.1 sliding-window + memory cross-attention path
+  (`window_size=1024`, 8 layers, CPU-feasible width). It proved learning and
+  coherent continuations, not finished production fluency. The 4-hour Colab run
+  is still the production-scale training event.

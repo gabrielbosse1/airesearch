@@ -1,4 +1,4 @@
-# Phase 24.1 -- ByteCore-DualMemory, the 4-hour T4 pre-training preset.
+# Phase 25.1 -- ByteCore-DualMemory, the 4-hour T4 pre-training preset.
 # PT-BR-first: 50% Portuguese (Brazil) documents, 25% code, 15% multimodal,
 # 10% English (data/sources.py enforces the quota, not just the expectation).
 #
@@ -10,10 +10,13 @@
 # torch.cuda.is_bf16_supported(): Ampere+ gets bfloat16, T4 gets float16 +
 # torch.amp.GradScaler. Both are 2-byte formats; the fallback is required.
 #
-# Geometry: 8 layers x 1024-dim core, 4096 context, 8192-dim skill space.
-# Every layer injects hidden += GatedSkillAdapter(hidden, memory):
-#   query 1024 -> keys 1024 -> retrieve 8192 -> GLU 8192 -> 2048
-#   -> split 2 x 1024 -> Information * sigmoid(Filter) -> 1024.
+# Geometry: 8 layers x 1024-dim core, 16384 context, 8192-dim unified memory.
+# Causal sliding-window attention: each byte attends to itself plus up to
+# window_size=1024 previous bytes. Chunk-local SDPA masks avoid any (L,L)
+# tensor; CUDA forces the memory-efficient backend (T4/sm_75 cannot use
+# PyTorch Flash/cuDNN SDPA). The unified memory cross-attention hub is the
+# ONLY path beyond the local window. The CUDA probe, not this YAML or the
+# analytic simulator, is the final authority on T4 fit.
 
 model:
   vocab_size: 265                  # 256 bytes + BOS/EOS/PAD + 6 tool/edit ids
@@ -22,13 +25,20 @@ model:
   n_heads: 8
   n_kv_heads: 2                    # GQA: KV projections at 25% of MHA
   d_ff: 4096                       # SwiGLU hidden width
-  max_seq_len: 4096                # RoPE: no learned position table
+  max_seq_len: 16384               # RoPE: no learned position table
+  attention_type: sliding_window
+  window_size: 1024                # max lookback distance; self + 1024 previous
+  sliding_chunk_size: 512          # query rows per chunk-local SDPA call
+  memory_cross_attention: true
   dropout: 0.0
   norm_type: rmsnorm
   ffn_type: swiglu
   position_type: rope
   refinement_steps: 4              # adaptive loop: up to 4 "think" passes
   refinement_rank: 256
+  max_thought_steps: 4             # Phase 24.4 latent scratchpad slots (B, 4, 1024);
+                                   # bidirectional cross-attention, never byte-emitted,
+                                   # frontier-only write-back keeps causality
   confidence_threshold: 0.9        # break early when confidence > 0.9
   memory_dim: 8192                 # the wide skill space
   rope_theta: 10000.0
@@ -38,20 +48,22 @@ model:
 memory:
   key_dim: 1024                    # high-fidelity matching against the core
   value_dim: 8192                  # skill matrices (text/image/audio/video)
-  procedural_capacity: 1024
-  episodic_capacity: 1024
+  capacity: 2048                   # ONE physical bank; episodic is an alias
+  decay_margin: 0.25               # stable softplus policy margins
+  max_eviction_events: 256
 
 encoders:                          # FROZEN feature extractors (never trained)
-  image: vit_b_16                  # 768-dim; codec payload fits a 1024 context
+  image: vit_b_16                  # 768-dim; codec truncated to the 16k row
   audio: wav2vec2                  # 768-dim, mean-pooled over time
-  video: vit_b_16                  # sampled frames -> mean-pooled matrix
+  video: null                      # T4 preset streams image/audio only; raw video
+                                   # backbone stays disabled to avoid dead VRAM
 
 training:
   requested_precision: bfloat16
   precision: auto                  # auto | bfloat16 | float16 | float32
-  micro_batch_size: 4
-  grad_accum: 8                    # effective batch = 32 sequences
-  seq_len: 1024                    # T4-safe training window (model cap 4096)
+  micro_batch_size: 1
+  grad_accum: 32                   # effective batch = 32 x 16384-byte rows
+  seq_len: 16384                   # actual packed/streamed training window
   learning_rate: 0.0003
   weight_decay: 0.1
   warmup_steps: 500
@@ -64,6 +76,7 @@ training:
   checkpoint_every: 500            # step-based safety net
   log_every: 10
   confidence_loss_weight: 0.1      # auxiliary BCE on the confidence head
+  decay_reg_weight: 0.01           # eviction-policy auxiliary loss
   entropy_threshold: 0.35          # normalised byte-entropy target cutoff
   ingest_to_memory: true           # write ingested matrices to the bank
   tool_trajectory_rate: 0.02       # mock-sandbox tool/edit trajectories (CE)
@@ -71,10 +84,23 @@ training:
   mix_audit_tolerance: 0.02        # allowed |doc share - target| per group (2 pp)
 
 vram:
-  target_max_gb: 12.0              # measured probe shrinks batch 4->2->1 above
+  target_max_gb: 13.5              # hard ceiling; representative CUDA probe
+  simulator_safety_gb: 0.5         # allocator/backend reserve in ESTIMATE only
+  require_gradient_checkpointing: true
+  frozen_encoder_dtype: float16    # inference-only frozen backbones on CUDA;
+                                   # trainable params/grads/Adam remain fp32
 
 data:
+  # Phase 24.2 STRICT streaming: build_mixture REJECTS streaming: false.
+  # Every load_dataset call uses streaming=True and the returned object is
+  # verified to be an IterableDataset (never a disk-backed Dataset).
   streaming: true
+  # RAM-only reservoir for IterableDataset.shuffle(seed=..., buffer_size=...).
+  # 10k documents ~ tens-to-hundreds of MB of RAM, zero disk. Media fallbacks
+  # (embedded images / decoded audio) are capped at 1000 rows in open_stream:
+  # decoded media rows are 100-1000x larger than text and 10k of them could
+  # OOM the instance. Map-style .shuffle(seed=...) is forbidden on streams.
+  shuffle_buffer_size: 10000
   # PT-BR-FIRST mix (Phase 24.1). Fractions of DRAWN DOCUMENTS, enforced
   # quota-exactly per 100-draw window by data/sources.MixtureSampler
   # (largest-remainder allocation + seeded shuffle). Must sum to 1.0.

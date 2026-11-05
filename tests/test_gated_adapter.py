@@ -118,7 +118,7 @@ def test_injection_in_all_eight_production_layers():
     import yaml
     with open("configs/t4_scaled.yaml", "r", encoding="utf8") as handle:
         cfg = FoundationConfig.from_mapping(yaml.safe_load(handle)["model"])
-    assert cfg.n_layers == 8 and cfg.max_seq_len == 4096 and cfg.memory_dim == 8192
+    assert cfg.n_layers == 8 and cfg.max_seq_len == 16384 and cfg.memory_dim == 8192
     # Meta device: full production geometry, zero memory cost.
     with torch.device("meta"):
         model = CausalByteTransformer(cfg)
@@ -133,13 +133,20 @@ def test_injection_in_all_eight_production_layers():
                  + 1024                    # norm_2
                  + 3 * 1024 * 4096         # SwiGLU
                  + 1024                    # skill_norm
-                 + 1024 * 1024 + 8192 * 2048 + 1)  # adapter q, glu, scale
+                 + 1024 * 1024 + 8192 * 2048 + 1  # adapter q, glu, scale
+                 + 3 * 1024 * 1024 + 8192 * 1024 + 2 * 1024 + 1)  # cross Q/K/V/O, norms, gate
     expected = (8 * per_layer
                 + 265 * 1024               # token embedding
                 + 1024 + 3 * 1024 * 256 + 4 + 1025  # refinement + conf head
+                # Phase 24.4 latent thought buffer (S=4 slots, D=1024):
+                + 4 * 1024                 # learned slot embeddings
+                + 2 * (4 * 1024 * 1024 + 4 * 1024)  # cross-MHAs: in_proj 3D^2+3D, out D^2+D
+                + 4 * 1024                 # cross-attention pre-norms
+                + 2                        # ReZero gates (buffer, context)
+                + 1024 + 1025              # thought_norm + thought_confidence head
                 + 1024                     # norm_final
                 + 1024 * 265 + 265)        # byte head
-    assert model.parameters_count == expected == 265_618_710
+    assert model.parameters_count == expected == 366_316_833
 
 
 def test_stack_views_broadcasts_global_to_batched():
