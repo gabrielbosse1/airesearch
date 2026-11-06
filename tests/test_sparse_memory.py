@@ -442,8 +442,10 @@ def test_inline_confidence_loss_matches_collected_state_reference():
             logp = torch.log_softmax(step_logits, dim=-1)
             entropy = -(logp.exp() * logp).sum(-1) / math.log(cfg.vocab_size)
             target_t = (entropy < 0.35).float()
-        conf = model.refinement.confidence(state, thought).float().clamp(1e-6, 1 - 1e-6)
-        terms.append(F.binary_cross_entropy(conf[valid], target_t[valid]))
+        conf_logits = model.refinement.confidence_logits(state, thought)
+        with torch.autocast(device_type=state.device.type, enabled=False):
+            terms.append(F.binary_cross_entropy_with_logits(
+                conf_logits[valid].float(), target_t[valid].float()))
     reference = ce + 0.1 * torch.stack(terms).mean()
     assert torch.allclose(loss, reference, atol=1e-5, rtol=1e-5)
     assert metrics["confidence_bce"] == pytest.approx(float(torch.stack(terms).detach().mean()), abs=1e-5)

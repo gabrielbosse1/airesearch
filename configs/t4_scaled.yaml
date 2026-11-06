@@ -10,6 +10,8 @@
 # the forced memory-efficient SDPA path. `precision: auto` requires native
 # Ampere+ support (compute capability >= 8 and including_emulation=False when
 # available); T4 gets float16 + torch.amp.GradScaler. Both are 2-byte formats.
+# Phase 25.6: confidence BCE scores raw logits in fp32 outside autocast; CUDA
+# rejects probability BCE under autocast even if the probability is .float().
 #
 # Geometry: 8 layers x 1024-dim core, 16384 context, 8192-dim unified memory.
 # Causal sliding-window attention: each byte attends to itself plus up to

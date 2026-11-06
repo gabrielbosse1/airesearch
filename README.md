@@ -10,7 +10,7 @@ ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
-**Status: Phase 25.5 native-bf16/T4 precision guard implemented; live T4 rerun pending.** The 500-step coherence
+**Status: Phase 25.6 autocast-safe confidence BCE + HF secret normalization implemented; live T4 rerun pending.** The 500-step coherence
 pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
 gibberish, and step-500 continuations were recognizable PT-BR plus Python that
 compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
@@ -61,8 +61,8 @@ cross-entropy. The authoritative math is in
    media matrix, and media codec bytes conditioned on a text matrix.
 4. **Model-decided adaptive loop.** A weight-tied refinement cell runs up to
    4 passes; a `Linear(1024, 1) → sigmoid` confidence head breaks early above
-   0.9 at inference. An auxiliary BCE loss teaches it to recognise low-entropy
-   (decided) states.
+   0.9 at inference. An auxiliary logits-based BCE loss, reduced in float32
+   outside autocast, teaches it to recognise low-entropy (decided) states.
 5. **Latent Thought Matrix (Phase 24.4).** Inside the loop, an isolated
    `(B, 4, 1024)` scratchpad thinks without emitting bytes: bidirectional
    cross-attention lets the buffer read the context and the context frontier
@@ -88,7 +88,7 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 10-min/100-step HF checkpoints + host-RAM/SIGKILL diagnostics, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 230 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
+| `tests/` | 258 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 | `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
@@ -98,7 +98,7 @@ cross-entropy. The authoritative math is in
 ```bash
 pip install -r requirements.txt
 
-# Full regression suite (CPU, ~10 s, fully offline: the HF Hub is mocked).
+# Full regression suite (CPU, ~11 s, fully offline: the HF Hub is mocked).
 python -m pytest tests/ -q
 
 # Full-pipeline plumbing validation on CPU (tiny model, synthetic fixtures).
@@ -281,6 +281,17 @@ to end, and the guarantee is tested, not assumed:
   memory-efficient SDPA path and resolves `auto` to **fp16 + GradScaler** on T4
   (native bf16 only on Ampere+). The notebook runs a short-lived precision
   preflight and logs the resolved plan before training.
+- **Confidence BCE is autocast-safe (Phase 25.6).** CUDA rejects probability
+  BCE inside autocast even after a `.float()` cast. Training scores raw
+  confidence logits with `binary_cross_entropy_with_logits` in an explicit
+  float32, autocast-disabled reduction; inference keeps the sigmoid probability
+  API and the detached entropy targets are unchanged. The notebook runs a tiny
+  GPU forward/backward preflight before encoder downloads or the production
+  VRAM probe. Checkpoint schema and model geometry are unchanged.
+- **HF secrets are normalized before the environment.** Colab secret providers
+  may return a wrapped mapping instead of a plain string. The auth cell accepts
+  only explicit token/value fields, falls back to hidden input for unsupported
+  shapes, and never prints the secret or wrapper before setting `HF_TOKEN`.
 - **Masking is source-agnostic.** Every group trains under the same
   `ignore_index=258` cross-entropy; caption prompts and codec prefixes are
   masked, padding is masked, and a fully masked batch returns a zero loss

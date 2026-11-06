@@ -609,8 +609,9 @@ class IterativeRefinement(nn.Module):
     an uncertain buffer keeps the loop running and a converged one lets it
     break. The buffer itself never reaches the byte head.
 
-    * Training: ALL ``steps`` passes run; intermediate states are returned so
-      the trainer can build the auxiliary BCE target (low byte-entropy).
+    * Training: ALL ``steps`` passes run; the auxiliary loss scores raw
+      confidence logits against the detached low-byte-entropy target using
+      fp32 ``binary_cross_entropy_with_logits`` outside autocast.
     * Inference (``adaptive=True``): break as soon as every position's
       confidence exceeds ``threshold`` (default 0.9), at most ``steps`` passes.
     """
@@ -643,6 +644,20 @@ class IterativeRefinement(nn.Module):
         values = self.norm(hidden)
         return self.up(F.silu(self.down(values)) * self.branch(values))
 
+    def confidence_logits(self, hidden: torch.Tensor,
+                          thought: torch.Tensor | None = None) -> torch.Tensor:
+        """Raw pre-sigmoid confidence logit, shape ``(B, T)``.
+
+        Training scores this logit with ``binary_cross_entropy_with_logits``;
+        inference applies ``sigmoid`` via :meth:`confidence`. Keeping the logit
+        avoids saturating a fp16 probability before the loss can see it. The
+        combined context + thought contract and zero-init are unchanged.
+        """
+        logit = self.confidence_head(self.norm(hidden)).squeeze(-1)
+        if thought is not None and self.thoughts is not None:
+            logit = logit + self.thought_confidence(self.thought_norm(thought))
+        return logit
+
     def confidence(self, hidden: torch.Tensor,
                    thought: torch.Tensor | None = None) -> torch.Tensor:
         """Per-position confidence in (0, 1), shape ``(B, T)``.
@@ -651,10 +666,7 @@ class IterativeRefinement(nn.Module):
         the COMBINED context + thought state. The thought term is zero-init,
         so confidence is neutral with respect to the buffer at step 0.
         """
-        logit = self.confidence_head(self.norm(hidden)).squeeze(-1)
-        if thought is not None and self.thoughts is not None:
-            logit = logit + self.thought_confidence(self.thought_norm(thought))
-        return torch.sigmoid(logit)
+        return torch.sigmoid(self.confidence_logits(hidden, thought))
 
     def forward(self, hidden: torch.Tensor, *, use_checkpoint: bool = False,
                 adaptive: bool = False, threshold: float | None = None,
@@ -915,7 +927,9 @@ class CausalByteTransformer(nn.Module):
         distribution at that state has normalised entropy below
         ``entropy_threshold`` (a "decided" state), else ``0``. Targets are
         detached: the confidence head learns to READ certainty, it must not
-        change the byte distribution to manufacture it.
+        change the byte distribution to manufacture it. The auxiliary term is
+        logits-based BCE reduced in float32 with autocast explicitly disabled
+        (CUDA rejects probability BCE under autocast even after ``.float()``).
 
         One masking contract for every data group (PT-BR text, code, English,
         multimodal captions/codecs): both ``ce`` and the auxiliary BCE are
@@ -944,8 +958,16 @@ class CausalByteTransformer(nn.Module):
                 entropy = -(log_probs.exp() * log_probs).sum(-1) / math.log(self.config.vocab_size)
                 target_t = (entropy < float(entropy_threshold)).float()
                 entropies.append(float(entropy[..., valid].mean().item()))
-            conf = self.refinement.confidence(state, thought).float().clamp(1e-6, 1.0 - 1e-6)
-            return F.binary_cross_entropy(conf[valid], target_t[valid])
+            # Phase 25.6: CUDA autocast rejects probability BCE even when the
+            # probability tensor was cast to float32 -- the cast does NOT leave
+            # the autocast region. Score the raw logit instead, and disable
+            # autocast explicitly so the numerically sensitive reduction is
+            # fp32 on every device. This is the same BCE objective without a
+            # saturating sigmoid/clamp before the loss; targets stay detached.
+            conf_logits = self.refinement.confidence_logits(state, thought)
+            with torch.autocast(device_type=state.device.type, enabled=False):
+                return F.binary_cross_entropy_with_logits(
+                    conf_logits[valid].float(), target_t[valid].float())
 
         logits, info = self.forward(ids, memory, collect_states=False, return_info=True,
                                     aux_fn=confidence_term if want_conf else None)

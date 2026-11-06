@@ -24,6 +24,10 @@ class _FakeApi:
         self.calls = []
         _FakeApi.instances.append(self)
 
+    def whoami(self, token=None):
+        self.calls.append(("whoami", token))
+        return {"name": "tester"}
+
     def create_repo(self, repo_id, **kwargs):
         self.calls.append(("create_repo", repo_id, kwargs))
         return types.SimpleNamespace(url=f"https://huggingface.co/{repo_id}")
@@ -241,3 +245,31 @@ def test_incompatible_checkpoint_is_rejected(tmp_path):
     with pytest.raises(ValueError, match="incomplete unified checkpoint"):
         train.load_checkpoint(path, model=trainer.model, ingestors=trainer.ingestors,
                               text_projector=trainer.text_projector, memory=trainer.memory)
+
+
+@pytest.mark.parametrize("value,expected", [
+    ("hf_plain_token", "hf_plain_token"),
+    ("  hf_plain_token  ", "hf_plain_token"),
+    (b"hf_bytes_token", "hf_bytes_token"),
+    ({"value": "hf_wrapped_token"}, "hf_wrapped_token"),
+    ({"secret": {"token": "hf_nested_token"}}, "hf_nested_token"),
+    ({"HF_TOKEN": "hf_named_token"}, "hf_named_token"),
+    (None, None),
+    ("   ", None),
+    ({"error": "SecretNotFoundError"}, None),
+    ({"value": 123}, None),
+    (["hf_list_token"], None),
+])
+def test_normalize_hf_token_accepts_only_explicit_secret_shapes(value, expected, capsys):
+    assert train.normalize_hf_token(value) == expected
+    assert capsys.readouterr().out == ""  # normalization never prints the secret
+
+
+def test_verify_hf_access_normalizes_wrapped_token(fake_hub, tmp_path):
+    result = train.verify_hf_access("user/repo", token={"value": "hf_private_token"},
+                                    run_dir=tmp_path)
+    assert result["write_verified"] is True
+    assert fake_hub.instances
+    assert all(api.token == "hf_private_token" for api in fake_hub.instances)
+    assert "hf_private_token" not in json.dumps(result)
+    assert (tmp_path / "hf_preflight.json").exists()
