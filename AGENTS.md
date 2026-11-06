@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.5)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.6)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -136,6 +136,11 @@ and `README.md` (how to run it).
   sm_75. Require native Ampere+ capability and non-emulated bf16 support; never
   treat `is_bf16_supported()` emulation as usable for the forced memory-efficient
   SDPA path. Explicit `precision: bfloat16` on T4 fails closed.
+- **Confidence BCE is autocast-safe (Phase 25.6).** CUDA rejects probability BCE
+  under autocast even after `.float()`. Training scores `confidence_logits` with
+  `binary_cross_entropy_with_logits` in float32 with autocast explicitly disabled;
+  inference keeps `sigmoid` probabilities and targets stay detached. The notebook
+  runs a tiny CUDA child loss/backward preflight before encoder downloads/probe.
 
 ## Mandatory architectural workflow
 
@@ -159,7 +164,7 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   230-test regression suite (CPU, ~11 s, fully offline)
+tests/                   244-test regression suite (CPU, ~20 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
                          T4, ~4 h, host-RAM/SIGKILL monitor, HF checkpoints,
                          debug-bundle fetch,

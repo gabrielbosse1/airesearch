@@ -1,8 +1,9 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.5 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.6 code as it exists
 
-**Status: Phase 25.5 native-bf16/T4 precision guard implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
-(500 steps, strict PT-BR/code assertions). The repository is merged-ready and
-the notebook/trainer remain the production path.
+**Status: Phase 25.6 autocast-safe confidence logits BCE implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
+(500 steps, strict PT-BR/code assertions). The fix is covered by offline
+regressions; the next Colab run is the hardware confirmation. The notebook/trainer
+remain the production path.
 
 **Scope.** Bottom-up description of the code in this checkout, from a scalar
 multiply to the training loop. Every formula is transcribed from the
@@ -266,7 +267,16 @@ the confidence head). **Inference:** ≤ 4 passes, break when
 `min_positions conf > 0.9`. **Training:** all 4 passes run; auxiliary target
 per state `y_t = 1[H(p_t)/log V < 0.35]` where `p_t = softmax(head(norm(h_t)))`,
 **detached** — the head learns to *read* certainty, never to manufacture it.
-`L = CE + 0.1 · mean_t BCE(conf(h_t), y_t)` over non-PAD positions.
+`z_t = W_c·RMSNorm(h_t) + b_c` (plus the zero-init thought term when enabled),
+`conf(h_t) = σ(z_t)` at inference, and
+`L = CE + 0.1 · mean_t BCEWithLogits(z_t, y_t)` over non-PAD positions.
+
+**Phase 25.6 precision contract:** CUDA autocast rejects probability BCE even
+when the probability tensor was cast to float32; the cast does not exit the
+autocast region. Training therefore scores the raw logit and explicitly disables
+autocast for a float32 `binary_cross_entropy_with_logits` reduction. This removes
+the pre-loss sigmoid/clamp saturation without changing the detached entropy
+target, inference probability API, parameter count or checkpoint schema.
 
 Measured (8-step CPU smoke): CE 5.596 → 5.382, confidence BCE 0.6931 →
 0.6798, both directions built (6 media→text + 6 text→media), 6 matrices
@@ -490,7 +500,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **230 passed in ~11 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **244 passed in ~20 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -519,8 +529,10 @@ contract, durable HF persistence (secret redaction, retry/fail-closed uploads,
 checkpoint-free debug bundles, crash artifacts, independent telemetry sync,
 optimizer/token resume), **host-RAM/cgroup accounting, device-first meta
 initialization, SIGKILL parent-monitor bundle capture with a mocked Hub, bounded
-audio/media graphs, probe-moment preservation, and native-bf16/T4 emulation
-rejection**, and the cleanup contract itself.
+audio/media graphs, probe-moment preservation, native-bf16/T4 emulation
+rejection, and autocast-safe confidence logits BCE (fp16/bf16 CPU autocast,
+checkpoint recompute, extreme-logit stability, notebook child execution)**,
+and the cleanup contract itself.
 
 
 ### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)

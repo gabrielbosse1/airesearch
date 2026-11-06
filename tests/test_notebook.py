@@ -209,3 +209,39 @@ def test_notebook_preflights_native_precision_without_parent_cuda_context():
     assert 'publish_preflight("precision"' in config_cell
     assert "bf16 emulation must not be treated as native" in config_cell
     assert "CUDA precision preflight failed" in config_cell
+    assert "loss_backward" in config_cell
+    assert "mixed-precision loss/backward preflight: PASS" in config_cell
+
+
+def test_notebook_precision_child_executes_loss_backward_offline(capsys):
+    """Run the notebook's embedded child script on CPU with fp16 autocast.
+
+    The CUDA device strings and autocast context are substituted for an
+    offline CPU execution. This validates the child script, JSON contract and
+    real model loss/backward path without a GPU, Hub access or a parent CUDA
+    context; it is not a T4 kernel/VRAM measurement.
+    """
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    config_cell = next(cell.source for cell in nb.cells
+                       if cell.cell_type == "code" and cell.source.startswith("# 5) Configuration"))
+    tree = ast.parse(config_cell)
+    assignment = next(node for node in ast.walk(tree)
+                      if isinstance(node, ast.Assign)
+                      and any(isinstance(target, ast.Name) and target.id == "precision_code"
+                              for target in node.targets))
+    child = ast.literal_eval(assignment.value)
+    assert "scaler.scale(loss).backward()" in child
+    assert "confidence_logits" not in child  # the model owns the numerically safe loss
+    child = child.replace('"cuda"', '"cpu"')
+    child = child.replace("plan.autocast_context()", 'torch.autocast("cpu", dtype=torch.float16)')
+    namespace = {"__name__": "__main__"}
+    exec(compile(child, str(NOTEBOOK) + ":precision_code", "exec"), namespace)
+    output = capsys.readouterr().out
+    report = json.loads(output.strip().splitlines()[-1])
+    assert report["precision"]["resolved"] == "float32"  # CPU PrecisionPlan
+    assert report["loss_backward"]["passed"] is True
+    assert report["loss_backward"]["device"] == "cpu"
+    assert report["loss_backward"]["model_scale"] == "tiny"
+    assert report["loss_backward"]["gradient_checkpointing"] is True
+    assert report["loss_backward"]["loss"] > 0.0
+    assert "confidence" in report["loss_backward"]["paths"]

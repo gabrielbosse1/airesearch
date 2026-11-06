@@ -1,9 +1,12 @@
 """Model-decided adaptive loop: confidence head, early break, aux BCE."""
 import math
 
+import pytest
 import torch
+import torch.nn.functional as F
 
-from models.foundation import PAD, VOCAB_SIZE
+from models.foundation import PAD, VOCAB_SIZE, CausalByteTransformer
+from models.memory_model import SkillBankView
 
 
 def test_confidence_head_shape_and_range(tiny_model):
@@ -121,3 +124,96 @@ def test_adaptive_disabled_in_training_mode(tiny_model):
     ids = torch.randint(0, 256, (1, 8))
     _, info = tiny_model(ids, adaptive=True, return_info=True)  # ignored in train
     assert info["steps_run"] == 4
+
+
+@pytest.mark.parametrize("dtype", [torch.float16, torch.bfloat16])
+@pytest.mark.parametrize("checkpointing", [False, True])
+@pytest.mark.parametrize("thought_steps", [0, 4])
+def test_confidence_loss_under_autocast_uses_fp32_logits_bce(
+        tiny_config, monkeypatch, dtype, checkpointing, thought_steps):
+    """Regression for the live T4 fp16 probe abort.
+
+    CUDA rejects probability BCE inside autocast even if its input was cast to
+    float32. CPU autocast may allow that op, so this test additionally guards
+    the op choice and verifies the reduction really runs with autocast off.
+    It exercises forward + backward, masking, memory reads and checkpoint
+    recompute on CPU; it is not a CUDA kernel or VRAM measurement.
+    """
+    cfg = tiny_config.scaled(attention_type="sliding_window", window_size=8,
+                             sliding_chunk_size=4, gradient_checkpointing=checkpointing,
+                             max_thought_steps=thought_steps)
+    model = CausalByteTransformer(cfg)
+    ids = torch.randint(0, 256, (2, 12))
+    targets = ids.clone()
+    targets[:, -2:] = PAD
+    memory = SkillBankView(torch.randn(2, 2, cfg.d_model, requires_grad=True),
+                           torch.randn(2, 2, cfg.memory_dim, requires_grad=True),
+                           torch.ones(2, 2, dtype=torch.bool))
+    real_bce_with_logits = F.binary_cross_entropy_with_logits
+    calls = []
+
+    def forbidden_probability_bce(*args, **kwargs):
+        raise AssertionError("probability BCE is unsafe under CUDA autocast; score logits instead")
+
+    def checked_logits_bce(logits, target, *args, **kwargs):
+        assert logits.dtype is torch.float32
+        assert target.dtype is torch.float32
+        try:
+            autocast_enabled = torch.is_autocast_enabled("cpu")
+        except TypeError:  # older torch exposes a separate CPU query
+            autocast_enabled = torch.is_autocast_cpu_enabled()
+        assert not autocast_enabled, "BCE reduction must leave autocast"
+        calls.append((logits.shape, target.shape))
+        return real_bce_with_logits(logits, target, *args, **kwargs)
+
+    monkeypatch.setattr(F, "binary_cross_entropy", forbidden_probability_bce)
+    monkeypatch.setattr(F, "binary_cross_entropy_with_logits", checked_logits_bce)
+    with torch.autocast("cpu", dtype=dtype):
+        loss, metrics = model.loss(ids, targets, memory, confidence_weight=0.1,
+                                   return_metrics=True)
+    assert len(calls) == cfg.refinement_steps
+    assert loss.dtype is torch.float32 and torch.isfinite(loss)
+    assert math.isfinite(metrics["confidence_bce"])
+    loss.backward()
+    head_grad = model.refinement.confidence_head.weight.grad
+    assert head_grad is not None and torch.isfinite(head_grad).all()
+    assert float(head_grad.abs().sum()) > 0.0
+    for parameter in model.parameters():
+        if parameter.grad is not None:
+            assert torch.isfinite(parameter.grad).all()
+
+
+def test_confidence_logits_preserve_probability_api_and_combined_state(tiny_model):
+    refinement = tiny_model.refinement
+    hidden = torch.randn(2, 6, 64)
+    thought = torch.randn(2, 64)
+    with torch.no_grad():
+        refinement.confidence_head.weight.normal_(0.0, 0.1)
+        refinement.confidence_head.bias.fill_(0.3)
+        refinement.thought_confidence.weight.normal_(0.0, 0.1)
+    for pooled in (None, thought):
+        logits = refinement.confidence_logits(hidden, pooled)
+        probability = refinement.confidence(hidden, pooled)
+        assert logits.shape == probability.shape == (2, 6)
+        assert torch.allclose(probability, torch.sigmoid(logits), atol=1e-7)
+        assert ((probability > 0) & (probability < 1)).all()
+
+
+@pytest.mark.parametrize("bias,threshold,expected", [
+    (-40.0, 0.0, 0.0), (40.0, 0.0, 40.0),
+    (-40.0, 1.1, 40.0), (40.0, 1.1, 0.0),
+])
+def test_confidence_logits_bce_is_stable_at_extreme_logits(
+        tiny_config, bias, threshold, expected):
+    model = CausalByteTransformer(tiny_config.scaled(max_thought_steps=0))
+    with torch.no_grad():
+        model.refinement.confidence_head.bias.fill_(bias)
+    ids = torch.randint(0, 256, (1, 12))
+    with torch.autocast("cpu", dtype=torch.float16):
+        loss, metrics = model.loss(ids, confidence_weight=1.0,
+                                   entropy_threshold=threshold, return_metrics=True)
+    assert metrics["confidence_bce"] == pytest.approx(expected, abs=1e-3)
+    assert torch.isfinite(loss)
+    loss.backward()
+    grad = model.refinement.confidence_head.bias.grad
+    assert grad is not None and torch.isfinite(grad).all()

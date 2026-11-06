@@ -19,7 +19,8 @@ Everything the 4-hour Colab run needs lives here:
   deadlocks and disk caching are structurally impossible;
 * bidirectional multimodal batches: caption bytes conditioned on a media
   skill matrix AND media codec bytes conditioned on a text skill matrix;
-* causal-LM cross-entropy + confidence BCE + dynamic-memory policy loss;
+* causal-LM cross-entropy + autocast-safe fp32 confidence logits BCE
+  + dynamic-memory policy loss;
 * gradient checkpointing, grad accumulation, cosine LR with warmup;
 * representative measured VRAM probe + batch autotune; the separate
   ``--simulate-t4`` accounting mode is explicitly labelled as an estimate;
@@ -132,9 +133,10 @@ def simulate_t4_vram(config: Mapping[str, Any], *, micro_batch: int | None = Non
     This is an ESTIMATE, not a CUDA measurement. It assumes fp32 trainable
     weights/grads/AdamW moments, fp16 autocast, fp32 residual boundaries,
     all-block PLUS sub-block checkpointing, chunk-local sliding-window SDPA
-    (one small mask/workspace live at a time), inline confidence auxiliary
-    loss, and the configured frozen-encoder storage dtype. T4/sm_75 uses the
-    memory-efficient SDPA backend; PyTorch Flash/cuDNN SDPA require sm_80+.
+    (one small mask/workspace live at a time), inline fp32 confidence
+    logits-BCE auxiliary loss, and the configured frozen-encoder storage dtype.
+    T4/sm_75 uses the memory-efficient SDPA backend; PyTorch Flash/cuDNN SDPA
+    require sm_80+.
     """
     model_cfg = FoundationConfig.from_mapping(config["model"])
     train = dict(config.get("training", {}))
