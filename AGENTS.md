@@ -147,8 +147,9 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   212-test regression suite (CPU, ~11 s, fully offline)
-pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
+tests/                   213-test regression suite (CPU, ~11 s, fully offline)
+pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
+                         T4, ~4 h, HF checkpoints, debug-bundle fetch,
                          mix audit + Zero-Disk verification before training)
 smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)
 coherence_preflight.py   Phase 25.2 500-step PT-BR/code coherence pre-flight

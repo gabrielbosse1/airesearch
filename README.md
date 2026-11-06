@@ -88,7 +88,7 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 212 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
+| `tests/` | 213 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 | `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
@@ -127,9 +127,12 @@ python -m training.train --config configs/t4_scaled.yaml \
 2. In Colab **Secrets**, add `HF_TOKEN` with **write** access to
    `gabrielbosse9/airesearch2`, and enable notebook access for that secret.
    Do not paste the token into notebook code, git, or chat.
-3. Open/run `pretrain_4h.ipynb` from the active delivery branch. The notebook
-   clones the repo, verifies HF write access with a tiny preflight upload,
-   audits the stream, checks the real CUDA VRAM probe, then launches training.
+3. Open/run the self-contained notebook:
+   [pretrain_4h.ipynb on Colab](https://colab.research.google.com/github/gabrielbosse1/airesearch/blob/main/pretrain_4h.ipynb).
+   Its first markdown cell contains the operator steps, and it includes an
+   optional debug-bundle fetch cell. The notebook clones the repo, verifies HF
+   write access with a tiny preflight upload, audits the stream, checks the real
+   CUDA VRAM probe, then launches training.
 
 The default remote is **`gabrielbosse9/airesearch2`**. Checkpoints are saved
 locally and uploaded every **10 minutes** or **100 optimizer steps**; a normal
