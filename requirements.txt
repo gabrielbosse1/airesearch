@@ -10,6 +10,7 @@ pillow                  # image decoding for ingestion
 datasets>=3,<6
 huggingface_hub>=0.25
 tqdm
+psutil>=5.9             # host-RAM/OOM telemetry (CUDA VRAM is separate)
 
 # True tooling: real DuckDuckGo search at inference (mock needs nothing).
 ddgs

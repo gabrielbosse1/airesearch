@@ -1,6 +1,6 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.3 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.4 code as it exists
 
-**Status: Ready for 4-Hour Colab Run.** Phase 25.2 coherence pre-flight passed
+**Status: Phase 25.4 host-RAM/startup fix implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
 (500 steps, strict PT-BR/code assertions). The repository is merged-ready and
 the notebook/trainer remain the production path.
 
@@ -379,6 +379,18 @@ Secrets are read from `HF_TOKEN`/Colab Secrets, redacted from console/JSON, and
 never written to config/checkpoints. Resume is exact for saved training state,
 not for live HF stream cursors; incomplete accumulation is discarded.
 
+**Phase 25.4 host-RAM correction.** CUDA VRAM fit does not imply Colab system-RAM
+fit. Trainable model/projectors/bank now initialize inside `torch.device(device)`
+(no full fp32 CPU model followed by `.to(cuda)`); frozen torchvision/torchaudio
+weights load one CPU backbone at a time, cast before transfer, and are bounded by
+a measured host-RAM guard. The notebook parent queries `nvidia-smi` rather than
+creating its own CUDA context, releases preflight reservoirs, heartbeats every
+15 s and uploads diagnostics every 60 s. `SIGKILL/-9` is reported by the parent
+with cgroup OOM-counter evidence; the child cannot catch it. Startup crashes do
+not overwrite a recoverable checkpoint with uncommitted step-0 state. The media
+row queue stores detached features and builds autograd graphs only at `pop_batch`,
+so a paired text-to-media row cannot survive a stale Adam update.
+
 ## 9. Data (`data/sources.py`) — PT-BR first, strictly streaming
 
 **Strict streaming (Phase 24.2).** `open_stream` is the single `load_dataset`
@@ -387,13 +399,13 @@ call site (AST-enforced by `tests/test_streaming.py`). It (1) forces
 `assert_streaming` — a map-style `Dataset`/`DatasetDict` (disk download) or an
 `IterableDatasetDict` (unresolved split) raises `TypeError` before any
 training — and (3) shuffles with the iterable-safe
-`.shuffle(seed=..., buffer_size=10000)`: a seeded RAM-only reservoir
+`.shuffle(seed=..., buffer_size=1000)`: a seeded RAM-only reservoir
 (`SHUFFLE_BUFFER_SIZE`, configurable via `data.shuffle_buffer_size`), never
 the map-style `.shuffle(seed=...)` that an `IterableDataset` rejects.
-`image_embedded`/`audio` kinds are capped at `MEDIA_SHUFFLE_BUFFER_CAP=1000`
+`image_embedded`/`audio` kinds are capped at `MEDIA_SHUFFLE_BUFFER_CAP=100`
 rows (`effective_shuffle_buffer`): the reservoir holds decoded PIL images /
 waveforms, so 10k media rows would be 1–2 GB of RAM; `image_url` rows buffer
-only url+caption strings and stay at 10k.
+only url+caption strings and use the 1k text-sized reservoir.
 `build_mixture` rejects `data.streaming: false`. The trainer loop is
 step-based (`while step < max_steps`), never calls `len()` on data, and
 rejects sized sample sources; `MixtureSampler` + `BatchBuilder` form the
@@ -475,7 +487,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **213 passed in ~11 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **225 passed in ~11 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -502,7 +514,9 @@ double-zero deadlock)**, the coherence smoke script, notebook validity
 (audit + Zero-Disk cell precede the run), the Phase 25.2 pre-flight assertion
 contract, durable HF persistence (secret redaction, retry/fail-closed uploads,
 checkpoint-free debug bundles, crash artifacts, independent telemetry sync,
-optimizer/token resume), and the cleanup contract itself.
+optimizer/token resume), **host-RAM/cgroup accounting, device-first meta
+initialization, SIGKILL parent-monitor bundle capture with a mocked Hub, bounded
+audio/media graphs, and probe-moment preservation**, and the cleanup contract itself.
 
 
 ### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)

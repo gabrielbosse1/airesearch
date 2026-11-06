@@ -121,9 +121,9 @@ def test_shuffle_is_seeded_deterministic_and_order_breaking(mock_streaming_hub):
     assert first_texts(24) != ordered              # source order is broken
 
 
-def test_default_buffer_is_10000_and_config_drives_it(mock_streaming_hub, monkeypatch):
+def test_default_buffer_is_colab_safe_and_config_drives_it(mock_streaming_hub, monkeypatch):
     from datasets import IterableDataset
-    assert SHUFFLE_BUFFER_SIZE == 10_000
+    assert SHUFFLE_BUFFER_SIZE == 1_000
     config = yaml.safe_load((REPO / "configs" / "t4_scaled.yaml").read_text(encoding="utf8"))
     assert config["data"]["streaming"] is True
     assert config["data"]["shuffle_buffer_size"] == SHUFFLE_BUFFER_SIZE
@@ -147,7 +147,7 @@ def test_media_reservoir_is_ram_capped(mock_streaming_hub, monkeypatch):
     reservoir is capped so a media fallback cannot OOM the Colab instance."""
     from datasets import IterableDataset
     from data.sources import MEDIA_SHUFFLE_BUFFER_CAP, effective_shuffle_buffer
-    assert MEDIA_SHUFFLE_BUFFER_CAP == 1_000
+    assert MEDIA_SHUFFLE_BUFFER_CAP == 100
     seen = []
     original = IterableDataset.shuffle
 
@@ -157,7 +157,7 @@ def test_media_reservoir_is_ram_capped(mock_streaming_hub, monkeypatch):
 
     monkeypatch.setattr(IterableDataset, "shuffle", spy)
     by_kind = {spec.kind: spec for specs in DEFAULT_SOURCES.values() for spec in specs}
-    # Embedded images + audio: capped at 1k rows.
+    # Embedded images + audio: capped at 100 rows.
     for kind in ("image_embedded", "audio"):
         open_stream(by_kind[kind], seed=1, shuffle_buffer=SHUFFLE_BUFFER_SIZE)
         assert seen[-1]["buffer_size"] == MEDIA_SHUFFLE_BUFFER_CAP, kind
