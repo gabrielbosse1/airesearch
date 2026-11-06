@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.4)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.5)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -132,8 +132,10 @@ and `README.md` (how to run it).
   sub-boundaries checkpointed, representative probe (memory/confidence/policy/
   AdamW + efficient-backend verification for self/chunk/cross masks), batch autotune, and fail-closed if
   still over. The 1024-byte window is not silently shrunk.
-- **T4 cannot bf16.** `precision: auto` resolves to fp16 + GradScaler on
-  sm_75. Never hardcode bf16 autocast on a T4 path.
+- **T4 cannot native-bf16.** `precision: auto` resolves to fp16 + GradScaler on
+  sm_75. Require native Ampere+ capability and non-emulated bf16 support; never
+  treat `is_bf16_supported()` emulation as usable for the forced memory-efficient
+  SDPA path. Explicit `precision: bfloat16` on T4 fails closed.
 
 ## Mandatory architectural workflow
 
@@ -157,7 +159,7 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   225-test regression suite (CPU, ~11 s, fully offline)
+tests/                   230-test regression suite (CPU, ~11 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
                          T4, ~4 h, host-RAM/SIGKILL monitor, HF checkpoints,
                          debug-bundle fetch,

@@ -197,3 +197,15 @@ def test_launch_monitor_retains_real_sigkill_bundle_with_mocked_hub(tmp_path, mo
     heartbeats = [json.loads(line) for line in (tmp_path / "notebook_monitor.jsonl").read_text().splitlines()]
     assert any(row["event"] == "heartbeat" for row in heartbeats)
     assert syncs and "runs/latest.json" in pointers
+
+
+def test_notebook_preflights_native_precision_without_parent_cuda_context():
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
+    gpu = next(src for src in code if src.startswith("# 1) GPU check"))
+    assert "compute_cap" in gpu and "torch.cuda" not in gpu
+    config_cell = next(src for src in code if src.startswith("# 5) Configuration"))
+    assert "resolve_precision" in config_cell and "precision_plan" in config_cell
+    assert 'publish_preflight("precision"' in config_cell
+    assert "bf16 emulation must not be treated as native" in config_cell
+    assert "CUDA precision preflight failed" in config_cell

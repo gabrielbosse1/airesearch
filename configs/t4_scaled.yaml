@@ -5,10 +5,11 @@
 # Load with:  yaml.safe_load(open("configs/t4_scaled.yaml"))
 # Model with: FoundationConfig.from_mapping(cfg["model"])
 #
-# PRECISION ON A TESLA T4 (Turing, sm_75): CUDA bf16 autocast is NOT available
-# and raises at runtime. `precision: auto` resolves at runtime with
-# torch.cuda.is_bf16_supported(): Ampere+ gets bfloat16, T4 gets float16 +
-# torch.amp.GradScaler. Both are 2-byte formats; the fallback is required.
+# PRECISION ON A TESLA T4 (Turing, sm_75): native bf16 is NOT available.
+# Newer PyTorch can report bf16 EMULATION as supported; that is rejected for
+# the forced memory-efficient SDPA path. `precision: auto` requires native
+# Ampere+ support (compute capability >= 8 and including_emulation=False when
+# available); T4 gets float16 + torch.amp.GradScaler. Both are 2-byte formats.
 #
 # Geometry: 8 layers x 1024-dim core, 16384 context, 8192-dim unified memory.
 # Causal sliding-window attention: each byte attends to itself plus up to
