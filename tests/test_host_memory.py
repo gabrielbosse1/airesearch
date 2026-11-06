@@ -167,3 +167,59 @@ def test_probe_moment_allocation_preserves_resumed_optimizer_state():
     train._rollback_adam_probe_moments(optimizer, added)
     assert second not in optimizer.state
     assert all(torch.equal(optimizer.state[first][key], value) for key, value in before.items())
+
+
+def test_trainer_audio_probe_sample_bound_matches_batch_builder(tmp_path):
+    config = smoke_config()
+    config["runtime"] = {"min_host_available_gb": 0, "max_audio_seconds": 2.5}
+    config["output"].update(run_dir=str(tmp_path / "run"),
+                            metrics_jsonl=str(tmp_path / "run" / "metrics.jsonl"))
+    config["checkpoints"]["local_dir"] = str(tmp_path / "run" / "checkpoints")
+    trainer = Trainer(config, device="cpu", samples=iter(()), resume=False)
+    assert trainer.max_audio_samples == 40_000
+    builder = BatchBuilder(trainer.model, trainer.ingestors, trainer.text_projector,
+                           trainer.seq_len, max_audio_seconds=trainer.max_audio_seconds)
+    assert builder.max_audio_samples == trainer.max_audio_samples
+
+
+def test_trainer_rejects_nonpositive_audio_bound(tmp_path):
+    config = smoke_config()
+    config["runtime"] = {"min_host_available_gb": 0, "max_audio_seconds": 0}
+    config["output"].update(run_dir=str(tmp_path / "run"),
+                            metrics_jsonl=str(tmp_path / "run" / "metrics.jsonl"))
+    config["checkpoints"]["local_dir"] = str(tmp_path / "run" / "checkpoints")
+    with pytest.raises(ValueError, match="max_audio_seconds must be positive"):
+        Trainer(config, device="cpu", samples=iter(()), resume=False)
+
+
+def test_frozen_audio_encoder_probe_uses_bounded_samples(tmp_path, monkeypatch):
+    """Regression for the live T4 AttributeError in probe_vram.
+
+    This exercises the extracted encoder-probe path with mocked CUDA memory
+    accounting on CPU. It verifies the audio input bound and report shape; it
+    is not a CUDA kernel or VRAM measurement.
+    """
+    config = smoke_config()
+    config["runtime"] = {"min_host_available_gb": 0, "max_audio_seconds": 1.5}
+    config["output"].update(run_dir=str(tmp_path / "run"),
+                            metrics_jsonl=str(tmp_path / "run" / "metrics.jsonl"))
+    config["checkpoints"]["local_dir"] = str(tmp_path / "run" / "checkpoints")
+    trainer = Trainer(config, device="cpu", samples=iter(()), resume=False)
+    ingestor = MultimodalIngestor(None, memory_dim=128, key_dim=64, encoder_dim=32)
+    seen = []
+
+    class Encoder:
+        def __call__(self, waveform):
+            seen.append(tuple(waveform.shape))
+            return torch.zeros(1, 32)
+
+    ingestor.encoder = Encoder()
+    trainer.ingestors["audio"] = ingestor
+    monkeypatch.setattr(torch.cuda, "reset_peak_memory_stats", lambda device=None: None)
+    monkeypatch.setattr(torch.cuda, "max_memory_allocated", lambda device=None: 123_000_000)
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
+    report = trainer._probe_frozen_encoders()
+    assert seen == [(1, 24_000)]
+    assert report["audio"]["input_shape"] == [1, 24_000]
+    assert report["audio"]["feature_shape"] == [1, 32]
+    assert report["audio"]["peak_gb"] == pytest.approx(0.123)

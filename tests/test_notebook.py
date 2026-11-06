@@ -319,3 +319,15 @@ def test_notebook_auth_falls_back_to_hidden_input_for_unsupported_secret(monkeyp
                         lambda repo_id, *, token=None, run_dir=None: {"repo_id": repo_id, "user": "tester"})
     exec(compile(source, str(NOTEBOOK) + ":auth", "exec"), {"__name__": "__main__"})
     assert os.environ["HF_TOKEN"] == "hf_fallback_token"
+
+
+def test_notebook_documents_bounded_audio_probe():
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    config_cell = next(cell.source for cell in nb.cells
+                       if cell.cell_type == "code" and cell.source.startswith("# 5) Configuration"))
+    assert "audio encoder probe bound:" in config_cell
+    assert "max_audio_seconds" in config_cell
+    assert "16000" in config_cell
+    source = NOTEBOOK.read_text(encoding="utf8")
+    assert "Phase 25.7" in source
+    assert "Trainer.max_audio_samples" in source

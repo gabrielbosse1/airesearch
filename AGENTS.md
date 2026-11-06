@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.6)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.7)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -142,6 +142,11 @@ and `README.md` (how to run it).
   `binary_cross_entropy_with_logits` in float32 with autocast explicitly disabled;
   inference keeps `sigmoid` probabilities and targets stay detached. The notebook
   runs a tiny CUDA child loss/backward preflight before encoder downloads/probe.
+- **Audio probe bound is shared (Phase 25.7).** `Trainer.max_audio_samples =
+  int(max_audio_seconds * 16000)` and must match `BatchBuilder`. The CUDA frozen
+  encoder probe (`_probe_frozen_encoders`) uses it for audio; non-positive
+  `runtime.max_audio_seconds` fails closed. Mocked-CUDA shape tests are not VRAM
+  measurements.
 
 ## Mandatory architectural workflow
 
@@ -165,7 +170,7 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   258-test regression suite (CPU, ~11 s, fully offline)
+tests/                   262-test regression suite (CPU, ~17 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
                          T4, ~4 h, host-RAM/SIGKILL monitor, HF checkpoints,
                          debug-bundle fetch,
