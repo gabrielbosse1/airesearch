@@ -69,18 +69,18 @@ GROUP_WEIGHTS: dict[str, float] = {"ptbr": 0.50, "code": 0.25,
 MIX_WINDOW: int = 100
 
 #: Reservoir size for ``IterableDataset.shuffle(seed=..., buffer_size=...)``.
-#: 10k documents is a RAM-only buffer (tens of MB for text, low hundreds for
-#: code files) -- large enough to break source ordering, small enough for a
-#: free Colab instance. Nothing is ever written to disk.
-SHUFFLE_BUFFER_SIZE: int = 10_000
+#: Colab-safe RAM-only reservoir. 1k documents still breaks source ordering;
+#: 10k long code/web documents multiplied across four open chains competed
+#: with model initialization for SYSTEM RAM. Nothing is written to disk.
+SHUFFLE_BUFFER_SIZE: int = 1_000
 
 #: Media rows are 100-1000x larger than text rows: the reservoir holds DECODED
 #: rows (PIL images / float waveforms), so 10k embedded MSCOCO images would be
 #: ~1 GB and 10k LibriSpeech clips ~2 GB of RAM -- an OOM risk next to the
 #: model. ``image_embedded``/``audio`` sources therefore cap the reservoir at
-#: 1k rows (~100-200 MB). ``image_url`` rows (COYO) stay uncapped: they buffer
+#: 100 rows. ``image_url`` rows (COYO) use the text-sized 1k reservoir: they buffer
 #: only url+caption strings; the image bytes are fetched downstream.
-MEDIA_SHUFFLE_BUFFER_CAP: int = 1_000
+MEDIA_SHUFFLE_BUFFER_CAP: int = 100
 
 #: Human-readable labels for the audit table (and the trainer's summary).
 GROUP_LABELS: dict[str, str] = {"ptbr": "PT-BR", "code": "Code",

@@ -1,8 +1,10 @@
 """The single Colab notebook: valid nbformat, parseable cells, T4-ready."""
 import ast
+import json
 from pathlib import Path
 
 import nbformat
+import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 NOTEBOOK = REPO / "pretrain_4h.ipynb"
@@ -118,3 +120,80 @@ def test_notebook_contains_operator_instructions_and_debug_fetch():
     assert "runs/latest.json" in fetch and "debug_bundle.zip" in fetch
     assert "hf_hub_download" in fetch and "remote_run_path" in fetch
     assert "files.download" in fetch
+
+
+def test_notebook_monitors_sigkill_and_releases_preflight_ram():
+    source = NOTEBOOK.read_text(encoding="utf8")
+    assert "Restart session" in source and "SIGKILL" in source
+    assert "buffer_size=1000" in source and "100 decoded rows" in source
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
+    gpu = next(src for src in code if src.startswith("# 1) GPU check"))
+    assert "nvidia-smi" in gpu and "torch.cuda" not in gpu  # no parent CUDA context
+    zero = next(src for src in code if "disk_usage" in src)
+    assert "del mix, stream, report" in zero and "gc.collect()" in zero
+    launch = next(src for src in code if "--hf-repo" in src and "Popen" in src)
+    for marker in ("threading.Thread", "notebook_monitor.jsonl", "host_memory_snapshot",
+                   "explain_child_exit", "notebook_failure.json", "make_debug_bundle",
+                   "publish_monitor_pointer", "monitor_stop.set()", "monitor.join"):
+        assert marker in launch, marker
+    assert "notebook_upload_seconds" in launch and "notebook_monitor_seconds" in launch
+
+
+def test_debug_fetch_prefers_local_bundle_after_failed_launch():
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    fetch = next(cell.source for cell in nb.cells
+                 if cell.cell_type == "code" and "FETCH_DEBUG_BUNDLE" in cell.source)
+    assert 'globals().get("RUN_DIR")' in fetch
+    assert "using local debug bundle" in fetch and "using remote debug bundle" in fetch
+    assert "raise SystemExit" not in fetch
+
+
+def test_launch_monitor_retains_real_sigkill_bundle_with_mocked_hub(tmp_path, monkeypatch):
+    """Execute the notebook launch cell against a child that SIGKILLs itself.
+
+    This is a local signal-path test, not a Colab OOM measurement. Every Hub
+    operation is mocked; the parent must still write/download a debug bundle.
+    """
+    import os
+    import training.train as train
+
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    source = next(cell.source for cell in nb.cells
+                  if cell.cell_type == "code" and "--hf-repo" in cell.source and "Popen" in cell.source)
+    begin = source.index("cmd = [")
+    end = source.index('print("launching:"', begin)
+    child = "import os,signal,time; print('child started', flush=True); time.sleep(0.25); os.kill(os.getpid(), signal.SIGKILL)"
+    source = source[:begin] + f"cmd = [sys.executable, '-c', {child!r}]\n" + source[end:]
+    syncs, pointers = [], []
+
+    def sync(*args, **kwargs):
+        syncs.append((args, kwargs))
+        return {"uploaded": True, "path_in_repo": args[2]}
+
+    def upload(path, repo, remote, **kwargs):
+        pointers.append(remote)
+        return {"uploaded": True, "path_in_repo": remote}
+
+    monkeypatch.setattr(train, "sync_run_folder", sync)
+    monkeypatch.setattr(train, "hf_upload", upload)
+    namespace = {
+        "config": {"runtime": {"notebook_monitor_seconds": 0.03,
+                               "notebook_upload_seconds": 0.03, "min_host_available_gb": 0}},
+        "RUN_DIR": tmp_path, "RUN_ID": "sigkill-test", "HF_REPO": "user/repo",
+        "os": os, "write_json": train.write_json, "utc_stamp": train.utc_stamp,
+        "redact_secrets": train.redact_secrets, "resolve_hf_token": lambda: "hf_private_token",
+        "hf_upload": upload, "sync_run_folder": sync,
+        "publish_preflight": lambda *a, **k: {"uploaded": True},
+    }
+    with pytest.raises(AssertionError, match="training failed"):
+        exec(compile(source, str(NOTEBOOK), "exec"), namespace)
+    exit_record = json.loads((tmp_path / "launch_exit.json").read_text())
+    assert exit_record["exit_code"] == -9 and exit_record["signal_name"] == "SIGKILL"
+    assert exit_record["confirmed_oom_kill"] is False  # no invented Colab evidence
+    assert (tmp_path / "notebook_failure.json").exists()
+    assert (tmp_path / "failure.json").exists()
+    assert (tmp_path / "debug_bundle.zip").exists()
+    heartbeats = [json.loads(line) for line in (tmp_path / "notebook_monitor.jsonl").read_text().splitlines()]
+    assert any(row["event"] == "heartbeat" for row in heartbeats)
+    assert syncs and "runs/latest.json" in pointers

@@ -10,7 +10,7 @@ ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
-**Status: Ready for 4-Hour Colab Run (Phase 25.3 durable persistence).** The 500-step coherence
+**Status: Phase 25.4 Colab host-RAM/startup fix implemented; live T4 rerun pending.** The 500-step coherence
 pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
 gibberish, and step-500 continuations were recognizable PT-BR plus Python that
 compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
@@ -26,7 +26,7 @@ before the GPU budget is spent — see
 **100% streaming, zero disk (Phase 24.2):** the corpora (the-stack, GigaVerbo,
 fineweb) are far larger than a Colab disk. Every `load_dataset` call is forced
 to `streaming=True` and type-checked to return an `IterableDataset`; shuffling
-uses a RAM-only `buffer_size=10000` reservoir; the training loop is strictly
+uses a RAM-only `buffer_size=1000` reservoir; the training loop is strictly
 step-based; and a **Zero-Disk verification cell** proves negligible disk growth
 before any training starts — see [Strict streaming](#strict-streaming-phase-242).
 
@@ -85,10 +85,10 @@ cross-entropy. The authoritative math is in
 | `models/foundation.py` | Byte Transformer, chunk-local causal sliding-window SDPA, GatedSkillAdapter + memory cross-attention, confidence loop, LatentThoughtBuffer, token-id tools, checkpoint I/O |
 | `models/memory_model.py` | Unified DualMemory alias: one 1024-key/8192-value bank, learnable decay/importance, Forever guard, detached delayed writes |
 | `models/encoders.py` | Frozen encoders, SkillProjector / SkillKeyProjector / TextSkillProjector, uint8 matrix codec, ingestion |
-| `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
+| `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 10-min/100-step HF checkpoints + host-RAM/SIGKILL diagnostics, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 213 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
+| `tests/` | 225 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 | `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
@@ -132,27 +132,51 @@ python -m training.train --config configs/t4_scaled.yaml \
    Its first markdown cell contains the operator steps, and it includes an
    optional debug-bundle fetch cell. The notebook clones the repo, verifies HF
    write access with a tiny preflight upload, audits the stream, checks the real
-   CUDA VRAM probe, then launches training.
+   CUDA VRAM probe, then launches training with an independent parent monitor.
 
 The default remote is **`gabrielbosse9/airesearch2`**. Checkpoints are saved
 locally and uploaded every **10 minutes** or **100 optimizer steps**; a normal
 finish also uploads `checkpoints/checkpoint_final.pt`. Logs/diagnostics sync
-every **5 minutes**, independently of checkpoint cadence. Upload failures are
+every **5 minutes**, independently of checkpoint cadence; the notebook parent
+also heartbeats every **15 seconds** and uploads diagnostics every **60 seconds**
+so startup/SIGKILL evidence does not wait for an optimizer step. Upload failures are
 retried and then stop the run by default (`fail_on_upload_error: true`) rather
 than silently spending GPU time without a recoverable remote checkpoint.
 
 Saved under `runs/colab_latest/` locally and under `runs/<run_id>/<session_id>/`
 on the Hub: `console.log`, `metrics.jsonl`, per-step `events.jsonl`, resolved
 config, environment/package/GPU manifest, git provenance + code snapshot,
-VRAM probe, preflight reports, final PT-BR/code/tool samples, checkpoint hash /
+VRAM probe, host-RAM/cgroup snapshots, `startup_stage.json`,
+`notebook_monitor.jsonl`, `launch_exit.json`, preflight reports, final PT-BR/code/tool samples, checkpoint hash /
 upload manifest, and a small checkpoint-free `debug_bundle.zip`. A cooperative
-interrupt/crash attempts an emergency checkpoint + bundle upload. A hard Colab
+interrupt/crash after a committed optimizer step attempts an emergency checkpoint
++ bundle upload; a startup failure preserves diagnostics without overwriting a
+recoverable checkpoint with step-0 state. A hard Colab
 VM kill cannot run final code; recovery is bounded by the last successful
 periodic upload. Re-running restores model, projectors, optimizer, scaler,
 memory bank, step, counters and RNG state. Live HF iterators/shuffle buffers are
 reopened rather than rewound to an exact document cursor; incomplete gradient
 accumulation is discarded. This is honest training-state resume, not a claim of
 bit-exact stream replay.
+
+### If Colab reports `exit code -9`
+
+`-9` is SIGKILL. The child cannot run Python cleanup after it. The notebook now:
+
+- initializes trainable weights directly on the GPU instead of building a full
+  fp32 CPU copy first;
+- avoids creating a CUDA context in the long-lived notebook parent;
+- reduces shuffle reservoirs to **1,000 text/URL rows** and **100 decoded media
+  rows**, and releases preflight streams before launch;
+- checks measured system-RAM headroom (`runtime.min_host_available_gb`, default
+  2 GB) before large allocations, separately from the 13.5 GB CUDA VRAM ceiling;
+- records parent heartbeats and cgroup OOM counters, then writes a local/remote
+  `debug_bundle.zip` even when the child is killed.
+
+Run the notebook's **Fetch debug bundle** cell immediately after the failure,
+upload that ZIP to Arena, then **Runtime → Restart session** before retrying.
+SIGKILL alone does not prove OOM; `launch_exit.json` distinguishes an observed
+cgroup `oom_kill` counter increase from an unconfirmed external kill.
 
 For later debugging, download the small bundle from the repo pointed to by
 `runs/latest.json`, or in Colab/local Python:
@@ -227,9 +251,9 @@ to end, and the guarantee is tested, not assumed:
   unresolved `IterableDatasetDict` raises `TypeError` immediately.
   `build_mixture` also rejects `data.streaming: false` in the config.
 - **Iterable-safe shuffling.** Streams are shuffled with
-  `.shuffle(seed=..., buffer_size=10000)` — a seeded, RAM-only reservoir
+  `.shuffle(seed=..., buffer_size=1000)` — a seeded, RAM-only reservoir
   (`data.shuffle_buffer_size` in the config). Embedded-image/audio fallbacks
-  are capped at **1,000 rows** (`MEDIA_SHUFFLE_BUFFER_CAP`): the reservoir
+  are capped at **100 rows** (`MEDIA_SHUFFLE_BUFFER_CAP`): the reservoir
   holds *decoded* media rows, and 10k images/waveforms would be 1–2 GB of RAM
   next to the model. COYO (`image_url`) stays at 10k — it buffers only
   url+caption strings. The map-style `.shuffle(seed=...)` that fails on an

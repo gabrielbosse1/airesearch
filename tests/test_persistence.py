@@ -190,7 +190,9 @@ def test_remote_startup_failure_fails_closed_and_keeps_crash_bundle(tmp_path, mo
     assert trainer.step == 0
     assert (run / "failure.json").exists()
     assert (run / "debug_bundle.zip").exists()
-    assert (run / "checkpoints" / "checkpoint_latest.pt").exists()
+    assert not (run / "checkpoints" / "checkpoint_latest.pt").exists()
+    skipped = json.loads((run / "crash_checkpoint.json").read_text())
+    assert skipped["saved"] is False and skipped["step"] == 0
 
 
 def test_telemetry_sync_is_independent_of_checkpoint_cadence(tmp_path, monkeypatch):

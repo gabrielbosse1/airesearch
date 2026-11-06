@@ -90,17 +90,24 @@ vram:
   frozen_encoder_dtype: float16    # inference-only frozen backbones on CUDA;
                                    # trainable params/grads/Adam remain fp32
 
+runtime:
+  min_host_available_gb: 2.0       # measured SYSTEM RAM headroom, not CUDA VRAM
+  max_audio_seconds: 30            # bound frozen Wav2Vec2 transient activations
+  notebook_monitor_seconds: 15     # parent heartbeat while the child starts/steps
+  notebook_upload_seconds: 60      # remote logs even if no optimizer step completes
+
 data:
   # Phase 24.2 STRICT streaming: build_mixture REJECTS streaming: false.
   # Every load_dataset call uses streaming=True and the returned object is
   # verified to be an IterableDataset (never a disk-backed Dataset).
   streaming: true
   # RAM-only reservoir for IterableDataset.shuffle(seed=..., buffer_size=...).
-  # 10k documents ~ tens-to-hundreds of MB of RAM, zero disk. Media fallbacks
-  # (embedded images / decoded audio) are capped at 1000 rows in open_stream:
+  # 1k documents per chain, zero disk; smaller than the former 10k reservoir
+  # so preflight + trainer do not compete for Colab SYSTEM RAM. Media fallbacks
+  # (embedded images / decoded audio) are capped at 100 rows in open_stream:
   # decoded media rows are 100-1000x larger than text and 10k of them could
   # OOM the instance. Map-style .shuffle(seed=...) is forbidden on streams.
-  shuffle_buffer_size: 10000
+  shuffle_buffer_size: 1000
   # PT-BR-FIRST mix (Phase 24.1). Fractions of DRAWN DOCUMENTS, enforced
   # quota-exactly per 100-draw window by data/sources.MixtureSampler
   # (largest-remainder allocation + seeded shuffle). Must sum to 1.0.

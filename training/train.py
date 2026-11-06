@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import copy
 import contextlib
+import gc
 import hashlib
 import json
 import math
@@ -243,6 +244,178 @@ def simulate_t4_vram(config: Mapping[str, Any], *, micro_batch: int | None = Non
 
 
 # ---------------------------------------------------------------------------
+# Host-RAM accounting: CUDA VRAM and Colab system RAM are separate budgets.
+# ---------------------------------------------------------------------------
+def _read_text(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf8").strip()
+    except (OSError, ValueError):
+        return None
+
+
+def _cgroup_memory() -> dict[str, Any]:
+    """Read the actual container limit/counters when the kernel exposes them.
+
+    Colab may hide cgroup files. Missing fields stay None (unknown), never a
+    fabricated zero. Both cgroup v2 and the legacy memory controller are read.
+    """
+    base = Path("/sys/fs/cgroup")
+    relative = Path("")
+    for line in (_read_text(Path("/proc/self/cgroup")) or "").splitlines():
+        parts = line.split(":", 2)
+        if len(parts) == 3 and parts[0] == "0" and parts[1] == "":
+            relative = Path(parts[2].lstrip("/"))
+    v2 = [base / relative, base]
+    for directory in v2:
+        current = _read_text(directory / "memory.current")
+        limit = _read_text(directory / "memory.max")
+        if current is None or limit is None:
+            continue
+        events = {}
+        for line in (_read_text(directory / "memory.events") or "").splitlines():
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                events[fields[0]] = int(fields[1])
+        stats = {}
+        for line in (_read_text(directory / "memory.stat") or "").splitlines():
+            fields = line.split()
+            if len(fields) == 2 and fields[1].isdigit():
+                stats[fields[0]] = int(fields[1])
+        reclaimable = min(int(current), stats.get("inactive_file", 0))
+        return {"version": 2, "current_bytes": int(current),
+                "limit_bytes": None if limit == "max" else int(limit),
+                "peak_bytes": (_read_text(directory / "memory.peak") or None),
+                "inactive_file_bytes": reclaimable,
+                "anon_kernel_estimate_bytes": int(current) - reclaimable,
+                "events": events, "path": str(directory)}
+    for directory in (base / "memory" / relative, base / "memory"):
+        current = _read_text(directory / "memory.usage_in_bytes")
+        limit = _read_text(directory / "memory.limit_in_bytes")
+        if current is None or limit is None:
+            continue
+        value = int(limit)
+        failcnt = _read_text(directory / "memory.failcnt")
+        return {"version": 1, "current_bytes": int(current),
+                "limit_bytes": None if value >= 1 << 60 else value,
+                "failcnt": int(failcnt) if failcnt else None, "path": str(directory)}
+    return {}
+
+
+def host_memory_snapshot(*, pid: int | None = None) -> dict[str, Any]:
+    """Measured host RAM, process RSS and (when visible) cgroup OOM counters.
+
+    This does NOT call CUDA and does not initialize a GPU context. `available`
+    is the tighter of OS-available RAM and the container's remaining allowance.
+    """
+    result: dict[str, Any] = {"measured": False, "checked_at": utc_stamp(),
+                              "pid": os.getpid(), "virtual": None, "process": None,
+                              "cgroup": _cgroup_memory(), "available_bytes": None}
+    try:
+        import psutil
+        virtual = psutil.virtual_memory()
+        result["virtual"] = {"total_bytes": int(virtual.total),
+                             "available_bytes": int(virtual.available),
+                             "used_bytes": int(virtual.used)}
+        result["available_bytes"] = int(virtual.available)
+        result["measured"] = True
+        target = psutil.Process(pid if pid is not None else os.getpid())
+        with target.oneshot():
+            result["process"] = {"pid": target.pid, "rss_bytes": int(target.memory_info().rss),
+                                 "vms_bytes": int(target.memory_info().vms)}
+        swap = psutil.swap_memory()
+        result["swap"] = {"total_bytes": int(swap.total), "used_bytes": int(swap.used)}
+    except Exception as exc:
+        result["measurement_error"] = f"{type(exc).__name__}: {exc}"
+    cgroup = result["cgroup"]
+    if cgroup.get("limit_bytes") is not None and cgroup.get("current_bytes") is not None:
+        usage = int(cgroup.get("anon_kernel_estimate_bytes", cgroup["current_bytes"]))
+        remaining = max(0, int(cgroup["limit_bytes"]) - usage)
+        available = result["available_bytes"]
+        result["available_bytes"] = remaining if available is None else min(available, remaining)
+        result["measured"] = True
+    if result["available_bytes"] is not None:
+        result["available_gb"] = round(result["available_bytes"] / GB, 4)
+    return result
+
+
+def require_host_memory(min_available_gb: float, *, stage: str) -> dict[str, Any]:
+    """Fail closed before a large allocation when available host RAM is known."""
+    if min_available_gb < 0:
+        raise ValueError("min_available_gb must be non-negative")
+    snapshot = host_memory_snapshot()
+    available = snapshot.get("available_bytes")
+    if available is not None and available < float(min_available_gb) * GB:
+        raise MemoryError(
+            f"host RAM guard at {stage}: {available / GB:.3f} GB available, "
+            f"{min_available_gb:.3f} GB required. Restart the Colab runtime to release "
+            "notebook/preflight memory, then retry. CUDA VRAM is a separate budget; "
+            "the model geometry was NOT silently reduced.")
+    return snapshot
+
+
+def _allocate_adam_probe_moments(optimizer: torch.optim.Optimizer) -> list[tuple[torch.Tensor, str | None]]:
+    """Allocate one worst-case set of AdamW moments without touching resumed ones.
+
+    Returns rollback instructions. A resumed optimizer already owns exp_avg /
+    exp_avg_sq on the GPU; replacing optimizer.state during the probe used to
+    keep those tensors alive via old_state AND allocate a second probe set.
+    """
+    added: list[tuple[torch.Tensor, str | None]] = []
+    for group in optimizer.param_groups:
+        for parameter in group["params"]:
+            if not parameter.requires_grad:
+                continue
+            state = optimizer.state.get(parameter)
+            if state is None:
+                state = {}
+                optimizer.state[parameter] = state
+                added.append((parameter, None))
+            for name in ("exp_avg", "exp_avg_sq"):
+                if name not in state:
+                    state[name] = torch.zeros_like(parameter)
+                    added.append((parameter, name))
+            if "step" not in state:
+                state["step"] = torch.zeros((), dtype=torch.float32, device=parameter.device)
+                added.append((parameter, "step"))
+    return added
+
+
+def _rollback_adam_probe_moments(optimizer: torch.optim.Optimizer,
+                                 added: list[tuple[torch.Tensor, str | None]]) -> None:
+    for parameter, name in reversed(added):
+        state = optimizer.state.get(parameter)
+        if state is None:
+            continue
+        if name is None:
+            del optimizer.state[parameter]
+        else:
+            state.pop(name, None)
+            if not state:
+                del optimizer.state[parameter]
+
+
+def explain_child_exit(exit_code: int | None, *, before: Mapping[str, Any] | None = None,
+                       after: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Describe a subprocess exit without pretending SIGKILL proves its sender."""
+    negative = exit_code is not None and exit_code < 0
+    signum = -exit_code if negative else (128 + exit_code if exit_code and exit_code > 128 else None)
+    record: dict[str, Any] = {"exit_code": exit_code, "signal": signum,
+                              "signal_name": signal.Signals(signum).name if signum in set(signal.Signals) else None,
+                              "probable_cause": None, "confirmed_oom_kill": False}
+    before_events = ((before or {}).get("cgroup") or {}).get("events") or {}
+    after_events = ((after or {}).get("cgroup") or {}).get("events") or {}
+    delta = after_events.get("oom_kill", 0) - before_events.get("oom_kill", 0)
+    record["cgroup_oom_kill_delta"] = delta
+    record["confirmed_oom_kill"] = delta > 0
+    if signum == int(signal.SIGKILL):
+        record["probable_cause"] = ("cgroup/host OOM killer (counter increased)" if delta > 0 else
+                                    "external SIGKILL; host-OOM is plausible but not proven by the exit code alone")
+        record["recovery"] = ("No Python finally/except handler runs after SIGKILL. Use the last remotely "
+                              "uploaded checkpoint; inspect notebook_monitor.jsonl and startup_stage.json.")
+    return record
+
+
+# ---------------------------------------------------------------------------
 # Precision: the T4 bf16 trap
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
@@ -432,6 +605,10 @@ class _Row:
     targets: torch.Tensor
     key: torch.Tensor | None = None
     value: torch.Tensor | None = None
+    features: torch.Tensor | None = None
+    modality: str | None = None
+    caption: bytes | None = None
+    direction: str | None = None
 
 
 class BatchBuilder:
@@ -446,7 +623,8 @@ class BatchBuilder:
 
     def __init__(self, model: CausalByteTransformer, ingestors: Mapping[str, MultimodalIngestor],
                  text_projector: TextSkillProjector, seq_len: int, *,
-                 memory: DualMemory | None = None, ingest_to_memory: bool = False) -> None:
+                 memory: DualMemory | None = None, ingest_to_memory: bool = False,
+                 max_audio_seconds: float = 30.0) -> None:
         self.model = model
         self.ingestors = dict(ingestors)
         self.text_projector = text_projector
@@ -455,6 +633,9 @@ class BatchBuilder:
         self.packer = BytePacker(seq_len)
         self.memory = memory
         self.ingest_to_memory = ingest_to_memory
+        if max_audio_seconds <= 0:
+            raise ValueError("max_audio_seconds must be positive")
+        self.max_audio_samples = int(float(max_audio_seconds) * 16000)
         self._rows: list[_Row] = []
         self._pending_writes: list[tuple[torch.Tensor, torch.Tensor, str, dict[str, Any]]] = []
         self.stats = {"text_rows": 0, "media_to_text": 0, "text_to_media": 0,
@@ -473,7 +654,7 @@ class BatchBuilder:
             raw = preprocess_image(sample["image"]).to(self.device)
             return ingestor.encoder(raw)
         if modality == "audio" and sample.get("waveform") is not None:
-            waveform = sample["waveform"].to(self.device)
+            waveform = sample["waveform"][:self.max_audio_samples].to(self.device)
             rate = sample.get("sample_rate") or 16000
             if rate != 16000:
                 import torchaudio
@@ -491,15 +672,12 @@ class BatchBuilder:
         if ingestor is None:
             self.stats["skipped"] += 1
             return
-        key, value = ingestor.project_features(features)  # gradients ON
+        # Keep only detached encoder features in the row queue. Creating
+        # projector/embedding graphs during feed() retained a second media
+        # graph across micro-batches (and potentially across an Adam update).
+        # pop_batch() projects just the selected rows, immediately before CE.
+        features = features.detach()
         caption = bytes(sample["caption"])[: self.seq_len // 4]
-
-        if self.ingest_to_memory and self.memory is not None:
-            # Delay commitment until AFTER the current batch is assembled.
-            # Otherwise a sample fed to fill this batch could be retrieved by
-            # that same batch (future/self leakage through the teleportation hub).
-            self._pending_writes.append((key[0].detach(), value[0].detach(), modality,
-                                         {"caption": caption[:64].decode("utf8", "replace")}))
 
         # Direction A: media matrix -> caption bytes.
         prompt = b"caption: "
@@ -507,13 +685,11 @@ class BatchBuilder:
         full = full[: self.seq_len + 1]
         ids_a, targets_a = full[:-1].clone(), full[1:].clone()
         targets_a[: len(prompt)] = PAD  # learn the caption, not the prompt
-        self._rows.append(_Row(ids_a, targets_a, key[0], value[0]))
+        self._rows.append(_Row(ids_a, targets_a, features=features, modality=modality,
+                               caption=caption, direction="media_to_text"))
         self.stats["media_to_text"] += 1
 
         # Direction B: text matrix -> media codec bytes.
-        caption_ids = encode_bytes(caption, bos=True).unsqueeze(0).to(self.device)
-        pooled = pooled_text_embedding(self.model, caption_ids, PAD)
-        text_key, text_value = self.text_projector(pooled)
         codec = matrix_to_bytes(features[0])
         prefix = b"matrix: " + caption + b"\n"
         budget = self.seq_len - len(prefix) - 2  # BOS + EOS framing
@@ -522,7 +698,8 @@ class BatchBuilder:
             full_b = encode_bytes(prefix + payload, bos=True, eos=True)
             ids_b, targets_b = full_b[:-1].clone(), full_b[1:].clone()
             targets_b[: len(prefix)] = PAD  # learn only the codec bytes + EOS
-            self._rows.append(_Row(ids_b, targets_b, text_key[0], text_value[0]))
+            self._rows.append(_Row(ids_b, targets_b, features=features, modality=modality,
+                                   caption=caption, direction="text_to_media"))
             self.stats["text_to_media"] += 1
 
     def feed(self, sample: Mapping[str, Any]) -> None:
@@ -549,6 +726,21 @@ class BatchBuilder:
             return None
         rows = self._rows[:batch_size]
         self._rows = self._rows[batch_size:]
+        # Differentiable projection is scoped to THIS batch, never the queue.
+        for row in rows:
+            if row.features is None:
+                continue
+            ingestor = self.ingestors[row.modality]
+            if row.direction == "media_to_text":
+                key, value = ingestor.project_features(row.features)
+                if self.ingest_to_memory and self.memory is not None:
+                    self._pending_writes.append((key[0].detach(), value[0].detach(), row.modality,
+                                                 {"caption": row.caption[:64].decode("utf8", "replace")}))
+            else:
+                caption_ids = encode_bytes(row.caption, bos=True).unsqueeze(0).to(self.device)
+                pooled = pooled_text_embedding(self.model, caption_ids, PAD)
+                key, value = self.text_projector(pooled)
+            row.key, row.value = key[0], value[0]
         ids, targets = pad_batch([row.ids for row in rows], self.seq_len)
         # pad_batch re-derives targets from ids; use OUR masked targets instead.
         targets = torch.full_like(ids, PAD)
@@ -981,7 +1173,6 @@ class Trainer:
                                       train_cfg.get("requested_precision", "bfloat16"),
                                       train_cfg.get("precision", "auto"))
         self.model_config = FoundationConfig.from_mapping(config["model"])
-        self.model = CausalByteTransformer(self.model_config).to(self.device)
         self.seq_len = int(train_cfg.get("seq_len", 1024))
         self.micro_batch = int(train_cfg.get("micro_batch_size", 4))
         self.grad_accum = int(train_cfg.get("grad_accum", 8))
@@ -1003,7 +1194,6 @@ class Trainer:
                                                self.model_config.attention_type == "sliding_window"))
         if require_checkpoint and not self.model_config.gradient_checkpointing:
             raise ValueError("this preset requires gradient_checkpointing=True for all blocks")
-        self.model.set_gradient_checkpointing(self.model_config.gradient_checkpointing)
         self.vram_report: dict[str, Any] | None = None
         self.log_every = max(1, int(train_cfg.get("log_every", 10)))
         self.checkpoint_every = int(train_cfg.get("checkpoint_every", 100))
@@ -1046,24 +1236,38 @@ class Trainer:
         write_json(self.run_dir / "environment.json", environment_manifest())
         write_json(self.run_dir / "provenance.json", git_provenance())
         source_snapshot(self.run_dir / "source_snapshot.zip")
+        runtime_cfg = dict(self.config.get("runtime", {}))
+        self.min_host_available_gb = float(runtime_cfg.get("min_host_available_gb", 1.0))
+        self.max_audio_seconds = float(runtime_cfg.get("max_audio_seconds", 30.0))
+        self._mark_stage("allocate_trainable_state", "started")
+        require_host_memory(self.min_host_available_gb, stage="allocate_trainable_state")
+        # Initialize directly on the target device. The former CPU construct +
+        # .to(cuda) path resident-sized ~1.5 GB of fp32 weights in Colab SYSTEM
+        # RAM before the GPU probe even started. Device-first construction keeps
+        # the same architecture/initializers without that host-RAM duplicate.
+        with torch.device(self.device):
+            self.model = CausalByteTransformer(self.model_config)
+            self.text_projector = TextSkillProjector(
+                self.model_config.d_model,
+                mem_cfg.get("value_dim", self.model_config.memory_dim or 8192),
+                mem_cfg.get("key_dim", self.model_config.d_model))
+            self._enc_cfg = enc_cfg
+            self._mem_cfg = mem_cfg
+            capacity = mem_cfg.get("capacity")
+            self.memory = DualMemory(
+                procedural_capacity=int(mem_cfg.get("procedural_capacity", 1024)),
+                episodic_capacity=int(mem_cfg.get("episodic_capacity", 1024)),
+                key_dim=int(mem_cfg.get("key_dim", self.model_config.d_model)),
+                value_dim=int(mem_cfg.get("value_dim", self.model_config.memory_dim or 8192)),
+                capacity=int(capacity) if capacity is not None else None,
+            )
+        self.model.set_gradient_checkpointing(self.model_config.gradient_checkpointing)
+        self._mark_stage("allocate_trainable_state", "completed")
 
-        # Multimodal ingestion paths (frozen encoders are built lazily: the
-        # CPU/smoke path uses pre-computed features and never downloads).
+        # Frozen pretrained weights still load through torchvision/torchaudio
+        # on CPU, one backbone at a time, then move to GPU. The trainable state
+        # above never has a full CPU copy. Smoke uses pre-computed features.
         self.ingestors: dict[str, MultimodalIngestor] = {}
-        self.text_projector = TextSkillProjector(
-            self.model_config.d_model,
-            mem_cfg.get("value_dim", self.model_config.memory_dim or 8192),
-            mem_cfg.get("key_dim", self.model_config.d_model)).to(self.device)
-        self._enc_cfg = enc_cfg
-        self._mem_cfg = mem_cfg
-        capacity = mem_cfg.get("capacity")
-        self.memory = DualMemory(
-            procedural_capacity=int(mem_cfg.get("procedural_capacity", 1024)),
-            episodic_capacity=int(mem_cfg.get("episodic_capacity", 1024)),
-            key_dim=int(mem_cfg.get("key_dim", self.model_config.d_model)),
-            value_dim=int(mem_cfg.get("value_dim", self.model_config.memory_dim or 8192)),
-            capacity=int(capacity) if capacity is not None else None,
-        ).to(self.device)
         self.memory.procedural.eviction_events = deque(
             self.memory.procedural.eviction_events,
             maxlen=int(mem_cfg.get("max_eviction_events", 256)))
@@ -1081,11 +1285,21 @@ class Trainer:
         self._resume = resume
         self.history: list[dict[str, Any]] = []
 
+    def _mark_stage(self, stage: str, status: str = "started", **details: Any) -> None:
+        """Small flushed breadcrumb that survives even when the child is killed."""
+        self._startup_stage = {"stage": stage, "status": status, "run_id": self.run_id,
+                               "session_id": self.session_id, "updated_at": utc_stamp(),
+                               "host_memory": host_memory_snapshot(), **details}
+        write_json(self.run_dir / "startup_stage.json", self._startup_stage)
+        append_jsonl(self.run_dir / "startup_events.jsonl", self._startup_stage)
+        print(f"stage: {stage} [{status}]", flush=True)
+
     # -- lazy pieces ------------------------------------------------------
     def _prepare_frozen_encoder(self, encoder: Any) -> Any:
-        encoder = encoder.to(self.device)
         if self.device.type == "cuda" and self._frozen_encoder_dtype != "float32":
             encoder = encoder.to(dtype=getattr(torch, self._frozen_encoder_dtype))
+        encoder = encoder.to(self.device)
+        gc.collect()
         return encoder
 
     def ensure_ingestor(self, modality: str, *, feature_dim: int | None = None
@@ -1096,21 +1310,28 @@ class Trainer:
             if existing.encoder is None and name:
                 # Upgrade a resumed projector-only ingestor with its frozen
                 # encoder so raw media can keep flowing.
+                self._mark_stage(f"load_frozen_encoder_{modality}", "started", encoder=name)
+                require_host_memory(self.min_host_available_gb, stage=f"load_frozen_encoder_{modality}")
                 existing.encoder = self._prepare_frozen_encoder(build_encoder(name, pretrained=True))
+                self._mark_stage(f"load_frozen_encoder_{modality}", "completed", encoder=name)
             return existing
         name = self._enc_cfg.get(modality)
         memory_dim = int(self._mem_cfg.get("value_dim", self.model_config.memory_dim or 8192))
         key_dim = int(self._mem_cfg.get("key_dim", self.model_config.d_model))
         if name:
+            self._mark_stage(f"load_frozen_encoder_{modality}", "started", encoder=name)
+            require_host_memory(self.min_host_available_gb, stage=f"load_frozen_encoder_{modality}")
             encoder = self._prepare_frozen_encoder(build_encoder(name, pretrained=True))
-            ingestor = MultimodalIngestor(encoder, memory_dim=memory_dim, key_dim=key_dim)
+            with torch.device(self.device):
+                ingestor = MultimodalIngestor(encoder, memory_dim=memory_dim, key_dim=key_dim)
+            self._mark_stage(f"load_frozen_encoder_{modality}", "completed", encoder=name)
         elif feature_dim is not None:
             # Matrix-agnostic path: pre-computed features, projector only.
-            ingestor = MultimodalIngestor(None, memory_dim=memory_dim, key_dim=key_dim,
-                                          encoder_dim=feature_dim)
+            with torch.device(self.device):
+                ingestor = MultimodalIngestor(None, memory_dim=memory_dim, key_dim=key_dim,
+                                              encoder_dim=feature_dim)
         else:
             return None
-        ingestor = ingestor.to(self.device)
         self.ingestors[modality] = ingestor
         if self.optimizer is not None:
             self.optimizer.add_param_group(
@@ -1200,6 +1421,8 @@ class Trainer:
         """
         if self.device.type != "cuda":
             return {"measured": False, "simulated": False, "reason": "CPU device; run --simulate-t4 for an estimate"}
+        self._mark_stage("cuda_vram_probe", "started")
+        require_host_memory(self.min_host_available_gb, stage="cuda_vram_probe")
         if self.optimizer is None:
             self.optimizer = self._build_optimizer()
         # Load configured frozen backbones/projectors so their persistent weights
@@ -1209,9 +1432,8 @@ class Trainer:
             if name:
                 self.ensure_ingestor(modality)
         assert self.optimizer is not None
-        old_state = self.optimizer.state
         old_lrs = [group["lr"] for group in self.optimizer.param_groups]
-        self.optimizer.state = defaultdict(dict)
+        added_probe_state: list[tuple[torch.Tensor, str | None]] = []
         for group in self.optimizer.param_groups:
             group["lr"] = 0.0
         probe_scaler = make_grad_scaler(self.plan)
@@ -1256,28 +1478,55 @@ class Trainer:
                 policy = self.memory.policy_loss(margin=self.decay_margin)
                 total = loss + self.decay_reg_weight * policy.to(loss.dtype)
             probe_scaler.scale(total / max(1, self.grad_accum)).backward()
-            # Allocate moments even for parameters whose synthetic probe path did
-            # not touch them; this is the worst-case optimizer residency.
+            # Allocate ONE worst-case moment set. Existing resumed moments stay
+            # resident and untouched; no synthetic optimizer.step corrupts them.
             for group in self.optimizer.param_groups:
                 for parameter in group["params"]:
                     if parameter.requires_grad and parameter.grad is None:
                         parameter.grad = torch.zeros_like(parameter)
+            added_probe_state = _allocate_adam_probe_moments(self.optimizer)
             probe_scaler.unscale_(self.optimizer)
-            probe_scaler.step(self.optimizer)  # lr=0: weights unchanged, moments allocated
-            probe_scaler.update()
-            peak_gb = torch.cuda.max_memory_allocated(self.device) / 1e9
+            core_peak_gb = torch.cuda.max_memory_allocated(self.device) / 1e9
+            # Measure frozen image/audio transients WITH optimizer moments already
+            # resident. These calls happen before transformer backward in the real
+            # loop, so the governing peak is max(core, encoder), not their sum.
+            encoder_probes = {}
+            for modality, ingestor in self.ingestors.items():
+                if ingestor.encoder is None:
+                    continue
+                if modality == "audio":
+                    raw = torch.zeros(1, self.max_audio_samples, device=self.device)
+                elif modality == "video":
+                    raw = torch.zeros(8, 3, 224, 224, device=self.device)
+                else:
+                    raw = torch.zeros(1, 3, 224, 224, device=self.device)
+                torch.cuda.reset_peak_memory_stats(self.device)
+                with torch.no_grad():
+                    features = ingestor.encoder(raw)
+                encoder_probes[modality] = {
+                    "measured": True, "input_shape": list(raw.shape),
+                    "feature_shape": list(features.shape),
+                    "peak_gb": round(torch.cuda.max_memory_allocated(self.device) / 1e9, 3)}
+                del raw, features
+                gc.collect()
+                torch.cuda.empty_cache()
+            peak_gb = max([core_peak_gb] + [p["peak_gb"] for p in encoder_probes.values()])
+            self._mark_stage("cuda_vram_probe", "completed", peak_gb=round(peak_gb, 3))
             return {"measured": True, "simulated": False, "peak_gb": round(peak_gb, 3),
+                    "core_peak_gb": round(core_peak_gb, 3), "encoder_probes": encoder_probes,
+                    "host_memory": host_memory_snapshot(),
                     "micro_batch": self.micro_batch, "seq_len": self.seq_len,
                     "attention_type": self.model_config.attention_type,
                     "window_size": self.model_config.window_size,
                     "sliding_chunk_size": self.model_config.sliding_chunk_size,
                     "sdpa_backend_verified": "memory_efficient (self + chunk-local mask + cross mask)",
                     "optimizer_state_allocated": True,
-                    "paths": ["ce", "confidence", "memory_cross_attention", "policy", "adamw"]}
+                    "paths": ["ce", "confidence", "memory_cross_attention", "policy", "adamw",
+                              *encoder_probes.keys()]}
         finally:
             bank.eviction_events.clear()
             bank.eviction_events.extend(saved_events)
-            self.optimizer.state = old_state
+            _rollback_adam_probe_moments(self.optimizer, added_probe_state)
             for group, lr in zip(self.optimizer.param_groups, old_lrs):
                 group["lr"] = lr
             self.model.zero_grad(set_to_none=True)
@@ -1302,10 +1551,21 @@ class Trainer:
         """
         if target_max_gb <= 0:
             raise ValueError("target_max_gb must be positive")
-        probe = self.probe_vram()
-        while probe.get("measured") and probe["peak_gb"] > target_max_gb and self.micro_batch > 1:
-            self.micro_batch = max(1, self.micro_batch // 2)
-            probe = self.probe_vram()
+        def probe_once():
+            try:
+                return self.probe_vram()
+            except torch.cuda.OutOfMemoryError as exc:
+                if self.device.type == "cuda":
+                    torch.cuda.empty_cache()
+                if self.micro_batch <= 1:
+                    raise MemoryError("CUDA OOM during measured probe at batch=1; refusing to start") from exc
+                self.micro_batch = max(1, self.micro_batch // 2)
+                return None
+        probe = probe_once()
+        while probe is None or (probe.get("measured") and probe["peak_gb"] > target_max_gb and self.micro_batch > 1):
+            if probe is not None:
+                self.micro_batch = max(1, self.micro_batch // 2)
+            probe = probe_once()
         if probe.get("measured") and probe["peak_gb"] > target_max_gb:
             raise MemoryError(
                 f"measured T4 peak {probe['peak_gb']:.3f} GB exceeds {target_max_gb:.3f} GB "
@@ -1550,9 +1810,14 @@ class Trainer:
         if self.device.type == "cuda":
             torch.cuda.empty_cache()
         try:
-            if self.optimizer is not None:
+            if self.optimizer is not None and self.step > 0:
                 crash = self._save(upload=bool(self.hf_repo), reason="crash", emergency=True)
                 write_json(self.run_dir / "crash_checkpoint.json", crash)
+            else:
+                write_json(self.run_dir / "crash_checkpoint.json", {
+                    "saved": False, "step": self.step,
+                    "reason": "No committed optimizer step yet; preserve any existing recoverable "
+                              "checkpoint instead of overwriting it with startup state."})
         except Exception as save_exc:
             append_jsonl(self.run_dir / "artifact_errors.jsonl",
                          {"stage": "crash_checkpoint", "error": error_record(save_exc, token=self._hf_token)})
@@ -1599,10 +1864,12 @@ class Trainer:
     def _run_impl(self, *, max_steps: int = 1000, max_minutes: float | None = None,
                   checkpoint_minutes: float | None = None) -> dict[str, Any]:
         if self.samples is None:
+            self._mark_stage("open_streaming_mixture", "started")
             data_cfg = self.config.get("data", {})
             self.mixture = build_mixture(data_cfg, seed=int(
                 self.config.get("training", {}).get("seed", 24)))
             self.samples = iter(self.mixture)
+            self._mark_stage("open_streaming_mixture", "completed")
         # Phase 24.2 streaming contract: the sample source must be a len-less
         # iterator. A sized object (list, map-style Dataset, ...) means
         # epoch-style training over materialised data -- reject it loudly
@@ -1623,10 +1890,13 @@ class Trainer:
         self.builder = BatchBuilder(self.model, self.ingestors, self.text_projector,
                                     self.seq_len, memory=self.memory,
                                     ingest_to_memory=bool(self.config.get("training", {}).get(
-                                        "ingest_to_memory", False)))
+                                        "ingest_to_memory", False)),
+                                    max_audio_seconds=self.max_audio_seconds)
         if self.optimizer is None:
             self.optimizer = self._build_optimizer()
+        self._mark_stage("resume_checkpoint", "started")
         self._maybe_resume()
+        self._mark_stage("resume_checkpoint", "completed", resumed=self._resume_info.get("resumed", False))
         self._prepare_remote()
         vram = self.autotune_batch(float(self.config.get("vram", {}).get("target_max_gb", 13.5)))
         write_json(self.run_dir / "vram_probe.json", vram)
@@ -1843,6 +2113,7 @@ def run_smoke(*, steps: int = 4, workdir: str | Path = "runs/smoke") -> dict[str
             "thought_confidence_weight_norm": float(
                 refinement.thought_confidence.weight.detach().norm()),
         }
+    write_json(Path(workdir) / "summary.json", summary)
     return summary
 
 
@@ -1903,8 +2174,30 @@ def main(argv: list[str] | None = None) -> None:
         repo = None if args.local_only else (args.hf_repo or ckpt_cfg.get("hf_repo"))
         if args.no_resume and repo:
             print("WARNING: --no-resume starts fresh and may replace the remote latest checkpoint", flush=True)
-        trainer = Trainer(config, device=args.device, hf_repo=repo,
-                          resume=not args.no_resume)
+        run_dir = Path(output_cfg.get("run_dir", "runs/colab_latest"))
+        write_json(run_dir / "startup_stage.json", {
+            "stage": "trainer_constructor", "status": "started", "updated_at": utc_stamp(),
+            "host_memory": host_memory_snapshot(), "hf_repo": repo})
+        try:
+            trainer = Trainer(config, device=args.device, hf_repo=repo,
+                              resume=not args.no_resume)
+        except (Exception, KeyboardInterrupt) as exc:
+            # __init__ used to allocate the full model before run() installed its
+            # crash capture. Preserve initialization failures too (SIGKILL itself
+            # is handled by the notebook parent monitor, not by Python).
+            record = error_record(exc, token=resolve_hf_token())
+            write_json(run_dir / "failure.json", {"stage": "trainer_constructor", "error": record})
+            append_jsonl(run_dir / "startup_events.jsonl", {"stage": "trainer_constructor",
+                                                           "status": "failed", "error": record})
+            try:
+                make_debug_bundle(run_dir)
+                sync_run_folder(run_dir, repo, f"runs/{output_cfg.get('run_id', 'startup')}/initialization_failure",
+                                token=resolve_hf_token(), strict=False,
+                                commit_message="Trainer initialization failure diagnostics")
+            except Exception as artifact_exc:
+                append_jsonl(run_dir / "artifact_errors.jsonl",
+                             {"stage": "initialization_sync", "error": error_record(artifact_exc)})
+            raise
         summary = trainer.run(
             max_steps=args.max_steps if args.max_steps is not None else int(train_cfg.get("max_steps", 200000)),
             max_minutes=args.max_minutes if args.max_minutes is not None else train_cfg.get("max_minutes"),

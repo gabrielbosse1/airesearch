@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.3)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.4)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -42,7 +42,17 @@ and `README.md` (how to run it).
   never code/CLI/logs. Checkpoints upload every 10 min/100 steps and fail closed
   after retries; diagnostics sync every 5 min and on exit/crash. Never claim
   exact live-stream cursor resume or survival of a hard VM kill beyond the last
-  successful upload. Debug bundles exclude checkpoints and secrets.
+  successful upload. Debug bundles exclude checkpoints and secrets. The notebook
+  parent heartbeats every 15 s and uploads diagnostics every 60 s; SIGKILL is
+  reported with cgroup OOM-counter evidence, never guessed from `-9` alone.
+- **Host RAM is a separate budget (Phase 25.4).** Initialize trainable state
+  directly on the target device; do not build a full production CPU copy then
+  `.to(cuda)`. Keep text/URL shuffle reservoirs at 1,000 rows and decoded media
+  at 100; release notebook preflight streams before launch. Query `nvidia-smi`
+  in the parent instead of creating a parent CUDA context. Check system-RAM
+  headroom before large allocations and fail closed without shrinking model
+  geometry. Media row queues hold detached features; autograd graphs are built
+  only for the popped micro-batch.
 - **Coherence pre-flight gates readiness (Phase 25.2).** `coherence_preflight.py`
   runs exactly 500 optimizer steps on PT-BR/code, snapshots loss/generation at
   0/250/500, and asserts loss decrease, recognizable PT-BR, and valid Python
@@ -82,8 +92,8 @@ and `README.md` (how to run it).
   the ONLY `load_dataset` call site: it forces `streaming=True`, verifies the
   result is an `IterableDataset` (`assert_streaming` raises `TypeError` on a
   disk-backed `Dataset`/`DatasetDict` or an `IterableDatasetDict`), and
-  shuffles with `.shuffle(seed=..., buffer_size=10000)` — a RAM-only
-  reservoir, capped at `MEDIA_SHUFFLE_BUFFER_CAP=1000` rows for
+  shuffles with `.shuffle(seed=..., buffer_size=1000)` — a RAM-only
+  reservoir, capped at `MEDIA_SHUFFLE_BUFFER_CAP=100` rows for
   `image_embedded`/`audio` kinds (decoded media rows are 100–1000× larger
   than text; 10k of them could OOM the instance). Map-style
   `.shuffle(seed=...)` without a buffer is forbidden on streams.
@@ -147,9 +157,10 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   213-test regression suite (CPU, ~11 s, fully offline)
+tests/                   225-test regression suite (CPU, ~11 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
-                         T4, ~4 h, HF checkpoints, debug-bundle fetch,
+                         T4, ~4 h, host-RAM/SIGKILL monitor, HF checkpoints,
+                         debug-bundle fetch,
                          mix audit + Zero-Disk verification before training)
 smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)
 coherence_preflight.py   Phase 25.2 500-step PT-BR/code coherence pre-flight
