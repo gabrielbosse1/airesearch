@@ -10,7 +10,7 @@ ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
-**Status: Phase 25.4 Colab host-RAM/startup fix implemented; live T4 rerun pending.** The 500-step coherence
+**Status: Phase 25.5 native-bf16/T4 precision guard implemented; live T4 rerun pending.** The 500-step coherence
 pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
 gibberish, and step-500 continuations were recognizable PT-BR plus Python that
 compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
@@ -88,7 +88,7 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 10-min/100-step HF checkpoints + host-RAM/SIGKILL diagnostics, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 225 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
+| `tests/` | 230 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 | `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
@@ -276,8 +276,11 @@ to end, and the guarantee is tested, not assumed:
 
 ## Honest notes
 
-- **T4 precision:** sm_75 cannot run bf16 autocast. The trainer resolves
-  `auto` to **fp16 + GradScaler** there (bf16 on Ampere+), and logs which.
+- **T4 precision:** sm_75 has no native bf16. Newer PyTorch may report bf16
+  emulation as supported; the trainer rejects emulation for the forced
+  memory-efficient SDPA path and resolves `auto` to **fp16 + GradScaler** on T4
+  (native bf16 only on Ampere+). The notebook runs a short-lived precision
+  preflight and logs the resolved plan before training.
 - **Masking is source-agnostic.** Every group trains under the same
   `ignore_index=258` cross-entropy; caption prompts and codec prefixes are
   masked, padding is masked, and a fully masked batch returns a zero loss

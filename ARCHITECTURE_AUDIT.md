@@ -1,6 +1,6 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.4 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.5 code as it exists
 
-**Status: Phase 25.4 host-RAM/startup fix implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
+**Status: Phase 25.5 native-bf16/T4 precision guard implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
 (500 steps, strict PT-BR/code assertions). The repository is merged-ready and
 the notebook/trainer remain the production path.
 
@@ -338,7 +338,9 @@ One loop: AdamW (β=0.9/0.95, wd 0.1), cosine LR 3e-4 with 500-step warmup,
 grad-clip 1.0, **micro-batch 1 × accum 32**, **seq_len 16384**, gradient
 checkpointing strictly on all 8 blocks plus pure thought-step/cell checkpoints.
 Precision `auto`: bf16 on Ampere+, **fp16 + GradScaler on T4/sm_75**, fp32 on
-CPU — resolved from `torch.cuda.is_bf16_supported()`, logged, never assumed.
+CPU — resolved from compute capability plus non-emulated
+`torch.cuda.is_bf16_supported(including_emulation=False)` when available, logged,
+never assumed. T4/sm_75 bf16 emulation is explicitly rejected for SDPA training.
 Loss = causal-LM CE + confidence BCE + decay-policy loss (§4). Persistent memory
 writes are delayed until after batch assembly to prevent same-batch leakage.
 
@@ -346,7 +348,8 @@ writes are delayed until after batch assembly to prevent same-batch leakage.
 `torch.cuda.max_memory_allocated` over a synthetic step with the full unified
 bank, differentiable local slots from every projector, confidence path, policy
 loss, all-block checkpointing, and worst-case AdamW moment allocation (temporary
-lr=0 step; existing resumed moments are preserved, not double-counted). Configured
+lr=0 probe; moments are allocated without a synthetic optimizer step, and existing
+resumed moments are preserved, not double-counted). Configured
 frozen backbones are loaded so their persistent weights are present. CPU returns
 `measured=False`, never a fake peak.
 
@@ -487,7 +490,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **225 passed in ~11 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **230 passed in ~11 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -516,7 +519,8 @@ contract, durable HF persistence (secret redaction, retry/fail-closed uploads,
 checkpoint-free debug bundles, crash artifacts, independent telemetry sync,
 optimizer/token resume), **host-RAM/cgroup accounting, device-first meta
 initialization, SIGKILL parent-monitor bundle capture with a mocked Hub, bounded
-audio/media graphs, and probe-moment preservation**, and the cleanup contract itself.
+audio/media graphs, probe-moment preservation, and native-bf16/T4 emulation
+rejection**, and the cleanup contract itself.
 
 
 ### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)

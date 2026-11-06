@@ -344,3 +344,63 @@ def test_smoke_coherence_script_reports_thought_norms(tmp_path, capsys):
     assert result["probe"]["buffer_shape"][1] == 4
     assert result["smoke"]["thought"]["buffer_shape"][1] == 4
     assert "sample_continuation" in result["smoke"]
+
+
+def _mock_cuda_bf16(monkeypatch, capability, *, native, emulation=None, old_api=False):
+    """Mock CUDA support queries; no real GPU or kernel launch is involved."""
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda device=None: capability)
+    if old_api:
+        def support():
+            return bool(native if emulation is None else emulation)
+    else:
+        def support(including_emulation=True):
+            if including_emulation:
+                return bool(native if emulation is None else emulation)
+            return bool(native)
+    monkeypatch.setattr(torch.cuda, "is_bf16_supported", support)
+
+
+def test_t4_emulated_bf16_resolves_to_fp16_and_rejects_explicit_bf16(monkeypatch):
+    # New PyTorch can report emulation as supported on sm_75. The forced
+    # memory-efficient SDPA path still needs native fp16/bf16 kernels.
+    _mock_cuda_bf16(monkeypatch, (7, 5), native=False, emulation=True)
+    plan = resolve_precision("cuda", "bfloat16", "auto")
+    assert plan.resolved == "float16" and plan.dtype is torch.float16
+    assert plan.scaler_required and plan.autocast
+    assert plan.bf16_supported is False
+    assert plan.compute_capability == (7, 5)
+    assert plan.bf16_emulation_supported is True
+    assert "native bf16 unavailable" in plan.reason
+    with pytest.raises(ValueError, match="lacks native bf16 support"):
+        resolve_precision("cuda", "bfloat16", "bfloat16")
+    explicit_fp16 = resolve_precision("cuda", "bfloat16", "float16")
+    assert explicit_fp16.resolved == "float16" and explicit_fp16.scaler_required
+    explicit_fp32 = resolve_precision("cuda", "bfloat16", "float32")
+    assert explicit_fp32.resolved == "float32" and not explicit_fp32.autocast
+
+
+def test_old_pytorch_bf16_api_still_protects_t4_by_capability(monkeypatch):
+    _mock_cuda_bf16(monkeypatch, (7, 5), native=True, old_api=True)
+    plan = resolve_precision("cuda", "bfloat16", "auto")
+    assert plan.resolved == "float16" and plan.scaler_required
+    assert plan.bf16_supported is False
+
+
+def test_ampere_native_bf16_is_selected_only_without_emulation(monkeypatch):
+    _mock_cuda_bf16(monkeypatch, (8, 0), native=True, emulation=True)
+    plan = resolve_precision("cuda", "bfloat16", "auto")
+    assert plan.resolved == "bfloat16" and plan.dtype is torch.bfloat16
+    assert plan.bf16_supported is True and not plan.scaler_required
+    assert plan.compute_capability == (8, 0)
+    explicit = resolve_precision("cuda", "bfloat16", "bfloat16")
+    assert explicit.resolved == "bfloat16"
+
+
+def test_ampere_without_native_bf16_falls_back_and_invalid_mode_rejected(monkeypatch):
+    _mock_cuda_bf16(monkeypatch, (8, 6), native=False, emulation=True)
+    plan = resolve_precision("cuda", "bfloat16", "auto")
+    assert plan.resolved == "float16" and plan.scaler_required
+    with pytest.raises(ValueError, match="lacks native bf16 support"):
+        resolve_precision("cuda", "bfloat16", "bfloat16")
+    with pytest.raises(ValueError, match="unknown precision mode"):
+        resolve_precision("cuda", "bfloat16", "tf32")

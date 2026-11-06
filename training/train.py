@@ -423,10 +423,12 @@ class PrecisionPlan:
     requested: str
     resolved: str
     device: str
-    bf16_supported: bool
+    bf16_supported: bool                  # NATIVE bf16 only; never emulation
     autocast: bool
     scaler_required: bool
     reason: str
+    compute_capability: tuple[int, int] | None = None
+    bf16_emulation_supported: bool | None = None
 
     @property
     def dtype(self) -> torch.dtype:
@@ -441,37 +443,80 @@ class PrecisionPlan:
     def as_dict(self) -> dict[str, Any]:
         return {"requested": self.requested, "resolved": self.resolved,
                 "device": self.device, "bf16_supported": self.bf16_supported,
+                "bf16_native_supported": self.bf16_supported,
+                "compute_capability": (list(self.compute_capability)
+                                       if self.compute_capability is not None else None),
+                "bf16_emulation_supported": self.bf16_emulation_supported,
                 "autocast": self.autocast, "scaler_required": self.scaler_required,
                 "reason": self.reason}
+
+
+def _cuda_native_bf16_support(device: torch.device) -> tuple[bool, tuple[int, int] | None, bool | None]:
+    """Return (native_bf16, compute_capability, emulation_reported).
+
+    Newer PyTorch/CUDA stacks can report bf16 *emulation* as supported on
+    pre-Ampere GPUs. The forced memory-efficient SDPA path used by this trainer
+    requires real fp16/bf16 kernels, so emulation must not select bf16. Require
+    both Ampere+ hardware and, when the API exposes it, non-emulated support.
+    """
+    try:
+        capability = tuple(int(part) for part in torch.cuda.get_device_capability(device))
+    except Exception:
+        return False, None, None
+    emulation_reported = None
+    try:
+        emulation_reported = bool(torch.cuda.is_bf16_supported())
+    except Exception:
+        emulation_reported = None
+    if capability[0] < 8:
+        return False, capability, emulation_reported
+    try:
+        native = bool(torch.cuda.is_bf16_supported(including_emulation=False))
+    except TypeError:
+        # Older PyTorch has no including_emulation kwarg; its boolean was the
+        # native support check. The capability gate above still protects T4.
+        native = bool(torch.cuda.is_bf16_supported())
+    except Exception:
+        native = False
+    return native, capability, emulation_reported
 
 
 def resolve_precision(device: torch.device | str, requested: str = "bfloat16",
                       mode: str = "auto") -> PrecisionPlan:
     """Resolve requested precision against the ACTUAL device.
 
-    Tesla T4 = Turing/sm_75: bf16 autocast raises at runtime. There we fall
+    Tesla T4 = Turing/sm_75: native bf16 is unavailable, and bf16 emulation is
+    not accepted by the forced memory-efficient SDPA training path. Auto falls
     back to float16 + GradScaler (same 2-byte budget, needs loss scaling).
     """
     device = torch.device(device)
     requested = requested.lower()
+    mode = str(mode).lower()
     if requested not in ("bfloat16", "float16", "float32"):
         raise ValueError(f"unknown precision {requested!r}")
+    if mode not in ("auto", "bfloat16", "float16", "float32"):
+        raise ValueError(f"unknown precision mode {mode!r}")
     if device.type != "cuda":
         return PrecisionPlan(requested, "float32", device.type, False, False, False,
                              "CPU: float32, no autocast")
-    bf16_ok = bool(torch.cuda.is_bf16_supported())
+    bf16_ok, capability, emulation = _cuda_native_bf16_support(device)
+    cap_text = (f"sm_{capability[0]}{capability[1]}" if capability is not None
+                else "unknown CUDA capability")
     if mode == "auto":
         if bf16_ok:
             return PrecisionPlan(requested, "bfloat16", "cuda", True, True, False,
-                                 "Ampere+: native bfloat16")
+                                 f"{cap_text}: native bfloat16", capability, emulation)
         return PrecisionPlan(requested, "float16", "cuda", False, True, True,
-                             "T4/sm_75: bf16 unsupported -> float16 + GradScaler")
+                             f"{cap_text}: native bf16 unavailable -> float16 + GradScaler",
+                             capability, emulation)
     if mode == "bfloat16" and not bf16_ok:
-        raise ValueError("bfloat16 requested but this CUDA device does not support it")
-    resolved = mode if mode != "float32" else "float32"
+        raise ValueError(
+            f"bfloat16 requested but {cap_text} lacks native bf16 support; "
+            "emulation is not allowed for the memory-efficient SDPA training path")
+    resolved = mode
     return PrecisionPlan(requested, resolved, "cuda", bf16_ok,
                          resolved != "float32", resolved == "float16",
-                         f"explicit mode {mode}")
+                         f"explicit mode {mode} on {cap_text}", capability, emulation)
 
 
 def make_grad_scaler(plan: PrecisionPlan) -> torch.amp.GradScaler:
@@ -1239,7 +1284,7 @@ class Trainer:
         runtime_cfg = dict(self.config.get("runtime", {}))
         self.min_host_available_gb = float(runtime_cfg.get("min_host_available_gb", 1.0))
         self.max_audio_seconds = float(runtime_cfg.get("max_audio_seconds", 30.0))
-        self._mark_stage("allocate_trainable_state", "started")
+        self._mark_stage("allocate_trainable_state", "started", precision=self.plan.as_dict())
         require_host_memory(self.min_host_available_gb, stage="allocate_trainable_state")
         # Initialize directly on the target device. The former CPU construct +
         # .to(cuda) path resident-sized ~1.5 GB of fp32 weights in Colab SYSTEM
@@ -1262,7 +1307,7 @@ class Trainer:
                 capacity=int(capacity) if capacity is not None else None,
             )
         self.model.set_gradient_checkpointing(self.model_config.gradient_checkpointing)
-        self._mark_stage("allocate_trainable_state", "completed")
+        self._mark_stage("allocate_trainable_state", "completed", precision=self.plan.as_dict())
 
         # Frozen pretrained weights still load through torchvision/torchaudio
         # on CPU, one backbone at a time, then move to GPU. The trainable state
@@ -1520,6 +1565,7 @@ class Trainer:
                     "window_size": self.model_config.window_size,
                     "sliding_chunk_size": self.model_config.sliding_chunk_size,
                     "sdpa_backend_verified": "memory_efficient (self + chunk-local mask + cross mask)",
+                    "precision": self.plan.as_dict(),
                     "optimizer_state_allocated": True,
                     "paths": ["ce", "confidence", "memory_cross_attention", "policy", "adamw",
                               *encoder_probes.keys()]}
