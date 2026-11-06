@@ -1,7 +1,7 @@
 """Unified training script (Phase 25). One script, one pipeline.
 
     python -m training.train --config configs/t4_scaled.yaml \
-        --hf-repo gabrielbosse9/airesearch --max-minutes 240
+        --hf-repo gabrielbosse9/airesearch2 --max-minutes 220
 
 Everything the 4-hour Colab run needs lives here:
 
@@ -23,7 +23,7 @@ Everything the 4-hour Colab run needs lives here:
 * gradient checkpointing, grad accumulation, cosine LR with warmup;
 * representative measured VRAM probe + batch autotune; the separate
   ``--simulate-t4`` accounting mode is explicitly labelled as an estimate;
-* atomic checkpoints every 30 minutes (and every N steps), resumable locally
+* atomic checkpoints every 10 minutes (and every N steps), resumable locally
   or from the Hugging Face Hub;
 * the TRUE tool runtime: ``[TOOL_SEARCH]`` token ids trigger a sandboxed
   subprocess search (deterministic mock for training, real ``ddgs`` at
@@ -36,15 +36,22 @@ data and are never used in a real run.
 from __future__ import annotations
 
 import argparse
+import copy
 import contextlib
+import hashlib
 import json
 import math
 import os
 import random
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
 import time
+import traceback
+import uuid
+import zipfile
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from functools import lru_cache
@@ -622,10 +629,17 @@ def load_checkpoint(path: str | Path, *, model: CausalByteTransformer,
                     text_projector: TextSkillProjector, memory: DualMemory | None,
                     optimizer: torch.optim.Optimizer | None = None,
                     scaler: torch.amp.GradScaler | None = None,
-                    device: str | torch.device = "cpu") -> int:
-    payload = torch.load(path, map_location=device, weights_only=False)
+                    device: str | torch.device = "cpu",
+                    return_payload: bool = False) -> int | tuple[int, dict[str, Any]]:
+    payload = torch.load(path, map_location=device, weights_only=True)
     if payload.get("schema_version") != CHECKPOINT_SCHEMA:
         raise ValueError("not a Phase 25.1 unified checkpoint (schema 7)")
+    required = {"config", "model", "ingestors", "text_projector", "memory", "optimizer", "scaler", "step"}
+    if not required.issubset(payload):
+        raise ValueError(f"incomplete unified checkpoint: missing {sorted(required - set(payload))}")
+    if payload["config"] != model.config.to_dict():
+        raise ValueError("checkpoint architecture/config differs from the requested model; "
+                         "resume with the saved config instead of silently changing geometry")
     model.load_state_dict(payload["model"])
     device = next(model.parameters()).device
     for name, state in payload["ingestors"].items():
@@ -655,38 +669,278 @@ def load_checkpoint(path: str | Path, *, model: CausalByteTransformer,
     if "rng" in payload:
         random.setstate(payload["rng"]["python"])
         torch.set_rng_state(payload["rng"]["torch"].cpu())
-    return int(payload["step"])
+    step = int(payload["step"])
+    return (step, payload) if return_payload else step
 
 
-def hf_upload(local_path: str | Path, repo_id: str | None, path_in_repo: str) -> dict[str, Any]:
-    """Upload a checkpoint to the Hub. Returns measured=False when skipped."""
+DEFAULT_HF_REPO = "gabrielbosse9/airesearch2"
+ARTIFACT_ALLOW = ["*.json", "*.jsonl", "*.log", "*.yaml", "*.yml", "*.txt", "*.zip"]
+ARTIFACT_IGNORE = ["checkpoints/**", "*.pt", "*.tmp", "*.npz", "**/*.pt", "**/*.tmp"]
+
+
+def utc_stamp() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+
+
+def resolve_hf_token() -> str | None:
+    """Read auth from the environment; never accept it in CLI argv or logs."""
+    return os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+
+
+def redact_secrets(text: str, *extra: str | None) -> str:
+    """Best-effort redaction before anything is printed or persisted."""
+    values = {value for value in extra if value and len(value) >= 4}
+    for key, value in os.environ.items():
+        if any(word in key.upper() for word in ("TOKEN", "SECRET", "PASSWORD", "API_KEY")):
+            if value and len(value) >= 4:
+                values.add(value)
+    for value in sorted(values, key=len, reverse=True):
+        text = text.replace(value, "[REDACTED]")
+    # Small literal scanner, not a model-output parser: keep the runtime free of
+    # regex while still masking common Authorization/token query leak shapes.
+    for marker in ("bearer ", "token="):
+        lower = text.lower()
+        pos = 0
+        while True:
+            index = lower.find(marker, pos)
+            if index < 0:
+                break
+            start = index + len(marker)
+            end = start
+            while end < len(text) and text[end] not in " \t\r\n&\"'<>":
+                end += 1
+            if end > start:
+                text = text[:start] + "[REDACTED]" + text[end:]
+                lower = text.lower()
+            pos = start + len("[REDACTED]")
+    return text
+
+
+def error_record(exc: BaseException, *, token: str | None = None) -> dict[str, Any]:
+    return {"type": type(exc).__name__,
+            "message": redact_secrets(str(exc), token)[:2000],
+            "traceback": redact_secrets(traceback.format_exc(), token)[-16000:]}
+
+
+def write_json(path: str | Path, payload: Mapping[str, Any]) -> Path:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_suffix(target.suffix + ".tmp")
+    tmp.write_text(redact_secrets(json.dumps(payload, indent=2, ensure_ascii=False, default=str)),
+                   encoding="utf8")
+    os.replace(tmp, target)
+    return target
+
+
+def file_sha256(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def hf_upload(local_path: str | Path, repo_id: str | None, path_in_repo: str, *,
+              token: str | None = None, retries: int = 3, strict: bool = True,
+              commit_message: str | None = None) -> dict[str, Any]:
+    """Upload one artifact, retrying transient failures.
+
+    A configured remote is a durability contract: by default exhausted retries
+    raise instead of silently continuing a GPU run with no recoverable state.
+    New repositories are private; an existing repository's visibility is kept.
+    """
     if not repo_id:
         return {"uploaded": False, "reason": "no hf_repo configured"}
-    try:
-        from huggingface_hub import HfApi
-        api = HfApi()
-        api.create_repo(repo_id, repo_type="model", exist_ok=True)
-        api.upload_file(path_or_fileobj=str(local_path), path_in_repo=path_in_repo,
-                        repo_id=repo_id, repo_type="model")
-        return {"uploaded": True, "repo_id": repo_id, "path_in_repo": path_in_repo}
-    except Exception as exc:
-        return {"uploaded": False, "reason": f"{type(exc).__name__}: {exc}"}
+    token = token or resolve_hf_token()
+    attempts = max(1, int(retries))
+    last: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            from huggingface_hub import HfApi
+            api = HfApi(token=token)
+            api.create_repo(repo_id, repo_type="model", exist_ok=True, private=True, token=token)
+            result = api.upload_file(path_or_fileobj=str(local_path), path_in_repo=path_in_repo,
+                                     repo_id=repo_id, repo_type="model", token=token,
+                                     commit_message=commit_message or f"Save {path_in_repo}")
+            return {"uploaded": True, "repo_id": repo_id, "path_in_repo": path_in_repo,
+                    "attempts": attempt + 1, "commit": getattr(result, "oid", None),
+                    "commit_url": getattr(result, "commit_url", None)}
+        except Exception as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                time.sleep(min(2 ** attempt, 8))
+    record = {"uploaded": False, "repo_id": repo_id, "path_in_repo": path_in_repo,
+              "attempts": attempts, "error": error_record(last, token=token) if last else None}
+    if strict:
+        raise RuntimeError(f"HF upload failed for {repo_id}/{path_in_repo}: {record['error']}")
+    return record
 
 
-def hf_download(repo_id: str | None, path_in_repo: str, local_path: str | Path) -> dict[str, Any]:
+def sync_run_folder(run_dir: str | Path, repo_id: str | None, path_in_repo: str, *,
+                    token: str | None = None, retries: int = 3, strict: bool = True,
+                    commit_message: str | None = None) -> dict[str, Any]:
+    """Commit diagnostics together; checkpoints are deliberately excluded."""
     if not repo_id:
-        return {"downloaded": False, "reason": "no hf_repo configured"}
+        return {"uploaded": False, "reason": "no hf_repo configured"}
+    token = token or resolve_hf_token()
+    attempts = max(1, int(retries))
+    last: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            from huggingface_hub import HfApi
+            api = HfApi(token=token)
+            api.create_repo(repo_id, repo_type="model", exist_ok=True, private=True, token=token)
+            result = api.upload_folder(folder_path=str(run_dir), repo_id=repo_id,
+                                       repo_type="model", path_in_repo=path_in_repo,
+                                       allow_patterns=ARTIFACT_ALLOW, ignore_patterns=ARTIFACT_IGNORE,
+                                       token=token, commit_message=commit_message or "Sync run diagnostics")
+            return {"uploaded": True, "repo_id": repo_id, "path_in_repo": path_in_repo,
+                    "attempts": attempt + 1, "commit": getattr(result, "oid", None),
+                    "commit_url": getattr(result, "commit_url", None)}
+        except Exception as exc:
+            last = exc
+            if attempt + 1 < attempts:
+                time.sleep(min(2 ** attempt, 8))
+    record = {"uploaded": False, "repo_id": repo_id, "path_in_repo": path_in_repo,
+              "attempts": attempts, "error": error_record(last, token=token) if last else None}
+    if strict:
+        raise RuntimeError(f"HF diagnostics sync failed for {repo_id}/{path_in_repo}: {record['error']}")
+    return record
+
+
+def hf_download(repo_id: str | None, path_in_repo: str, local_path: str | Path, *,
+                token: str | None = None, strict: bool = True) -> dict[str, Any]:
+    """Download atomically. Missing is normal; auth/network failures are not."""
+    if not repo_id:
+        return {"downloaded": False, "reason": "no hf_repo configured", "not_found": False}
+    token = token or resolve_hf_token()
     try:
-        import shutil
         from huggingface_hub import hf_hub_download
+        from huggingface_hub.errors import EntryNotFoundError, RepositoryNotFoundError
         downloaded = hf_hub_download(repo_id=repo_id, filename=path_in_repo,
-                                     repo_type="model")
+                                     repo_type="model", token=token)
         target = Path(local_path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(downloaded, target)
-        return {"downloaded": True, "path": str(target)}
+        tmp = target.with_suffix(target.suffix + ".download")
+        shutil.copyfile(downloaded, tmp)
+        os.replace(tmp, target)
+        return {"downloaded": True, "path": str(target), "not_found": False}
     except Exception as exc:
-        return {"downloaded": False, "reason": f"{type(exc).__name__}: {exc}"}
+        from huggingface_hub.errors import EntryNotFoundError, RepositoryNotFoundError
+        missing = isinstance(exc, (EntryNotFoundError, RepositoryNotFoundError))
+        record = {"downloaded": False, "not_found": missing,
+                  "error": error_record(exc, token=token)}
+        if strict and not missing:
+            raise RuntimeError(f"HF download failed for {repo_id}/{path_in_repo}: {record['error']}") from exc
+        return record
+
+
+def verify_hf_access(repo_id: str = DEFAULT_HF_REPO, *, token: str | None = None,
+                     run_dir: str | Path = "runs/colab_latest") -> dict[str, Any]:
+    """Prove identity and write access with a tiny preflight before training."""
+    token = token or resolve_hf_token()
+    if not token:
+        raise RuntimeError("HF_TOKEN is missing. Add a write-scoped Colab secret and enable notebook access.")
+    from huggingface_hub import HfApi
+    who = HfApi(token=token).whoami(token=token)
+    path = Path(run_dir) / "hf_preflight.json"
+    payload = {"repo_id": repo_id, "user": who.get("name"), "checked_at": utc_stamp(),
+               "purpose": "write-access preflight", "secret_included": False}
+    write_json(path, payload)
+    uploaded = hf_upload(path, repo_id, f"runs/preflight/{path.stem}-{utc_stamp()}.json",
+                         token=token, strict=True, commit_message="Verify checkpoint write access")
+    return {"repo_id": repo_id, "user": who.get("name"), "write_verified": True,
+            "upload": uploaded}
+
+
+def environment_manifest() -> dict[str, Any]:
+    import importlib.metadata as metadata
+    import platform
+    packages = {}
+    for name in ("torch", "torchvision", "torchaudio", "datasets", "huggingface_hub",
+                 "numpy", "pillow", "pyyaml", "ddgs"):
+        try:
+            packages[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            packages[name] = None
+    gpu = None
+    if torch.cuda.is_available():
+        props = torch.cuda.get_device_properties(0)
+        gpu = {"name": props.name, "capability": list(torch.cuda.get_device_capability(0)),
+               "total_memory_bytes": props.total_memory,
+               "driver": getattr(torch, "cuda_driver_version", None)}
+    return {"python": platform.python_version(), "platform": platform.platform(),
+            "packages": packages, "cuda_available": torch.cuda.is_available(),
+            "gpu": gpu, "cwd": str(Path.cwd())}
+
+
+def git_provenance() -> dict[str, Any]:
+    def git(*args: str) -> str | None:
+        try:
+            return subprocess.run(["git", *args], capture_output=True, text=True,
+                                  timeout=10, check=True).stdout.strip()
+        except Exception:
+            return None
+    return {"commit": git("rev-parse", "HEAD"), "branch": git("branch", "--show-current"),
+            "status": git("status", "--porcelain"), "diff": git("diff", "--binary")}
+
+
+def source_snapshot(target: str | Path, *, max_file_bytes: int = 4_000_000) -> Path:
+    """Small code-only snapshot for later sandbox debugging; never data/cache."""
+    root = Path.cwd()
+    output = Path(target)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    excluded = {".git", ".venv", "runs", "data_cache", "user_memory", "__pycache__", "node_modules"}
+    suffixes = {".py", ".yaml", ".yml", ".md", ".txt", ".ipynb"}
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(root.rglob("*")):
+            rel = path.relative_to(root)
+            if not path.is_file() or excluded.intersection(rel.parts):
+                continue
+            if path.suffix not in suffixes or path.stat().st_size > max_file_bytes:
+                continue
+            if any(word in path.name.lower() for word in ("secret", "credential", ".env")):
+                continue
+            archive.write(path, rel.as_posix())
+    return output
+
+
+def make_debug_bundle(run_dir: str | Path) -> Path:
+    """Zip logs/config/provenance for download; exclude multi-GB checkpoints."""
+    root = Path(run_dir)
+    target = root / "debug_bundle.zip"
+    tmp = root / "debug_bundle.zip.tmp"
+    with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(root.rglob("*")):
+            if not path.is_file() or path in (target, tmp):
+                continue
+            rel = path.relative_to(root)
+            if "checkpoints" in rel.parts or path.suffix in (".pt", ".tmp", ".npz", ".download"):
+                continue
+            archive.write(path, rel.as_posix())
+    os.replace(tmp, target)
+    return target
+
+
+class _ConsoleTee:
+    def __init__(self, original: Any, handle: Any, token: str | None) -> None:
+        self.original, self.handle, self.token = original, handle, token
+
+    def write(self, text: str) -> int:
+        clean = redact_secrets(text, self.token)
+        self.original.write(clean)
+        self.handle.write(clean)
+        self.handle.flush()
+        return len(text)
+
+    def flush(self) -> None:
+        self.original.flush()
+        self.handle.flush()
+
+    def isatty(self) -> bool:
+        return bool(getattr(self.original, "isatty", lambda: False)())
+
 
 
 # ---------------------------------------------------------------------------
@@ -696,7 +950,12 @@ def append_jsonl(path: str | Path, record: Mapping[str, Any]) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     with open(target, "a", encoding="utf8") as handle:
-        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        handle.write(redact_secrets(json.dumps(record, ensure_ascii=False, default=str)) + "\n")
+        handle.flush()
+
+
+class TrainingInterrupted(RuntimeError):
+    """Cooperative SIGINT/SIGTERM stop; hard VM kills still need periodic saves."""
 
 
 class Trainer:
@@ -705,11 +964,17 @@ class Trainer:
     def __init__(self, config: Mapping[str, Any], *, device: str = "auto",
                  samples: Iterator[tuple[str, dict[str, Any]]] | None = None,
                  hf_repo: str | None = None, resume: bool = True) -> None:
-        self.config = dict(config)
-        train_cfg = dict(config.get("training", {}))
-        ckpt_cfg = dict(config.get("checkpoints", {}))
-        mem_cfg = dict(config.get("memory", {}))
-        enc_cfg = dict(config.get("encoders", {}))
+        self.config = copy.deepcopy(dict(config))
+        train_cfg = dict(self.config.get("training", {}))
+        ckpt_cfg = dict(self.config.get("checkpoints", {}))
+        output_cfg = dict(self.config.get("output", {}))
+        mem_cfg = dict(self.config.get("memory", {}))
+        enc_cfg = dict(self.config.get("encoders", {}))
+        seed = int(train_cfg.get("seed", 24))
+        random.seed(seed)
+        torch.manual_seed(seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(seed)
         self.device = torch.device(
             ("cuda" if torch.cuda.is_available() else "cpu") if device == "auto" else device)
         self.plan = resolve_precision(self.device,
@@ -740,13 +1005,47 @@ class Trainer:
             raise ValueError("this preset requires gradient_checkpointing=True for all blocks")
         self.model.set_gradient_checkpointing(self.model_config.gradient_checkpointing)
         self.vram_report: dict[str, Any] | None = None
-        self.log_every = int(train_cfg.get("log_every", 10))
-        self.checkpoint_every = int(train_cfg.get("checkpoint_every", 500))
-        self.checkpoint_minutes = float(train_cfg.get("checkpoint_minutes", 30))
-        self.local_dir = Path(ckpt_cfg.get("local_dir", "runs/checkpoints"))
-        self.hf_repo = hf_repo or ckpt_cfg.get("hf_repo")
+        self.log_every = max(1, int(train_cfg.get("log_every", 10)))
+        self.checkpoint_every = int(train_cfg.get("checkpoint_every", 100))
+        self.checkpoint_minutes = float(train_cfg.get("checkpoint_minutes", 10))
+        self.upload_minutes = float(ckpt_cfg.get("upload_minutes", 5))
+        self.upload_retries = max(1, int(ckpt_cfg.get("upload_retries", 3)))
+        self.strict_uploads = bool(ckpt_cfg.get("fail_on_upload_error", True))
+        self.keep_local_previous = bool(ckpt_cfg.get("keep_local_previous", True))
+        if self.checkpoint_every < 0 or self.checkpoint_minutes < 0 or self.upload_minutes < 0:
+            raise ValueError("checkpoint/upload cadences must be non-negative (0 disables)")
+        self.hf_repo = hf_repo or ckpt_cfg.get("hf_repo") or os.environ.get("HF_REPO")
         self.hf_path = ckpt_cfg.get("hf_path_in_repo", "checkpoints/checkpoint_latest.pt")
-        self.metrics_path = Path(config.get("output", {}).get("metrics_jsonl", "runs/metrics.jsonl"))
+        self._hf_token = resolve_hf_token()
+        self.local_dir = Path(ckpt_cfg.get("local_dir", "runs/checkpoints"))
+        self.run_dir = Path(output_cfg.get("run_dir", self.local_dir.parent))
+        self.metrics_path = Path(output_cfg.get("metrics_jsonl", self.run_dir / "metrics.jsonl"))
+        self.events_path = self.run_dir / "events.jsonl"
+        self.console_path = self.run_dir / "console.log"
+        self.run_id = str(output_cfg.get("run_id") or os.environ.get("BYTECORE_RUN_ID")
+                          or f"run-{utc_stamp()}-{uuid.uuid4().hex[:8]}")
+        self.session_id = f"session-{utc_stamp()}-{uuid.uuid4().hex[:8]}"
+        self.remote_run_path = f"runs/{self.run_id}/{self.session_id}"
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.local_dir.mkdir(parents=True, exist_ok=True)
+        self.config.setdefault("checkpoints", {})["hf_repo"] = self.hf_repo
+        self.config.setdefault("output", {})["run_dir"] = str(self.run_dir)
+        self.config["output"]["run_id"] = self.run_id
+        self._remote_ready = False
+        self._last_upload_time = time.monotonic()
+        self._console_handle = None
+        self._total_tokens = 0
+        self._completed_micros = 0
+        self._training_seconds = 0.0
+        self._last_metrics: dict[str, Any] = {}
+        self._resume_info: dict[str, Any] = {"resumed": False}
+        self._artifact_errors: list[dict[str, Any]] = []
+        self._signal_received: str | None = None
+        (self.run_dir / "config.resolved.yaml").write_text(
+            yaml.safe_dump(self.config, sort_keys=False, allow_unicode=True), encoding="utf8")
+        write_json(self.run_dir / "environment.json", environment_manifest())
+        write_json(self.run_dir / "provenance.json", git_provenance())
+        source_snapshot(self.run_dir / "source_snapshot.zip")
 
         # Multimodal ingestion paths (frozen encoders are built lazily: the
         # CPU/smoke path uses pre-computed features and never downloads).
@@ -923,6 +1222,9 @@ class Trainer:
             ingestor.zero_grad(set_to_none=True)
         bank = self.memory.procedural
         saved_events = list(bank.eviction_events)
+        rng_python = random.getstate()
+        rng_torch = torch.get_rng_state()
+        rng_cuda = [state.cpu() for state in torch.cuda.get_rng_state_all()]
         bank.eviction_events.clear()
         retained = torch.arange(1, min(bank.capacity, 9), device=self.device)
         ages = torch.linspace(0.0, 1.0, bank.capacity, device=self.device)
@@ -984,6 +1286,10 @@ class Trainer:
             for ingestor in self.ingestors.values():
                 ingestor.zero_grad(set_to_none=True)
             del ids, memory_view, loss, total, policy
+            random.setstate(rng_python)
+            torch.set_rng_state(rng_torch)
+            for index, rng_state in enumerate(rng_cuda):
+                torch.cuda.set_rng_state(rng_state, device=index)
             torch.cuda.empty_cache()
 
     def autotune_batch(self, target_max_gb: float = 13.5) -> dict[str, Any]:
@@ -1013,37 +1319,285 @@ class Trainer:
         self.vram_report = probe
         return probe
 
-    # -- checkpoint / resume ------------------------------------------------
-    def _save(self, *, upload: bool = True) -> dict[str, Any]:
+    # -- checkpoint / resume / diagnostics ---------------------------------
+    def _cuda_memory(self) -> dict[str, float] | None:
+        if self.device.type != "cuda":
+            return None
+        return {"allocated_gb": round(torch.cuda.memory_allocated(self.device) / 1e9, 4),
+                "reserved_gb": round(torch.cuda.memory_reserved(self.device) / 1e9, 4),
+                "max_allocated_gb": round(torch.cuda.max_memory_allocated(self.device) / 1e9, 4)}
+
+    def _runtime_state(self) -> dict[str, Any]:
+        sampler_state = None
+        if self.mixture is not None:
+            sampler_state = {"counts": dict(self.mixture.counts),
+                             "weights": self.mixture.weights,
+                             "failures": dict(self.mixture.failures),
+                             "queue": list(self.mixture._queue),
+                             "rng_python": self.mixture._rng.getstate()}
+        return {
+            "run_id": self.run_id, "session_id": self.session_id,
+            "total_tokens": self._total_tokens,
+            "completed_micro_batches": self._completed_micros,
+            "incomplete_micro_batches": self._micro % self.grad_accum,
+            "training_seconds": round(self._training_seconds, 3),
+            "last_metrics": self._last_metrics,
+            "grad_accum": self.grad_accum, "micro_batch": self.micro_batch,
+            "seq_len": self.seq_len, "sampler": sampler_state,
+            "cuda_rng": ([state.cpu() for state in torch.cuda.get_rng_state_all()]
+                         if self.device.type == "cuda" else None),
+            "data_resume": {
+                "exact_stream_cursor": False,
+                "policy": "Resume model/optimizer/scaler/bank/RNG and seeded mixture state; "
+                          "live HF iterators/shuffle buffers are reopened, not rewound to an "
+                          "exact document cursor. Incomplete gradient accumulation is discarded.",
+            },
+        }
+
+    def _restore_runtime_state(self, payload: Mapping[str, Any]) -> None:
+        state = dict(payload.get("training_state") or {})
+        self._total_tokens = int(state.get("total_tokens", 0))
+        self._completed_micros = int(state.get("completed_micro_batches", self.step * self.grad_accum))
+        self._training_seconds = float(state.get("training_seconds", 0.0))
+        self._last_metrics = dict(state.get("last_metrics") or {})
+        self._micro = 0
+        self._resume_info = {"resumed": True, "step": self.step,
+                             "previous_run_id": state.get("run_id"),
+                             "previous_session_id": state.get("session_id"),
+                             "discarded_incomplete_micro_batches": int(state.get("incomplete_micro_batches", 0)),
+                             "exact_stream_cursor": False}
+        if self.mixture is not None and state.get("sampler") is not None:
+            saved = state["sampler"]
+            # Counts/failures are diagnostic; RNG/queue restore the seeded quota
+            # sequence when the same live sources remain available.
+            self.mixture.counts.update(saved.get("counts") or {})
+            self.mixture.failures.update(saved.get("failures") or {})
+            self.mixture._queue = deque(saved.get("queue") or [])
+            if saved.get("rng_python") is not None:
+                self.mixture._rng.setstate(saved["rng_python"])
+        if self.device.type == "cuda" and state.get("cuda_rng"):
+            for index, rng_state in enumerate(state["cuda_rng"]):
+                if index < torch.cuda.device_count():
+                    torch.cuda.set_rng_state(rng_state.cpu(), device=index)
+        if self.optimizer is not None:
+            self.optimizer.zero_grad(set_to_none=True)
+
+    def _artifact_manifest(self, reason: str) -> dict[str, Any]:
+        return {"run_id": self.run_id, "session_id": self.session_id, "reason": reason,
+                "updated_at": utc_stamp(), "step": self.step, "hf_repo": self.hf_repo,
+                "remote_run_path": self.remote_run_path, "checkpoint_path": self.hf_path,
+                "total_tokens": self._total_tokens, "training_seconds": self._training_seconds,
+                "resume": self._resume_info, "artifact_errors": self._artifact_errors[-20:],
+                "secret_included": False}
+
+    def _write_diagnostics(self, reason: str) -> None:
+        write_json(self.run_dir / "manifest.json", self._artifact_manifest(reason))
+        write_json(self.run_dir / "diagnostics.json", {
+            "reason": reason, "step": self.step, "cuda_memory": self._cuda_memory(),
+            "vram_probe": self.vram_report, "precision": self.plan.as_dict(),
+            "batch_stats": dict(self.builder.stats) if self.builder else {},
+            "memory_slots": len(self.memory), "resume": self._resume_info,
+            "data_mix": mixture_snapshot(self.mixture) if self.mixture is not None else None,
+            "runtime_state_json_safe": {key: value for key, value in self._runtime_state().items()
+                                        if key not in ("cuda_rng",)},
+        })
+
+    def _prepare_remote(self) -> None:
+        if not self.hf_repo or self._remote_ready:
+            return
+        try:
+            access = verify_hf_access(self.hf_repo, token=self._hf_token, run_dir=self.run_dir)
+            write_json(self.run_dir / "hf_access.json", access)
+            self._sync_artifacts("startup", strict=self.strict_uploads)
+            self._remote_ready = True
+        except Exception as exc:
+            record = error_record(exc, token=self._hf_token)
+            self._artifact_errors.append({"stage": "startup", "error": record})
+            append_jsonl(self.run_dir / "artifact_errors.jsonl", record)
+            if self.strict_uploads:
+                raise
+            print("WARNING: remote persistence unavailable; local-only run explicitly allowed", flush=True)
+
+    def _sync_artifacts(self, reason: str, *, strict: bool = False) -> dict[str, Any]:
+        if self._console_handle is not None:
+            self._console_handle.flush()
+        self._write_diagnostics(reason)
+        if reason in ("final", "crash", "interrupted"):
+            make_debug_bundle(self.run_dir)
+        if not self.hf_repo:
+            return {"uploaded": False, "reason": "local run; no hf_repo"}
+        result = sync_run_folder(self.run_dir, self.hf_repo, self.remote_run_path,
+                                 token=self._hf_token, retries=self.upload_retries,
+                                 strict=strict, commit_message=f"{reason}: step {self.step}")
+        pointer = write_json(self.run_dir / "remote_pointer.json", self._artifact_manifest(reason))
+        pointer_result = hf_upload(pointer, self.hf_repo, "runs/latest.json",
+                                   token=self._hf_token, retries=self.upload_retries,
+                                   strict=strict, commit_message=f"Latest run pointer: {self.run_id}")
+        result["pointer"] = pointer_result
+        if not result.get("uploaded") or not pointer_result.get("uploaded"):
+            record = {"stage": reason, "result": result}
+            self._artifact_errors.append(record)
+            append_jsonl(self.run_dir / "artifact_errors.jsonl", record)
+            print(f"WARNING: diagnostics sync incomplete ({reason}); local files retained", flush=True)
+        self._last_upload_time = time.monotonic()
+        return result
+
+    def _save(self, *, upload: bool = True, reason: str = "periodic",
+              final: bool = False, emergency: bool = False) -> dict[str, Any]:
         assert self.optimizer is not None
         path = self.local_dir / "checkpoint_latest.pt"
+        previous = self.local_dir / "checkpoint_previous.pt"
+        if path.exists() and self.keep_local_previous:
+            shutil.copy2(path, previous)
+        # Checkpoints represent committed optimizer boundaries. Any incomplete
+        # accumulation is explicitly discarded on resume, never half-applied.
+        self.optimizer.zero_grad(set_to_none=True)
         save_checkpoint(path, model=self.model, ingestors=self.ingestors,
                         text_projector=self.text_projector, memory=self.memory,
                         optimizer=self.optimizer, scaler=self.scaler, step=self.step,
-                        extra={"precision": self.plan.as_dict()})
-        record: dict[str, Any] = {"step": self.step, "checkpoint": str(path)}
+                        extra={"precision": self.plan.as_dict(),
+                               "training_state": self._runtime_state()})
+        record: dict[str, Any] = {"step": self.step, "checkpoint": str(path),
+                                  "reason": reason, "bytes": path.stat().st_size,
+                                  "sha256": file_sha256(path), "created_at": utc_stamp()}
+        write_json(self.run_dir / "checkpoint_manifest.json", record)
         if upload and self.hf_repo:
-            record["hf"] = hf_upload(path, self.hf_repo, self.hf_path)
+            strict = self.strict_uploads and not emergency
+            record["hf"] = hf_upload(path, self.hf_repo, self.hf_path,
+                                     token=self._hf_token, retries=self.upload_retries,
+                                     strict=strict, commit_message=f"Checkpoint step {self.step} ({reason})")
+            if final:
+                record["hf_final"] = hf_upload(path, self.hf_repo, "checkpoints/checkpoint_final.pt",
+                                               token=self._hf_token, retries=self.upload_retries,
+                                               strict=strict, commit_message=f"Final checkpoint step {self.step}")
+            write_json(self.run_dir / "checkpoint_manifest.json", record)
+            record["diagnostics"] = self._sync_artifacts(reason, strict=strict)
         self._last_ckpt_time = time.monotonic()
+        append_jsonl(self.events_path, {"event": "checkpoint", **record})
         return record
 
     def _maybe_resume(self) -> None:
         if not self._resume or self.optimizer is None:
             return
         path = self.local_dir / "checkpoint_latest.pt"
+        previous = self.local_dir / "checkpoint_previous.pt"
+        candidates = [path, previous]
         if not path.exists() and self.hf_repo:
-            result = hf_download(self.hf_repo, self.hf_path, path)
-            if not result.get("downloaded"):
+            result = hf_download(self.hf_repo, self.hf_path, path,
+                                 token=self._hf_token, strict=True)
+            self._resume_info["remote_download"] = result
+            if not result.get("downloaded") and not result.get("not_found"):
+                raise RuntimeError(f"cannot establish resume state: {result}")
+        errors = []
+        for candidate in candidates:
+            if not candidate.exists():
+                continue
+            try:
+                self.step, payload = load_checkpoint(
+                    candidate, model=self.model, ingestors=self.ingestors,
+                    text_projector=self.text_projector, memory=self.memory,
+                    optimizer=self.optimizer, scaler=self.scaler,
+                    device=self.device, return_payload=True)
+                self._restore_runtime_state(payload)
+                self._resume_info["source"] = str(candidate)
+                append_jsonl(self.events_path, {"event": "resume", **self._resume_info})
                 return
-        if path.exists():
-            self.step = load_checkpoint(path, model=self.model, ingestors=self.ingestors,
-                                        text_projector=self.text_projector, memory=self.memory,
-                                        optimizer=self.optimizer, scaler=self.scaler,
-                                        device=self.device)
+            except Exception as exc:
+                errors.append(error_record(exc, token=self._hf_token))
+        if errors:
+            raise RuntimeError(f"local checkpoints are unreadable/incompatible: {errors}")
 
-    # -- the loop -----------------------------------------------------------
+    def _evaluate_final(self) -> dict[str, Any]:
+        prompts = {"ptbr": "Olá, eu sou um modelo de linguagem e",
+                   "code": "def fibonacci(n):"}
+        result: dict[str, Any] = {"step": self.step, "prompts": {}}
+        self.model.eval()
+        try:
+            view = self.memory.view()
+            for name, prompt in prompts.items():
+                prefix = encode_bytes(prompt.encode("utf8"), bos=True, eos=False).to(self.device)
+                with torch.no_grad():
+                    ids = self.model.generate(prefix, max_new_bytes=100, temperature=0.0, memory=view)
+                    _, info = self.model(prefix.unsqueeze(0), memory=view, return_info=True)
+                continuation = decode_ids(ids).decode("utf8", "replace")
+                result["prompts"][name] = {"prompt": prompt, "continuation": continuation,
+                                           "full_text": prompt + continuation,
+                                           "generated_bytes": int(ids.numel()),
+                                           "adaptive": {key: info.get(key) for key in
+                                                        ("steps_run", "confidence", "thought_steps", "thought_norm")}}
+            try:
+                ids, stats = self.model.generate_with_tools(
+                    encode_bytes(b"search: ").to(self.device), make_search_fn("mock"),
+                    max_new_bytes=96)
+                result["tool_demo"] = {"generated_ids": int(ids.numel()), **stats,
+                                       "transcript": decode_ids(ids, keep_controls=True)[:300].decode("utf8", "replace")}
+            except Exception as exc:
+                result["tool_error"] = error_record(exc, token=self._hf_token)
+        except Exception as exc:
+            result["error"] = error_record(exc, token=self._hf_token)
+        finally:
+            self.model.train()
+        write_json(self.run_dir / "evaluation.json", result)
+        return result
+
+    def _handle_crash(self, exc: BaseException) -> None:
+        record = error_record(exc, token=self._hf_token)
+        traceback.clear_frames(exc.__traceback__)
+        write_json(self.run_dir / "failure.json", {"step": self.step, "run_id": self.run_id,
+                                                   "session_id": self.session_id, "error": record})
+        append_jsonl(self.events_path, {"event": "failure", "step": self.step, "error": record})
+        print(redact_secrets(traceback.format_exc(), self._hf_token), flush=True)
+        if self.device.type == "cuda":
+            torch.cuda.empty_cache()
+        try:
+            if self.optimizer is not None:
+                crash = self._save(upload=bool(self.hf_repo), reason="crash", emergency=True)
+                write_json(self.run_dir / "crash_checkpoint.json", crash)
+        except Exception as save_exc:
+            append_jsonl(self.run_dir / "artifact_errors.jsonl",
+                         {"stage": "crash_checkpoint", "error": error_record(save_exc, token=self._hf_token)})
+        try:
+            self._sync_artifacts("crash", strict=False)
+        except Exception as sync_exc:
+            append_jsonl(self.run_dir / "artifact_errors.jsonl",
+                         {"stage": "crash_sync", "error": error_record(sync_exc, token=self._hf_token)})
+
+    @contextlib.contextmanager
+    def _captured_run(self):
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        previous_handlers = {}
+        def interrupt(signum, _frame):
+            raise TrainingInterrupted(f"received signal {signum}")
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            try:
+                previous_handlers[signum] = signal.signal(signum, interrupt)
+            except ValueError:
+                pass  # non-main thread: KeyboardInterrupt still works interactively
+        with open(self.console_path, "a", encoding="utf8") as handle:
+            self._console_handle = handle
+            stdout = _ConsoleTee(sys.stdout, handle, self._hf_token)
+            stderr = _ConsoleTee(sys.stderr, handle, self._hf_token)
+            try:
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    yield
+            finally:
+                self._console_handle = None
+                for signum, handler in previous_handlers.items():
+                    signal.signal(signum, handler)
+
     def run(self, *, max_steps: int = 1000, max_minutes: float | None = None,
             checkpoint_minutes: float | None = None) -> dict[str, Any]:
+        with self._captured_run():
+            try:
+                return self._run_impl(max_steps=max_steps, max_minutes=max_minutes,
+                                      checkpoint_minutes=checkpoint_minutes)
+            except (Exception, KeyboardInterrupt) as exc:
+                self._handle_crash(exc)
+                raise
+
+    # -- the loop -----------------------------------------------------------
+    def _run_impl(self, *, max_steps: int = 1000, max_minutes: float | None = None,
+                  checkpoint_minutes: float | None = None) -> dict[str, Any]:
         if self.samples is None:
             data_cfg = self.config.get("data", {})
             self.mixture = build_mixture(data_cfg, seed=int(
@@ -1073,21 +1627,21 @@ class Trainer:
         if self.optimizer is None:
             self.optimizer = self._build_optimizer()
         self._maybe_resume()
+        self._prepare_remote()
         vram = self.autotune_batch(float(self.config.get("vram", {}).get("target_max_gb", 13.5)))
+        write_json(self.run_dir / "vram_probe.json", vram)
         self.model.train()
         self._start_time = time.monotonic()
         self._last_ckpt_time = time.monotonic()
-        deadline = None if max_minutes is None else self._start_time + max_minutes * 60.0
-        tokens = 0
-        last_metrics: dict[str, Any] = {}
+        self._last_upload_time = time.monotonic()
+        deadline = None if max_minutes is None else self._start_time + float(max_minutes) * 60.0
+        last_metrics: dict[str, Any] = dict(self._last_metrics)
         stop_reason = "max_steps"
-        # STEP-BASED loop (Phase 24.2): equivalent to
-        #   for step, batch in enumerate(dataloader):
-        #       if step >= max_steps: break
-        # but counting OPTIMIZER steps (grad_accum micro-batches each).
-        # Streams have no len() and no epochs: we pull one micro-batch at a
-        # time from the single-process iterable pipeline and stop on
-        # max_steps, the wall-clock budget, or stream exhaustion.
+        pending_tokens = 0
+        accum_sums = defaultdict(float)
+        accum_weight = 0
+        accum_micros = 0
+        # STEP-BASED loop: count optimizer boundaries, never epochs or len(data).
         while self.step < max_steps:
             if deadline is not None and time.monotonic() >= deadline:
                 stop_reason = "time_budget"
@@ -1103,51 +1657,96 @@ class Trainer:
                     entropy_threshold=self.entropy_threshold, return_metrics=True)
                 policy = self.memory.policy_loss(margin=self.decay_margin)
                 total = loss + self.decay_reg_weight * policy.to(loss.dtype)
+            if not bool(torch.isfinite(total).item()):
+                raise FloatingPointError(f"non-finite loss at step {self.step}: {metrics}")
             metrics["policy_loss"] = float(policy.detach().item())
             metrics["total"] = float(total.detach().item())
+            valid = int((batch["targets"] != PAD).sum().item())
+            weight = valid
+            accum_weight += weight
+            accum_micros += 1
+            for key in ("ce", "confidence_bce", "total", "policy_loss"):
+                accum_sums[key] += float(metrics.get(key) or 0.0) * weight
+            if metrics.get("mean_entropy") is not None:
+                accum_sums["mean_entropy"] += float(metrics["mean_entropy"]) * weight
             self.scaler.scale(total / self.grad_accum).backward()
             self.memory.procedural.clear_policy_events()
             self._micro += 1
-            tokens += int((batch["targets"] != PAD).sum().item())
+            self._completed_micros += 1
+            pending_tokens += valid
             if self._micro % self.grad_accum == 0:
+                lr = self._lr_at(self.step, max_steps)
                 for group in self.optimizer.param_groups:
-                    group["lr"] = self._lr_at(self.step, max_steps)
+                    group["lr"] = lr
                 self.scaler.unscale_(self.optimizer)
-                torch.nn.utils.clip_grad_norm_(
+                grad_norm = torch.nn.utils.clip_grad_norm_(
                     [p for group in self.optimizer.param_groups for p in group["params"]],
                     float(self.config.get("training", {}).get("max_grad_norm", 1.0)))
+                scale_before = self.scaler.get_scale()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
                 self.optimizer.zero_grad(set_to_none=True)
                 self.step += 1
-                last_metrics = metrics
+                self._total_tokens += pending_tokens
+                pending_tokens = 0
+                denominator = max(1, accum_weight)
+                averaged = {key: value / denominator for key, value in accum_sums.items()}
+                if "mean_entropy" not in averaged:
+                    averaged["mean_entropy"] = None
+                last_metrics = {**metrics, **averaged,
+                                "steps_run": int(metrics.get("steps_run") or 0),
+                                "thought_norm": float(metrics.get("thought_norm") or 0.0)}
+                self._last_metrics = last_metrics
+                event = {"event": "optimizer_step", "step": self.step,
+                         "tokens": self._total_tokens, "micro_batches": self._completed_micros,
+                         "elapsed_s": round(time.monotonic() - self._start_time, 3),
+                         "lr": lr, "grad_norm": float(grad_norm.detach().item()),
+                         "scaler_scale": self.scaler.get_scale(),
+                         "optimizer_update_skipped": bool(self.scaler.is_enabled() and self.scaler.get_scale() < scale_before),
+                         "accumulated_micro_batches": accum_micros,
+                         "accumulated_target_bytes": accum_weight, **last_metrics}
+                if self.device.type == "cuda":
+                    event["vram_gb"] = round(torch.cuda.max_memory_allocated(self.device) / 1e9, 3)
+                append_jsonl(self.events_path, event)
+                accum_sums.clear()
+                accum_weight = 0
+                accum_micros = 0
                 if self.step % self.log_every == 0 or self.step == 1:
-                    record = {"step": self.step, "tokens": tokens,
-                              "elapsed_s": round(time.monotonic() - self._start_time, 2),
-                              **metrics}
-                    if self.device.type == "cuda":
-                        record["vram_gb"] = round(torch.cuda.max_memory_allocated(self.device) / 1e9, 3)
+                    record = {key: value for key, value in event.items() if key != "event"}
                     if self.mixture is not None:
-                        # Effective (post-failure) weights + realised doc share.
                         record["data_mix"] = mixture_snapshot(self.mixture)["observed_share"]
                     self.history.append(record)
                     append_jsonl(self.metrics_path, record)
-                    print(json.dumps(record), flush=True)
-                due_time = time.monotonic() - self._last_ckpt_time >= self.checkpoint_minutes * 60.0
+                    print(json.dumps(record, ensure_ascii=False), flush=True)
+                due_time = self.checkpoint_minutes > 0 and time.monotonic() - self._last_ckpt_time >= self.checkpoint_minutes * 60.0
                 due_steps = self.checkpoint_every > 0 and self.step % self.checkpoint_every == 0
                 if due_time or due_steps:
-                    record = self._save()
+                    record = self._save(reason="periodic")
                     self.history.append({"checkpoint_event": record})
-        final = self._save()
+                elif self.upload_minutes > 0 and time.monotonic() - self._last_upload_time >= self.upload_minutes * 60.0:
+                    self._sync_artifacts("telemetry", strict=False)
+        self._training_seconds += time.monotonic() - self._start_time
+        final = self._save(reason="final", final=True)
+        evaluation = None
+        if bool(self.config.get("output", {}).get("evaluate_final", bool(self.hf_repo))):
+            evaluation = self._evaluate_final()
+            self._sync_artifacts("evaluation", strict=self.strict_uploads)
         data_mix = mixture_snapshot(self.mixture) if self.mixture is not None else None
-        summary = {"steps": self.step, "tokens": tokens, "stop_reason": stop_reason,
-                   "data_mix": data_mix,
+        summary = {"steps": self.step, "tokens": self._total_tokens, "stop_reason": stop_reason,
+                   "data_mix": data_mix, "run_id": self.run_id, "session_id": self.session_id,
+                   "run_dir": str(self.run_dir), "remote_run_path": self.remote_run_path,
                    "precision": self.plan.as_dict(), "vram_probe": vram,
                    "final_checkpoint": final, "last_metrics": last_metrics,
+                   "resume": self._resume_info, "evaluation": evaluation,
                    "batch_stats": dict(self.builder.stats) if self.builder else {},
-                   "parameters": self.model.parameters_count}
+                   "parameters": self.model.parameters_count,
+                   "debug_bundle": str(self.run_dir / "debug_bundle.zip")}
+        write_json(self.run_dir / "summary.json", summary)
         append_jsonl(self.metrics_path, {"summary": summary})
+        self._sync_artifacts("final", strict=self.strict_uploads)
+        print(json.dumps(summary, indent=2, ensure_ascii=False, default=str), flush=True)
         return summary
+
 
 
 # ---------------------------------------------------------------------------
@@ -1257,7 +1856,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--max-steps", type=int, default=None)
     parser.add_argument("--max-minutes", type=float, default=None)
     parser.add_argument("--checkpoint-minutes", type=float, default=None)
-    parser.add_argument("--hf-repo", default=None)
+    parser.add_argument("--checkpoint-every", type=int, default=None)
+    parser.add_argument("--upload-minutes", type=float, default=None)
+    parser.add_argument("--run-dir", default=None)
+    parser.add_argument("--run-id", default=None)
+    parser.add_argument("--hf-repo", default=None,
+                        help=f"HF model repo for checkpoints/diagnostics (preset default: {DEFAULT_HF_REPO})")
+    parser.add_argument("--local-only", action="store_true",
+                        help="explicitly disable Hub persistence for a local experiment")
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--smoke", action="store_true",
                         help="CPU plumbing validation with synthetic fixtures")
@@ -1279,8 +1885,25 @@ def main(argv: list[str] | None = None) -> None:
         summary = run_smoke(steps=args.max_steps or 4)
     else:
         config = load_config(args.config)
-        train_cfg = config.get("training", {})
-        trainer = Trainer(config, device=args.device, hf_repo=args.hf_repo,
+        train_cfg = config.setdefault("training", {})
+        ckpt_cfg = config.setdefault("checkpoints", {})
+        output_cfg = config.setdefault("output", {})
+        if args.checkpoint_every is not None:
+            train_cfg["checkpoint_every"] = args.checkpoint_every
+        if args.upload_minutes is not None:
+            ckpt_cfg["upload_minutes"] = args.upload_minutes
+        if args.run_dir:
+            output_cfg["run_dir"] = args.run_dir
+            ckpt_cfg["local_dir"] = str(Path(args.run_dir) / "checkpoints")
+            output_cfg["metrics_jsonl"] = str(Path(args.run_dir) / "metrics.jsonl")
+        if args.run_id:
+            output_cfg["run_id"] = args.run_id
+        if args.local_only:
+            ckpt_cfg["hf_repo"] = None
+        repo = None if args.local_only else (args.hf_repo or ckpt_cfg.get("hf_repo"))
+        if args.no_resume and repo:
+            print("WARNING: --no-resume starts fresh and may replace the remote latest checkpoint", flush=True)
+        trainer = Trainer(config, device=args.device, hf_repo=repo,
                           resume=not args.no_resume)
         summary = trainer.run(
             max_steps=args.max_steps if args.max_steps is not None else int(train_cfg.get("max_steps", 200000)),

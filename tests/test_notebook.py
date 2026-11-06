@@ -29,14 +29,23 @@ def test_all_code_cells_are_valid_python():
 
 def test_notebook_targets_the_right_run():
     source = NOTEBOOK.read_text(encoding="utf8")
-    assert "gabrielbosse9/airesearch" in source          # HF checkpoint target
+    assert "gabrielbosse9/airesearch2" in source         # HF checkpoint target
     assert "t4_scaled.yaml" in source                    # production preset
     assert "training.train" in source                    # the ONE script
     assert "220" in source                               # minute budget
-    assert "checkpoint-minutes" in source and "30" in source
+    assert "checkpoint-minutes" in source and "10" in source
+    assert "upload-minutes" in source and "5" in source
     assert "T4" in source
     assert "fp16" in source or "float16" in source       # T4 precision fallback
     assert "HF_TOKEN" in source
+    assert "userdata.get" in source and "getpass" in source
+    assert "arena/b49dc41e-airesearch" in source      # delivery provenance
+    assert "arena/6adc4370-airesearch" not in source
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    clone = next(cell.source for cell in nb.cells
+                 if cell.cell_type == "code" and "REPO_URL" in cell.source)
+    assert 'os.environ.get("AIRESEARCH_BRANCH", "main")' in clone
+    assert "debug_bundle.zip" in source and "sync_run_folder" in source
 
 
 def test_notebook_audits_the_ptbr_mix_before_training():
@@ -44,7 +53,7 @@ def test_notebook_audits_the_ptbr_mix_before_training():
     nb = nbformat.read(NOTEBOOK, as_version=4)
     code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
     audit = next(src for src in code if "audit_mixture" in src)
-    train = next(src for src in code if "training.train" in src)
+    train = next(src for src in code if "--hf-repo" in src and "Popen" in src)
     assert code.index(audit) < code.index(train), "audit must precede the run"
     assert "format_mixture_report" in audit
     assert "mix_audit_batches" in audit and "mix_audit_tolerance" in audit
@@ -61,7 +70,7 @@ def test_notebook_verifies_zero_disk_streaming_before_training():
     code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
     audit = next(src for src in code if "audit_mixture" in src)
     zero = next(src for src in code if "disk_usage" in src)
-    train = next(src for src in code if "training.train" in src)
+    train = next(src for src in code if "--hf-repo" in src and "Popen" in src)
     # Right after data initialization (the audit cell builds the mixture)...
     assert code.index(zero) == code.index(audit) + 1
     # ...and strictly before the 4-hour launch.
@@ -83,3 +92,29 @@ def test_notebook_has_no_legacy_phase_references():
     source = NOTEBOOK.read_text(encoding="utf8")
     for legacy in ("phase22", "phase1_", "01_setup", "02_distill", "03_rl"):
         assert legacy not in source
+
+
+def test_notebook_launch_captures_console_and_syncs_even_on_failure():
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    launch = next(cell.source for cell in nb.cells
+                  if cell.cell_type == "code" and "--hf-repo" in cell.source and "Popen" in cell.source)
+    assert "notebook_launch.log" in launch
+    assert "stderr=subprocess.STDOUT" in launch
+    assert "finally:" in launch and "sync_run_folder" in launch
+    assert "strict=False" in launch  # diagnostics must not mask the original failure
+    assert "launch_exit.json" in launch
+
+
+def test_notebook_contains_operator_instructions_and_debug_fetch():
+    source = NOTEBOOK.read_text(encoding="utf8")
+    assert "https://colab.research.google.com/github/gabrielbosse1/airesearch/blob/main/pretrain_4h.ipynb" in source
+    assert "Runtime → Run all" in source
+    assert "Notebook access" in source and "write" in source
+    assert "Disconnected?" in source and "checkpoint_latest.pt" in source
+
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    code = [cell.source for cell in nb.cells if cell.cell_type == "code"]
+    fetch = next(src for src in code if "FETCH_DEBUG_BUNDLE" in src)
+    assert "runs/latest.json" in fetch and "debug_bundle.zip" in fetch
+    assert "hf_hub_download" in fetch and "remote_run_path" in fetch
+    assert "files.download" in fetch

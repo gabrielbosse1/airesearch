@@ -10,7 +10,7 @@ ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
-**Status: Ready for 4-Hour Colab Run (Phase 25.2).** The 500-step coherence
+**Status: Ready for 4-Hour Colab Run (Phase 25.3 durable persistence).** The 500-step coherence
 pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
 gibberish, and step-500 continuations were recognizable PT-BR plus Python that
 compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
@@ -88,7 +88,7 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 30-min HF checkpoints, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 199 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
+| `tests/` | 213 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 | `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
@@ -117,12 +117,59 @@ python -m training.train --simulate-t4 --config configs/t4_scaled.yaml
 
 # Real pre-training (GPU machine; streams HF datasets, checkpoints to the Hub).
 python -m training.train --config configs/t4_scaled.yaml \
-    --hf-repo gabrielbosse9/airesearch --max-minutes 220 --checkpoint-minutes 30
+    --hf-repo gabrielbosse9/airesearch2 --max-minutes 220 \
+    --checkpoint-minutes 10 --upload-minutes 5
 ```
 
-On Colab: open `pretrain_4h.ipynb`, select a T4 runtime, add the `HF_TOKEN`
-secret, run all cells. Checkpoints land in `gabrielbosse9/airesearch` every
-30 minutes; re-running resumes automatically.
+### Google Colab (recommended)
+
+1. Select **Runtime → Change runtime type → T4 GPU**.
+2. In Colab **Secrets**, add `HF_TOKEN` with **write** access to
+   `gabrielbosse9/airesearch2`, and enable notebook access for that secret.
+   Do not paste the token into notebook code, git, or chat.
+3. Open/run the self-contained notebook:
+   [pretrain_4h.ipynb on Colab](https://colab.research.google.com/github/gabrielbosse1/airesearch/blob/main/pretrain_4h.ipynb).
+   Its first markdown cell contains the operator steps, and it includes an
+   optional debug-bundle fetch cell. The notebook clones the repo, verifies HF
+   write access with a tiny preflight upload, audits the stream, checks the real
+   CUDA VRAM probe, then launches training.
+
+The default remote is **`gabrielbosse9/airesearch2`**. Checkpoints are saved
+locally and uploaded every **10 minutes** or **100 optimizer steps**; a normal
+finish also uploads `checkpoints/checkpoint_final.pt`. Logs/diagnostics sync
+every **5 minutes**, independently of checkpoint cadence. Upload failures are
+retried and then stop the run by default (`fail_on_upload_error: true`) rather
+than silently spending GPU time without a recoverable remote checkpoint.
+
+Saved under `runs/colab_latest/` locally and under `runs/<run_id>/<session_id>/`
+on the Hub: `console.log`, `metrics.jsonl`, per-step `events.jsonl`, resolved
+config, environment/package/GPU manifest, git provenance + code snapshot,
+VRAM probe, preflight reports, final PT-BR/code/tool samples, checkpoint hash /
+upload manifest, and a small checkpoint-free `debug_bundle.zip`. A cooperative
+interrupt/crash attempts an emergency checkpoint + bundle upload. A hard Colab
+VM kill cannot run final code; recovery is bounded by the last successful
+periodic upload. Re-running restores model, projectors, optimizer, scaler,
+memory bank, step, counters and RNG state. Live HF iterators/shuffle buffers are
+reopened rather than rewound to an exact document cursor; incomplete gradient
+accumulation is discarded. This is honest training-state resume, not a claim of
+bit-exact stream replay.
+
+For later debugging, download the small bundle from the repo pointed to by
+`runs/latest.json`, or in Colab/local Python:
+
+```python
+import json
+from huggingface_hub import hf_hub_download
+repo = "gabrielbosse9/airesearch2"
+pointer = json.loads(hf_hub_download(repo, "runs/latest.json", repo_type="model"))
+path = hf_hub_download(repo, f"{pointer['remote_run_path']}/debug_bundle.zip",
+                       repo_type="model")
+print(path)  # upload this ZIP to the sandbox for inspection
+```
+
+Checkpoints are roughly multi-GB; the debug ZIP deliberately excludes them.
+Hub commit history retains older checkpoint revisions, so monitor repo storage
+if you change the cadence or resume many sessions.
 
 ## Data mix (PT-BR first)
 
@@ -163,7 +210,7 @@ govern **documents**; a code file is far longer than an image caption, so the
 byte share will never equal 50/25/15/10. Multimodal documents also expand into
 two training rows (caption + media codec). Tool/edit trajectories are injected
 *on top* at `tool_trajectory_rate=0.02` and are outside the quota by design.
-The trainer logs the realised mix in `runs/metrics.jsonl` (`data_mix`) and in
+The trainer logs the realised mix in `runs/colab_latest/metrics.jsonl` (`data_mix`) and in
 the run summary.
 
 ## Strict streaming (Phase 24.2)

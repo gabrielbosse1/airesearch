@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.2)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.3)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -37,6 +37,12 @@ and `README.md` (how to run it).
   the combined context+thought state. `max_thought_steps: 0` reproduces the
   legacy architecture exactly. Checkpoint schemas: foundation v6, trainer v7,
   memory v2.
+- **Colab persistence is a contract.** Default HF repo is
+  `gabrielbosse9/airesearch2`; auth comes from the `HF_TOKEN` Colab secret/env,
+  never code/CLI/logs. Checkpoints upload every 10 min/100 steps and fail closed
+  after retries; diagnostics sync every 5 min and on exit/crash. Never claim
+  exact live-stream cursor resume or survival of a hard VM kill beyond the last
+  successful upload. Debug bundles exclude checkpoints and secrets.
 - **Coherence pre-flight gates readiness (Phase 25.2).** `coherence_preflight.py`
   runs exactly 500 optimizer steps on PT-BR/code, snapshots loss/generation at
   0/250/500, and asserts loss decrease, recognizable PT-BR, and valid Python
@@ -141,8 +147,9 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   199-test regression suite (CPU, ~11 s, fully offline)
-pretrain_4h.ipynb        the ONLY notebook (T4, ~4 h, HF checkpoints,
+tests/                   213-test regression suite (CPU, ~11 s, fully offline)
+pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
+                         T4, ~4 h, HF checkpoints, debug-bundle fetch,
                          mix audit + Zero-Disk verification before training)
 smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)
 coherence_preflight.py   Phase 25.2 500-step PT-BR/code coherence pre-flight
@@ -165,7 +172,8 @@ python -m pytest tests/ -q                 # must stay 100% green
 python -m training.train --smoke           # CPU plumbing validation
 python smoke_test_coherence.py --steps 4   # + thought-buffer activation norms
 python -m training.train --config configs/t4_scaled.yaml \
-    --hf-repo gabrielbosse9/airesearch --max-minutes 220 --checkpoint-minutes 30
+    --hf-repo gabrielbosse9/airesearch2 --max-minutes 220 \
+    --checkpoint-minutes 10 --upload-minutes 5
 ```
 
 ## Change discipline

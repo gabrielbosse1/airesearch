@@ -72,8 +72,8 @@ training:
   seed: 24
   max_steps: 200000                # time budget dominates in the 4h run
   max_minutes: 225                 # leave ~15 min of the 4h for setup/upload
-  checkpoint_minutes: 30           # HF checkpoint cadence
-  checkpoint_every: 500            # step-based safety net
+  checkpoint_minutes: 10           # recoverable checkpoint cadence (Colab can vanish)
+  checkpoint_every: 100            # step-based safety net
   log_every: 10
   confidence_loss_weight: 0.1      # auxiliary BCE on the confidence head
   decay_reg_weight: 0.01           # eviction-policy auxiliary loss
@@ -113,9 +113,15 @@ data:
     english: 0.10                  # HuggingFaceFW/fineweb (secondary language)
 
 checkpoints:
-  local_dir: runs/checkpoints
-  hf_repo: null                    # notebook passes --hf-repo gabrielbosse9/airesearch
+  local_dir: runs/colab_latest/checkpoints
+  hf_repo: gabrielbosse9/airesearch2
   hf_path_in_repo: checkpoints/checkpoint_latest.pt
+  upload_minutes: 5                # logs/diagnostics sync independently of checkpoints
+  upload_retries: 3
+  fail_on_upload_error: true       # do not burn GPU time without recoverable remote state
+  keep_local_previous: true        # one local fallback; Hub commit history keeps older revisions
 
 output:
-  metrics_jsonl: runs/metrics.jsonl
+  run_dir: runs/colab_latest
+  metrics_jsonl: runs/colab_latest/metrics.jsonl
+  evaluate_final: true             # PT-BR/code samples saved to evaluation.json
