@@ -1316,6 +1316,12 @@ class Trainer:
         runtime_cfg = dict(self.config.get("runtime", {}))
         self.min_host_available_gb = float(runtime_cfg.get("min_host_available_gb", 1.0))
         self.max_audio_seconds = float(runtime_cfg.get("max_audio_seconds", 30.0))
+        if self.max_audio_seconds <= 0:
+            raise ValueError("max_audio_seconds must be positive")
+        # The CUDA encoder probe and BatchBuilder must share the same 16 kHz
+        # audio bound. Phase 25.7: probe_vram previously referenced this
+        # attribute before it existed on Trainer (only BatchBuilder had it).
+        self.max_audio_samples = int(self.max_audio_seconds * 16000)
         self._mark_stage("allocate_trainable_state", "started", precision=self.plan.as_dict())
         require_host_memory(self.min_host_available_gb, stage="allocate_trainable_state")
         # Initialize directly on the target device. The former CPU construct +
@@ -1487,6 +1493,36 @@ class Trainer:
                               torch.ones(batch, len(local_keys), dtype=torch.bool, device=self.device))
         return stack_views(global_view, local, batch_size=batch)
 
+    def _probe_frozen_encoders(self) -> dict[str, Any]:
+        """Frozen image/audio/video transient probes with optimizer state resident.
+
+        Called by the CUDA VRAM probe after the core backward pass. Audio uses
+        the same bounded 16 kHz sample count as ``BatchBuilder``. Offline tests
+        may mock CUDA accounting to verify the input shape; that is not a VRAM
+        measurement.
+        """
+        encoder_probes: dict[str, Any] = {}
+        for modality, ingestor in self.ingestors.items():
+            if ingestor.encoder is None:
+                continue
+            if modality == "audio":
+                raw = torch.zeros(1, self.max_audio_samples, device=self.device)
+            elif modality == "video":
+                raw = torch.zeros(8, 3, 224, 224, device=self.device)
+            else:
+                raw = torch.zeros(1, 3, 224, 224, device=self.device)
+            torch.cuda.reset_peak_memory_stats(self.device)
+            with torch.no_grad():
+                features = ingestor.encoder(raw)
+            encoder_probes[modality] = {
+                "measured": True, "input_shape": list(raw.shape),
+                "feature_shape": list(features.shape),
+                "peak_gb": round(torch.cuda.max_memory_allocated(self.device) / 1e9, 3)}
+            del raw, features
+            gc.collect()
+            torch.cuda.empty_cache()
+        return encoder_probes
+
     def probe_vram(self) -> dict[str, Any]:
         """MEASURED representative forward+backward+Adam-state peak on CUDA.
 
@@ -1567,26 +1603,7 @@ class Trainer:
             # Measure frozen image/audio transients WITH optimizer moments already
             # resident. These calls happen before transformer backward in the real
             # loop, so the governing peak is max(core, encoder), not their sum.
-            encoder_probes = {}
-            for modality, ingestor in self.ingestors.items():
-                if ingestor.encoder is None:
-                    continue
-                if modality == "audio":
-                    raw = torch.zeros(1, self.max_audio_samples, device=self.device)
-                elif modality == "video":
-                    raw = torch.zeros(8, 3, 224, 224, device=self.device)
-                else:
-                    raw = torch.zeros(1, 3, 224, 224, device=self.device)
-                torch.cuda.reset_peak_memory_stats(self.device)
-                with torch.no_grad():
-                    features = ingestor.encoder(raw)
-                encoder_probes[modality] = {
-                    "measured": True, "input_shape": list(raw.shape),
-                    "feature_shape": list(features.shape),
-                    "peak_gb": round(torch.cuda.max_memory_allocated(self.device) / 1e9, 3)}
-                del raw, features
-                gc.collect()
-                torch.cuda.empty_cache()
+            encoder_probes = self._probe_frozen_encoders()
             peak_gb = max([core_peak_gb] + [p["peak_gb"] for p in encoder_probes.values()])
             self._mark_stage("cuda_vram_probe", "completed", peak_gb=round(peak_gb, 3))
             return {"measured": True, "simulated": False, "peak_gb": round(peak_gb, 3),

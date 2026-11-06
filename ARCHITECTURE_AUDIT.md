@@ -1,6 +1,6 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.6 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.7 code as it exists
 
-**Status: Phase 25.6 autocast-safe confidence BCE + HF secret normalization implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
+**Status: Phase 25.7 bounded audio VRAM probe + autocast-safe confidence BCE + HF secret normalization implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
 (500 steps, strict PT-BR/code assertions). The fix is covered by offline
 regressions; the next Colab run is the hardware confirmation. The notebook/trainer
 remain the production path.
@@ -360,8 +360,12 @@ bank, differentiable local slots from every projector, confidence path, policy
 loss, all-block checkpointing, and worst-case AdamW moment allocation (temporary
 lr=0 probe; moments are allocated without a synthetic optimizer step, and existing
 resumed moments are preserved, not double-counted). Configured
-frozen backbones are loaded so their persistent weights are present. CPU returns
-`measured=False`, never a fake peak.
+frozen backbones are loaded so their persistent weights are present. Frozen
+encoder transients are measured by `_probe_frozen_encoders`; the audio input is
+`(1, Trainer.max_audio_samples)` with
+`Trainer.max_audio_samples = int(runtime.max_audio_seconds * 16000)`, the same
+bound as `BatchBuilder` (Phase 25.7). Non-positive audio limits fail closed.
+CPU returns `measured=False`, never a fake peak.
 
 **Autotune / fail-closed.** Above **13.5 GB**, halve micro-batch to 1 and
 reprobe. The 1024-byte window is an architecture contract and is not silently
@@ -500,7 +504,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **258 passed in ~11 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **262 passed in ~17 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -532,7 +536,8 @@ initialization, SIGKILL parent-monitor bundle capture with a mocked Hub, bounded
 audio/media graphs, probe-moment preservation, native-bf16/T4 emulation
 rejection, and autocast-safe confidence logits BCE (fp16/bf16 CPU autocast,
 checkpoint recompute, extreme-logit stability, notebook child execution),
-wrapped HF-secret normalization without logging**, and the cleanup contract itself.
+wrapped HF-secret normalization without logging, bounded audio encoder-probe
+shape/accounting with mocked CUDA**, and the cleanup contract itself.
 
 
 ### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)

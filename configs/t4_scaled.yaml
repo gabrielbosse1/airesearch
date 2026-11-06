@@ -95,7 +95,8 @@ vram:
 
 runtime:
   min_host_available_gb: 2.0       # measured SYSTEM RAM headroom, not CUDA VRAM
-  max_audio_seconds: 30            # bound frozen Wav2Vec2 transient activations
+  max_audio_seconds: 30            # bound frozen Wav2Vec2 transient activations;
+                                   # Trainer/probe samples = seconds * 16000 (Phase 25.7)
   notebook_monitor_seconds: 15     # parent heartbeat while the child starts/steps
   notebook_upload_seconds: 60      # remote logs even if no optimizer step completes
 
