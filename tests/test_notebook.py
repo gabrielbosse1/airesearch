@@ -245,3 +245,77 @@ def test_notebook_precision_child_executes_loss_backward_offline(capsys):
     assert report["loss_backward"]["gradient_checkpointing"] is True
     assert report["loss_backward"]["loss"] > 0.0
     assert "confidence" in report["loss_backward"]["paths"]
+
+
+def _notebook_auth_cell():
+    nb = nbformat.read(NOTEBOOK, as_version=4)
+    return next(cell.source for cell in nb.cells
+                if cell.cell_type == "code" and cell.source.startswith("# 4) Hugging Face auth"))
+
+
+def test_notebook_auth_normalizes_colab_dict_secret_before_env(monkeypatch, tmp_path, capsys):
+    import os
+    import sys
+    import types
+    import getpass
+    import training.train as train
+
+    source = _notebook_auth_cell()
+    assert "normalize_hf_token" in source
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(os, "environ", os.environ.copy())
+    os.environ.pop("HF_TOKEN", None)
+    os.environ.pop("HUGGING_FACE_HUB_TOKEN", None)
+    os.environ["BYTECORE_RUN_ID"] = "auth-test"
+
+    google = types.ModuleType("google")
+    colab = types.ModuleType("google.colab")
+    userdata = types.ModuleType("google.colab.userdata")
+    userdata.get = lambda name: {"value": "hf_private_token"}
+    colab.userdata = userdata
+    google.colab = colab
+    monkeypatch.setitem(sys.modules, "google", google)
+    monkeypatch.setitem(sys.modules, "google.colab", colab)
+    monkeypatch.setitem(sys.modules, "google.colab.userdata", userdata)
+    monkeypatch.setattr(getpass, "getpass", lambda *a, **k: pytest.fail("valid wrapped secret must not prompt"))
+    calls = []
+
+    def verify(repo_id, *, token=None, run_dir=None):
+        calls.append((repo_id, token, run_dir))
+        return {"repo_id": repo_id, "user": "tester", "write_verified": True}
+
+    monkeypatch.setattr(train, "verify_hf_access", verify)
+    exec(compile(source, str(NOTEBOOK) + ":auth", "exec"), {"__name__": "__main__"})
+    assert os.environ["HF_TOKEN"] == "hf_private_token"
+    assert calls and calls[0][1] == "hf_private_token"
+    assert "hf_private_token" not in capsys.readouterr().out
+
+
+def test_notebook_auth_falls_back_to_hidden_input_for_unsupported_secret(monkeypatch, tmp_path):
+    import os
+    import sys
+    import types
+    import getpass
+    import training.train as train
+
+    source = _notebook_auth_cell()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(os, "environ", os.environ.copy())
+    os.environ.pop("HF_TOKEN", None)
+    os.environ.pop("HUGGING_FACE_HUB_TOKEN", None)
+    os.environ["BYTECORE_RUN_ID"] = "auth-test"
+
+    google = types.ModuleType("google")
+    colab = types.ModuleType("google.colab")
+    userdata = types.ModuleType("google.colab.userdata")
+    userdata.get = lambda name: {"error": "SecretNotFoundError"}
+    colab.userdata = userdata
+    google.colab = colab
+    monkeypatch.setitem(sys.modules, "google", google)
+    monkeypatch.setitem(sys.modules, "google.colab", colab)
+    monkeypatch.setitem(sys.modules, "google.colab.userdata", userdata)
+    monkeypatch.setattr(getpass, "getpass", lambda *a, **k: "hf_fallback_token")
+    monkeypatch.setattr(train, "verify_hf_access",
+                        lambda repo_id, *, token=None, run_dir=None: {"repo_id": repo_id, "user": "tester"})
+    exec(compile(source, str(NOTEBOOK) + ":auth", "exec"), {"__name__": "__main__"})
+    assert os.environ["HF_TOKEN"] == "hf_fallback_token"

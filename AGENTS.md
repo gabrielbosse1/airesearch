@@ -39,7 +39,8 @@ and `README.md` (how to run it).
   memory v2.
 - **Colab persistence is a contract.** Default HF repo is
   `gabrielbosse9/airesearch2`; auth comes from the `HF_TOKEN` Colab secret/env,
-  never code/CLI/logs. Checkpoints upload every 10 min/100 steps and fail closed
+  never code/CLI/logs. Normalize secret-provider results to plain strings before
+  `os.environ`; unsupported wrappers fall back to hidden input, never printed. Checkpoints upload every 10 min/100 steps and fail closed
   after retries; diagnostics sync every 5 min and on exit/crash. Never claim
   exact live-stream cursor resume or survival of a hard VM kill beyond the last
   successful upload. Debug bundles exclude checkpoints and secrets. The notebook
@@ -164,7 +165,7 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   244-test regression suite (CPU, ~20 s, fully offline)
+tests/                   258-test regression suite (CPU, ~11 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
                          T4, ~4 h, host-RAM/SIGKILL monitor, HF checkpoints,
                          debug-bundle fetch,

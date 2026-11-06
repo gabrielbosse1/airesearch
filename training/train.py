@@ -927,6 +927,36 @@ def resolve_hf_token() -> str | None:
     return os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 
 
+def normalize_hf_token(value: Any) -> str | None:
+    """Coerce a secret-provider result to a plain token string, never logging it.
+
+    Colab ``userdata.get`` normally returns ``str``, but some runtimes/providers
+    wrap secrets in a mapping. Accept only explicit token/value fields so error
+    messages or metadata are never mistaken for credentials. Unsupported shapes
+    return ``None`` so the notebook can fall back to hidden input.
+    """
+    def coerce(candidate: Any, depth: int = 0) -> str | None:
+        if candidate is None or depth > 3:
+            return None
+        if isinstance(candidate, bytes):
+            try:
+                candidate = candidate.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
+        if isinstance(candidate, str):
+            token = candidate.strip()
+            return token or None
+        if isinstance(candidate, dict):
+            for key in ("value", "secret", "token", "access_token", "hf_token",
+                        "HF_TOKEN", "HUGGING_FACE_HUB_TOKEN"):
+                if key in candidate:
+                    token = coerce(candidate[key], depth + 1)
+                    if token:
+                        return token
+        return None
+    return coerce(value)
+
+
 def redact_secrets(text: str, *extra: str | None) -> str:
     """Best-effort redaction before anything is printed or persisted."""
     values = {value for value in extra if value and len(value) >= 4}
@@ -1078,7 +1108,7 @@ def hf_download(repo_id: str | None, path_in_repo: str, local_path: str | Path, 
 def verify_hf_access(repo_id: str = DEFAULT_HF_REPO, *, token: str | None = None,
                      run_dir: str | Path = "runs/colab_latest") -> dict[str, Any]:
     """Prove identity and write access with a tiny preflight before training."""
-    token = token or resolve_hf_token()
+    token = normalize_hf_token(token) or normalize_hf_token(resolve_hf_token())
     if not token:
         raise RuntimeError("HF_TOKEN is missing. Add a write-scoped Colab secret and enable notebook access.")
     from huggingface_hub import HfApi

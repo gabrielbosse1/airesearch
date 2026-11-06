@@ -1,6 +1,6 @@
 # ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.6 code as it exists
 
-**Status: Phase 25.6 autocast-safe confidence logits BCE implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
+**Status: Phase 25.6 autocast-safe confidence BCE + HF secret normalization implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
 (500 steps, strict PT-BR/code assertions). The fix is covered by offline
 regressions; the next Colab run is the hardware confirmation. The notebook/trainer
 remain the production path.
@@ -500,7 +500,7 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **244 passed in ~20 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **258 passed in ~11 s** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
 failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
@@ -531,8 +531,8 @@ optimizer/token resume), **host-RAM/cgroup accounting, device-first meta
 initialization, SIGKILL parent-monitor bundle capture with a mocked Hub, bounded
 audio/media graphs, probe-moment preservation, native-bf16/T4 emulation
 rejection, and autocast-safe confidence logits BCE (fp16/bf16 CPU autocast,
-checkpoint recompute, extreme-logit stability, notebook child execution)**,
-and the cleanup contract itself.
+checkpoint recompute, extreme-logit stability, notebook child execution),
+wrapped HF-secret normalization without logging**, and the cleanup contract itself.
 
 
 ### Phase 25.2 coherence pre-flight (measured, CPU sandbox scale)
