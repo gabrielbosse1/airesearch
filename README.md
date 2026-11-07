@@ -10,12 +10,7 @@ ingestion.
 Trained by **one script** on real streamed Hugging Face data, on a single
 free Colab T4, from **one notebook**.
 
-**Status: Phase 25.7 bounded audio VRAM probe + autocast-safe confidence BCE + HF secret normalization implemented; live T4 rerun pending.** The 500-step coherence
-pre-flight passed: loss fell from **5.4663 → 0.0593**, step-0 output was
-gibberish, and step-500 continuations were recognizable PT-BR plus Python that
-compiles. The sandbox pre-flight runs the Phase 25.1 sliding-window + memory
-cross-attention path at CPU-feasible scale; production fluency still requires
-the 4-hour T4 run.
+**Status: Phase 26 evaluation harness implemented.** The user reports the four-hour T4 run is complete, but this sandbox could not establish a Hugging Face TLS connection, so the public checkpoint has not been fetched or evaluated here. No production fluency, code, tool-use, memory-retrieval, or activation claim is inferred from the training duration. The 500-step coherence pre-flight passed separately at CPU sandbox scale; that is not a substitute for production checkpoint evaluation.
 
 **Portuguese (Brazil) is the primary language** (Phase 24.1): 50% of every
 training window is PT-BR text, with code, multimodal and English as support
@@ -88,8 +83,10 @@ cross-entropy. The authoritative math is in
 | `training/train.py` | The ONE training script: precision, representative VRAM probe/simulator/autotune, bidirectional batches, CE + confidence + policy loss, 10-min/100-step HF checkpoints + host-RAM/SIGKILL diagnostics, sandboxed search |
 | `data/sources.py` | Streaming PT-BR-first 50/25/15/10 quota mix, strict-streaming enforcement (`open_stream`), mix audit, byte packing |
 | `configs/t4_scaled.yaml` | Production preset: 8 layers, 1024-dim, 16384 packed rows, 1024 sliding window, 8192 memory, batch 1×32, 13.5 GB ceiling |
-| `tests/` | 262 tests (fully offline): sliding-window exactness/causality, memory long-range hand-off, decay/Forever policy, GLU, adaptive loop, thought matrix, tooling, trainer/probe/simulator, quota mix, masking, streaming, notebook, hygiene, coherence pre-flight assertions |
+| `tests/` | 269 tests (fully offline): previous architecture/training contracts plus checkpoint snoop selection/loading, production shape verification, attention telemetry, notebook instructions, thought/FFN probes, and syntax-only checks |
 | `pretrain_4h.ipynb` | The ONLY notebook: end-to-end ~4 h T4 pre-training |
+| `evaluation/deep_snoop.py` | Phase 26 safe checkpoint downloader/loader, production shape checks, greedy generation, thought/FFN/sliding-window/memory attention telemetry |
+| `runs/final_model_snoop_report.md` | Generated forensic model card; checkpoint weights and raw telemetry are not tracked |
 | `smoke_test_coherence.py` | CPU smoke + coherence probe: pipeline health, thought-buffer activation norms, greedy continuation |
 | `coherence_preflight.py` | Phase 25.2 500-step PT-BR/code coherence pre-flight with strict loss/text/syntax assertions |
 
@@ -112,6 +109,22 @@ python smoke_test_coherence.py --steps 4
 # assertions (loss decrease, recognizable PT-BR, valid Python syntax).
 python coherence_preflight.py
 
+# Phase 26: fetch and inspect the public trained checkpoint (full inference).
+# Optional HF_TOKEN is read from the environment; never paste it into source.
+python evaluation/deep_snoop.py --repo-id gabrielbosse9/airesearch2 \
+    --device auto --max-new-bytes 128
+# Or run offline against a previously downloaded checkpoint:
+python evaluation/deep_snoop.py --checkpoint /path/to/checkpoint_latest.pt \
+    --device cuda --max-new-bytes 128
+```
+
+The snoop writes `runs/final_model_snoop_report.md` and an ignored JSON trace.
+It uses safe PyTorch checkpoint loading (`weights_only=True`) and memory-maps the
+checkpoint where supported; the optimizer tensors can make a training checkpoint
+several gigabytes. Generated code is syntax-checked but never executed. Norms
+and attention weights document component activity/routing, not semantic proof.
+
+```bash
 # Analytic T4 VRAM preflight (SIMULATION, not a CUDA measurement).
 python -m training.train --simulate-t4 --config configs/t4_scaled.yaml
 

@@ -10,14 +10,14 @@ REQUIRED = [
     "training/train.py", "data/sources.py",
     "configs/t4_scaled.yaml", "pretrain_4h.ipynb", "smoke_test_coherence.py",
     "README.md", "ARCHITECTURE_AUDIT.md", "AGENTS.md",
-    "requirements.txt", ".gitignore",
+    "requirements.txt", ".gitignore", "evaluation/deep_snoop.py",
     "models/__init__.py", "training/__init__.py", "data/__init__.py",
     "tests/__init__.py",
 ]
 
 FORBIDDEN = [
     "QWEN_CHAT_PROMPT.md", "configs/default.yaml",
-    "data/phase22_sources.py", "evaluation",
+    "data/phase22_sources.py",
     "models/contradiction_graph.py", "models/foundation_memory.py",
     "models/holdout.py", "models/procedural.py", "models/react.py",
     "models/sandbox.py", "notebook", "runs/phase22",

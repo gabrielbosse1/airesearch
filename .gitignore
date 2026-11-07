@@ -5,7 +5,8 @@ __pycache__/
 *.tmp
 
 # Training artefacts: checkpoints, streamed shards, telemetry (never committed).
-runs/
+runs/*
+!runs/final_model_snoop_report.md
 data_cache/
 data_cache_phase22/
 *.pt
