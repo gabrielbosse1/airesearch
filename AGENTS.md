@@ -1,4 +1,4 @@
-# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 25.7)
+# AGENTS.md — ByteCore-DualMemory operating protocol (Phase 26)
 
 Read this file before touching the repository, then read
 `ARCHITECTURE_AUDIT.md` (the bottom-up math of the code that actually exists)
@@ -124,6 +124,14 @@ and `README.md` (how to run it).
   masked). A fully masked batch returns a zero loss, never `0/0` NaN. Do not
   add per-source losses or per-source weights without re-running
   `tests/test_train.py` masking tests.
+- **Deep-snoop evidence (Phase 26).** `evaluation/deep_snoop.py` uses
+  `weights_only=True` and mmap where supported; tests must use synthetic local
+  checkpoints and never call the live Hub. Downloaded model output is untrusted:
+  generated code is compiled for syntax only, never executed. Report parameter
+  shapes and observed activation/attention statistics separately from semantic
+  claims. A non-zero thought norm or memory attention weight is evidence of
+  computation/routing, not proof of reasoning or correct retrieval. If HF access
+  fails, preserve a blocked report and do not invent generations or 0–10 scores.
 - **Unmeasured is reported as unmeasured.** This environment has no GPU.
   VRAM/throughput/bf16 behaviour are claims that require the Colab run.
   Never present an analytic estimate as a measurement. `--simulate-t4` is an
@@ -170,23 +178,26 @@ data/sources.py          streaming PT-BR-first 50/25/15/10 quota mix
                          + strict-streaming enforcement (open_stream)
                          + mix audit/report + byte packing
 configs/t4_scaled.yaml   production preset (8 layers, 16384 rows, W=1024, 8192 memory)
-tests/                   262-test regression suite (CPU, ~17 s, fully offline)
+tests/                   269-test regression suite (CPU, ~17 s, fully offline)
 pretrain_4h.ipynb        the ONLY notebook (self-contained Colab instructions,
                          T4, ~4 h, host-RAM/SIGKILL monitor, HF checkpoints,
                          debug-bundle fetch,
                          mix audit + Zero-Disk verification before training)
 smoke_test_coherence.py  CPU smoke + coherence probe (thought-buffer norms)
 coherence_preflight.py   Phase 25.2 500-step PT-BR/code coherence pre-flight
+evaluation/deep_snoop.py Phase 26 checkpoint loader, inference probes, and activation forensics
+runs/final_model_snoop_report.md generated model-card report (tracked; no weights/artifacts)
 README.md  ARCHITECTURE_AUDIT.md  AGENTS.md
 requirements.txt  .gitignore  package __init__.py files
 ```
 
-Everything else was deleted in Phase 24: legacy phase scripts, synthetic
-generators, evaluation harnesses, demo notebooks, `runs/` artefacts,
-`react.py`/`sandbox.py` regex machinery, the 3-tier memory, holdout guards,
-contradiction graphs. `tests/test_repo_hygiene.py` fails if they come back.
-Do not add files outside this map without updating the hygiene test and this
-document in the same change.
+Phase 24 removed legacy phase scripts, synthetic generators, demo notebooks,
+training artefacts, `react.py`/`sandbox.py` regex machinery, the 3-tier memory,
+holdout guards and contradiction graphs. Phase 26 adds only the explicit
+`evaluation/deep_snoop.py` checkpoint forensic utility and a tracked text report;
+weights and machine-generated JSON stay ignored. `tests/test_repo_hygiene.py`
+keeps the allowed map explicit. Do not add files outside this map without
+updating the hygiene test and this document in the same change.
 
 ## Commands
 
@@ -195,6 +206,7 @@ pip install -r requirements.txt
 python -m pytest tests/ -q                 # must stay 100% green
 python -m training.train --smoke           # CPU plumbing validation
 python smoke_test_coherence.py --steps 4   # + thought-buffer activation norms
+python evaluation/deep_snoop.py --repo-id gabrielbosse9/airesearch2 --max-new-bytes 128
 python -m training.train --config configs/t4_scaled.yaml \
     --hf-repo gabrielbosse9/airesearch2 --max-minutes 220 \
     --checkpoint-minutes 10 --upload-minutes 5

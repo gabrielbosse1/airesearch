@@ -1,9 +1,6 @@
-# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 25.7 code as it exists
+# ARCHITECTURE_AUDIT.md — ByteCore-DualMemory, Phase 26 code as it exists
 
-**Status: Phase 25.7 bounded audio VRAM probe + autocast-safe confidence BCE + HF secret normalization implemented; live T4 rerun pending.** Phase 25.2 coherence pre-flight passed
-(500 steps, strict PT-BR/code assertions). The fix is covered by offline
-regressions; the next Colab run is the hardware confirmation. The notebook/trainer
-remain the production path.
+**Status: Phase 26 evaluator implemented.** The user reports the four-hour T4 run is complete, but the sandbox's request to `huggingface.co` failed with a TLS/SSL EOF. No trained checkpoint was fetched and no model inference/activation result is claimed here. The blocked run is documented in `runs/final_model_snoop_report.md`. The Phase 25.2 500-step CPU coherence pre-flight is separate and is not evidence of production fluency.
 
 **Scope.** Bottom-up description of the code in this checkout, from a scalar
 multiply to the training loop. Every formula is transcribed from the
@@ -13,7 +10,8 @@ environment has no GPU).
 
 **Files audited.** `models/foundation.py`, `models/memory_model.py`,
 `models/encoders.py`, `training/train.py`, `data/sources.py`,
-`configs/t4_scaled.yaml`, `pretrain_4h.ipynb`, `coherence_preflight.py`.
+`configs/t4_scaled.yaml`, `pretrain_4h.ipynb`, `coherence_preflight.py`,
+`evaluation/deep_snoop.py`, `tests/test_deep_snoop.py`.
 
 **Notation.**
 
@@ -504,9 +502,10 @@ pairs with carry — no byte dropped.
 
 ## 10. Verification (measured)
 
-`python -m pytest tests/ -q` → **262 passed in ~17 s** (CPU, fully offline:
+`python -m pytest tests/ -q` → **269 passed** (CPU, fully offline:
 a session guard replaces the real `datasets.load_dataset` with a loud
-failure, and `mock_streaming_hub` serves tiny in-memory `IterableDataset`s).
+failure, `mock_streaming_hub` serves tiny in-memory streams, and the new snoop
+tests use synthetic local checkpoints with no network access).
 Coverage: exact GLU math at production widths, key-matching fidelity (aligned
 query retrieves its value to 1e-3), all-8-layer injection + exact parameter
 count, masked/empty retrieval, projector gradient flow, bank
@@ -590,3 +589,36 @@ analytic until the notebook runs; the Phase 25.2 pre-flight proves the
 architecture learns coherent byte patterns at sandbox scale. Self-attention is local; the memory hub is the
 long-range path. T4 uses memory-efficient SDPA, not Flash/cuDNN. The 13.5 GB
 ceiling is enforced by the real probe, not by the simulator alone.
+
+## 12. Phase 26 deep-snoop instrumentation (evaluator implemented; checkpoint not observed)
+
+`evaluation/deep_snoop.py` resolves `checkpoints/checkpoint_latest.pt`, then
+`checkpoint_final.pt`, then the highest explicitly numbered checkpoint from
+`gabrielbosse9/airesearch2`. It uses `weights_only=True` and mmap where available,
+instantiates the architecture on `meta`, and strictly assigns saved model tensors.
+Schema 7/config/state-dict mismatches fail closed. It reports the exact parameter
+count, trained config, per-layer projection shapes, and the production geometry
+checks (`D=1024`, 8 layers, `F=4096`, 16,384 context, 1,024-byte sliding window,
+8,192 memory, 4 thought slots). No optimizer tensor is copied into the model.
+
+The inference recorder stores only scalar activation summaries while decoding;
+full attention maps are reconstructed once per prompt at the final prompt/generation
+position. For causal sliding attention it computes the last-row distribution
+`softmax(q_last K^T / sqrt(d_head))` over key indices
+`max(0, L-window_size-1)..L-1`, after the same RoPE and GQA key expansion. For
+memory cross-attention it reconstructs the trained normalized `Q` and `K`, then
+reports the per-head-mean softmax, entropy, max weight, top slot, and (for the
+injected fact) its weight/rank. Per-step thought-buffer norm/gates and SwiGLU
+intermediate/output L2 norms are captured as small detached scalars. They show
+computation/routing, not semantic correctness. The `[EDIT]` id is reported as an
+ordinary token; tool behavior is judged by dedicated control-token ids, not text
+matching. Generated Python is only passed to `compile()`; arbitrary model output
+is never executed.
+
+**Observed Phase 26 status in this sandbox:** the actual Hub request to
+`https://huggingface.co/api/models/gabrielbosse9/airesearch2/tree/main` failed
+with `ConnectError: TLS/SSL connection has been closed (EOF)`. There was no local
+checkpoint or HF token/cache. Therefore checkpoint step, parameter count of the
+trained file, generated text, attention values, and capability scores are all
+**not observed**; the text report records that block rather than substituting
+randomly initialized weights or the CPU coherence fixture.
